@@ -1,11 +1,25 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Users } from "lucide-react";
 
-import { NotBuiltYet } from "@/components/not-built-yet";
+import { Card, CardBody } from "@/components/card";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeading, PageShell } from "@/components/page-shell";
+import { TeamCrest } from "@/components/team-crest";
+import { getPrimaryCompetition, getTeams } from "@/lib/queries";
+import { getStandings } from "@/lib/standings";
 
 export const metadata: Metadata = { title: "Teams" };
 
-export default function TeamsPage() {
+export default async function TeamsPage() {
+  const [teams, primary] = await Promise.all([
+    getTeams(),
+    getPrimaryCompetition(),
+  ]);
+
+  const standings = primary ? await getStandings(primary.id) : [];
+  const bySlug = new Map(standings.map((r) => [r.team.slug, r]));
+
   return (
     <PageShell>
       <PageHeading
@@ -13,7 +27,66 @@ export default function TeamsPage() {
         title="Teams"
         description="The organisations that build and field the robots."
       />
-      <NotBuiltYet page="Teams" step="step 3" />
+
+      {teams.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<Users />}
+            title="No teams yet"
+            description="Teams appear here once they are entered into a competition."
+          />
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {teams.map(({ team, robotCount }) => {
+            const standing = bySlug.get(team.slug);
+            return (
+              <Card
+                key={team.id}
+                className="hover:border-line-strong transition-colors"
+              >
+                <CardBody>
+                  <div className="flex items-start gap-4">
+                    <TeamCrest
+                      name={team.name}
+                      logoUrl={team.logoUrl}
+                      size="lg"
+                      decorative
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-display text-ink truncate text-lg font-semibold uppercase">
+                        <Link
+                          href={`/teams/${team.slug}`}
+                          className="hover:text-volt transition-colors"
+                        >
+                          {team.name}
+                        </Link>
+                      </h2>
+                      <p className="text-ink-dim mt-0.5 truncate text-xs">
+                        {[team.orgName, team.country].filter(Boolean).join(" · ")}
+                      </p>
+                      <p className="text-ink-muted tabular mt-3 text-xs">
+                        {robotCount} {robotCount === 1 ? "robot" : "robots"}
+                        {standing ? (
+                          <>
+                            <span className="text-ink-dim"> · </span>
+                            {standing.won}–{standing.lost}
+                            {standing.drawn > 0 ? `–${standing.drawn}` : ""}
+                            <span className="text-ink-dim"> · </span>
+                            <span className="text-volt">
+                              {standing.points} pts
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </PageShell>
   );
 }
