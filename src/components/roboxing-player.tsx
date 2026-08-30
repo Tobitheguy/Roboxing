@@ -117,12 +117,16 @@ export function RoboxingPlayer({
     };
 
     async function attach() {
-      const canPlayNatively = video!.canPlayType(
-        "application/vnd.apple.mpegurl",
-      );
+      // `canPlayType` for HLS returns "probably" on Safari and iOS, and
+      // "maybe" on Chrome — which cannot actually play HLS natively at all.
+      // Treating any truthy answer as native support sends Chrome down the
+      // native path, where the video silently never loads (readyState stays 0
+      // with no error event). Only "probably" means it.
+      const nativeSupport = video!.canPlayType("application/vnd.apple.mpegurl");
+      const preferNative = nativeSupport === "probably";
 
       /* --- Safari / iOS: hand the manifest straight to the element -------- */
-      if (canPlayNatively) {
+      if (preferNative) {
         video!.src = src;
 
         // The element's own error event is the ONLY signal available here —
@@ -158,6 +162,13 @@ export function RoboxingPlayer({
       if (cancelled) return;
 
       if (!HlsLib.isSupported()) {
+        // No Media Source Extensions. If the element claims it can manage the
+        // manifest itself — even hesitantly — that is strictly better than
+        // showing an error.
+        if (nativeSupport) {
+          video!.src = src;
+          return;
+        }
         setError("This browser cannot play the stream.");
         return;
       }
