@@ -34,8 +34,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Robox — Live Robot Fighting",
-    template: "%s · Robox",
+    default: "Roboxing — Live Robot Fighting",
+    template: "%s · Roboxing",
   },
   description:
     "Live humanoid robot combat: streams, league standings, team rosters, and full fight history.",

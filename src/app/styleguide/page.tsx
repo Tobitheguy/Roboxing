@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { RobotAvatar } from "@/components/robot-avatar";
-import { RoboxMark } from "@/components/robox-mark";
+import { RoboxingMark } from "@/components/roboxing-mark";
 import { StatRow, StatTile } from "@/components/stat-tile";
 import { TeamCrest } from "@/components/team-crest";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,9 @@ const SURFACE_TOKENS = [
 ] as const;
 
 const INK_TOKENS = [
-  ["--color-ink", "Primary text"],
-  ["--color-ink-muted", "Secondary text"],
-  ["--color-ink-dim", "Metadata, disabled"],
+  ["--color-ink", "Primary text · 19.4:1"],
+  ["--color-ink-muted", "Secondary text · 7.7:1"],
+  ["--color-ink-dim", "Metadata · 4.6:1, clears AA"],
 ] as const;
 
 const ACCENT_TOKENS = [
@@ -47,6 +47,9 @@ const ACCENT_TOKENS = [
   ["--color-volt-dim", "Accent hover / pressed"],
   ["--color-live", "LIVE ONLY — never decorative"],
   ["--color-drift", "Behind the live edge"],
+  // Swatched next to --color-live deliberately: seeing the two reds side by
+  // side is the only way to actually verify the "red means live" rule holds.
+  ["--destructive", "Errors — a DIFFERENT red to live"],
   ["--color-loss", "A loss"],
 ] as const;
 
@@ -145,7 +148,7 @@ export default function StyleguidePage() {
       <PageHeading
         eyebrow="Internal"
         title="Styleguide"
-        description="Every token and primitive in the Robox design system. Swatches read the live CSS variables from globals.css, so this page cannot drift from the system it documents."
+        description="Every token and primitive in the Roboxing design system. Swatches read the live CSS variables from globals.css, so this page cannot drift from the system it documents."
       />
 
       {/* ---------------------------------------------------------------- */}
@@ -210,7 +213,7 @@ export default function StyleguidePage() {
           <div>
             <p className="eyebrow mb-2">Body · Inter</p>
             <p className="text-ink-muted max-w-2xl text-sm">
-              Robox licenses broadcast rights from combat league organizers and
+              Roboxing licenses broadcast rights from combat league organizers and
               streams events on its own player, wrapped in real sports
               infrastructure: competitions, teams, robots, fixtures, results, and
               computed standings.
@@ -338,9 +341,9 @@ export default function StyleguidePage() {
           <div className="space-y-3">
             <p className="eyebrow">Wordmark</p>
             <div className="flex items-end gap-4">
-              <RoboxMark size="sm" />
-              <RoboxMark size="md" />
-              <RoboxMark size="lg" />
+              <RoboxingMark size="sm" />
+              <RoboxingMark size="md" />
+              <RoboxingMark size="lg" />
             </div>
           </div>
         </div>
@@ -363,7 +366,7 @@ export default function StyleguidePage() {
       {/* ---------------------------------------------------------------- */}
       <Section
         title="Buttons"
-        note="shadcn components inherit the Robox palette through the semantic variables in globals.css — primary resolves to volt with near-black ink, never white."
+        note="shadcn components inherit the Roboxing palette through the semantic variables in globals.css — primary resolves to volt with near-black ink, never white."
       >
         <div className="flex flex-wrap items-center gap-3">
           <Button>Watch live</Button>

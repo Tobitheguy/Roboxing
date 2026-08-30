@@ -14,7 +14,9 @@ export function Card({
   return (
     <section
       className={cn(
-        "bg-surface border-line rounded-lg border",
+        // overflow-hidden so flush content (a DataTable's hovered last row)
+        // is clipped by the card's rounded corners instead of squaring them off.
+        "bg-surface border-line overflow-hidden rounded-lg border",
         className,
       )}
       {...props}

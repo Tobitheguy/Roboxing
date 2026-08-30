@@ -1,8 +1,8 @@
-# Robox
+# Roboxing
 
 Live humanoid robot fighting — streaming, standings, and fight history in one place.
 
-Robox licenses broadcast rights from combat league organizers and streams events on
+Roboxing licenses broadcast rights from combat league organizers and streams events on
 its own player, wrapped in real sports infrastructure: competitions, teams, robots,
 fixtures, results, and computed standings.
 
@@ -46,7 +46,7 @@ Steps 1–3 of the build (design system, database, public pages) need only
 
 ### 1. Neon (database)
 
-1. Sign up at [neon.tech](https://neon.tech) and create a project named `robox`.
+1. Sign up at [neon.tech](https://neon.tech) and create a project named `roboxing`.
 2. Pick a **US East** region — the audience is the United States.
 3. Copy the **pooled** connection string (the host contains `-pooler`). The direct
    endpoint will exhaust its connection limit under serverless functions.
@@ -63,7 +63,7 @@ npm run db:seed      # load placeholder data
 
 1. Create an account, then **subscribe to Stream**. Storage is prepaid in $5 blocks
    of 1,000 minutes.
-2. **R2** → create a bucket named `robox-media` and enable public access (or attach a
+2. **R2** → create a bucket named `roboxing-media` and enable public access (or attach a
    custom domain). Put the resulting base URL in `R2_PUBLIC_URL`.
 3. **My Profile → API Tokens → Create Token → Custom token**, with:
    - `Account | Stream | Edit`

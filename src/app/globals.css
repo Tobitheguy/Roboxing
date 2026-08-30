@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /* ==========================================================================
-   ROBOX DESIGN TOKENS — single source of truth
+   ROBOXING DESIGN TOKENS — single source of truth
 
    Every colour, size, and radius in the product is defined in this file. A
    real brand pass later should be an edit here, not a rewrite of components.
@@ -30,9 +30,13 @@
   --color-line-strong: #3a3a47; /* emphasised divider */
 
   /* --- Ink ------------------------------------------------------------- */
-  --color-ink: #ffffff; /* primary text */
-  --color-ink-muted: #a1a1ae; /* secondary text, table headers */
-  --color-ink-dim: #6b6b78; /* metadata, disabled */
+  --color-ink: #ffffff; /* primary text — 19.4:1 on canvas */
+  --color-ink-muted: #a1a1ae; /* secondary text, table headers — 7.7:1 on canvas */
+  /* Metadata and de-emphasised copy. Chosen as the darkest grey that still
+     clears WCAG AA (4.5:1) on BOTH canvas and surface — 4.62:1 and 4.51:1
+     respectively. The obvious-looking #6B6B78 measures 3.74:1 and 3.46:1,
+     which fails: this token ends up carrying real sentences, not just chrome. */
+  --color-ink-dim: #7e7e8c;
 
   /* --- Accent ---------------------------------------------------------- */
   /* Named "volt" rather than "accent" on purpose: shadcn already owns
@@ -86,7 +90,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   shadcn semantic variables, mapped onto the Robox palette above so that any
+   shadcn semantic variables, mapped onto the Roboxing palette above so that any
    component pulled from the registry inherits the brand without edits.
    -------------------------------------------------------------------------- */
 :root,
@@ -117,8 +121,13 @@
   /* Errors and destructive actions. Distinct from --color-live by design. */
   --destructive: #ff4d4f;
 
+  /* Decorative hairlines between rows and around cards. Intentionally faint —
+     WCAG 1.4.11 governs component boundaries, not separators. */
   --border: var(--color-line);
-  --input: var(--color-line);
+  /* Borders that ARE the component: outline buttons, text inputs, selects.
+     These must clear 3:1 against the canvas to be perceivable, which the
+     hairline value does not (1.3:1). This measures 3.06:1. */
+  --input: #5d5d69;
   --ring: var(--color-volt);
 
   --chart-1: var(--color-volt);
@@ -188,15 +197,6 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-}
-
-/* Horizontally scrollable strips (the mobile nav) without a visible scrollbar. */
-@utility scrollbar-none {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 /* The small all-caps section label used throughout the site. */

@@ -4,7 +4,7 @@ import { CalendarClock, ListOrdered, Trophy } from "lucide-react";
 import { Card, CardHeader, CardBodyFlush } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { PageShell } from "@/components/page-shell";
-import { RoboxMark } from "@/components/robox-mark";
+import { RoboxingMark } from "@/components/roboxing-mark";
 
 /**
  * Home.
@@ -28,8 +28,10 @@ export default function HomePage() {
           Streams, league standings, team rosters, and full fight history for
           humanoid robot combat — treated like the sport it has become.
         </p>
-        <p className="text-ink-dim mt-8 max-w-xl text-xs">
-          Robox is in build. There are no events loaded yet, and no broadcast
+        {/* The most consequential sentence on the page — it says there is no
+            rights deal. It gets the readable ink, not the dim one. */}
+        <p className="text-ink-muted mt-8 max-w-xl text-xs">
+          Roboxing is in build. There are no events loaded yet, and no broadcast
           rights are in place. See the{" "}
           <Link
             href="/styleguide"
@@ -77,7 +79,7 @@ export default function HomePage() {
       </Card>
 
       <div className="text-ink-dim mt-12 flex items-center gap-2 text-xs">
-        <RoboxMark size="sm" />
+        <RoboxingMark size="sm" />
         <span>· design system v1</span>
       </div>
     </PageShell>

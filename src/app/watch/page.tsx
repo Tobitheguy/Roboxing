@@ -13,7 +13,7 @@ export default function WatchIndexPage() {
         title="Watch"
         description="Live events play here, and the recording stays at the same address afterward."
       />
-      <NotBuiltYet page="Watch" step="step 4, with the Robox player" />
+      <NotBuiltYet page="Watch" step="step 4, with the Roboxing player" />
     </PageShell>
   );
 }

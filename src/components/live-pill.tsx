@@ -15,7 +15,7 @@ export type LiveStatus =
  * The only component in the system permitted to use --color-live.
  *
  * That restriction is the whole point: if a viewer sees this red anywhere on
- * Robox, something is broadcasting. Not an error, not a delete button, not a
+ * Roboxing, something is broadcasting. Not an error, not a delete button, not a
  * decorative accent. Drift gets amber instead, because "you are watching, but
  * behind" is a different message from "this is happening now".
  */

@@ -1,17 +1,18 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The Robox wordmark.
+ * The Roboxing wordmark.
  *
  * Type-only by decision — no illustration, so a real brand pass later is a
  * change to this one component rather than a hunt for asset files. Rendered as
  * live text rather than a flattened SVG so it stays crisp at any size, respects
  * the user's text scaling, and is readable by screen readers and search engines.
  *
- * The X is volt. It is the only part of the mark that carries colour, which is
- * what makes it survive being shrunk to a 24px favicon.
+ * The X is volt and is the only coloured part of the mark, which is what lets
+ * it survive being shrunk to a 24px favicon — and it sits at the seam of
+ * "robo" and "boxing", which is the whole joke of the name.
  */
-export function RoboxMark({
+export function RoboxingMark({
   className,
   size = "md",
 }: {
@@ -27,12 +28,12 @@ export function RoboxMark({
   return (
     <span
       className={cn(
-        "font-display leading-none font-bold tracking-[-0.03em] text-ink uppercase select-none",
+        "font-display text-ink leading-none font-bold tracking-[-0.03em] uppercase select-none",
         sizes[size],
         className,
       )}
     >
-      Robo<span className="text-volt">x</span>
+      Robo<span className="text-volt">x</span>ing
     </span>
   );
 }

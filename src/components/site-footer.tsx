@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { RoboxMark } from "@/components/robox-mark";
+import { RoboxingMark } from "@/components/roboxing-mark";
 import { NAV_ITEMS } from "@/lib/nav";
 
 export function SiteFooter() {
@@ -8,7 +8,7 @@ export function SiteFooter() {
     <footer className="border-line mt-16 border-t">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 md:flex-row md:items-start md:justify-between md:px-6">
         <div>
-          <RoboxMark size="sm" />
+          <RoboxingMark size="sm" />
           <p className="text-ink-dim mt-2 max-w-xs text-xs">
             Live humanoid robot combat — streams, standings, and fight history.
           </p>
@@ -35,7 +35,7 @@ export function SiteFooter() {
 
       <div className="border-line border-t">
         <div className="text-ink-dim mx-auto max-w-7xl px-4 py-4 text-xs md:px-6">
-          Robox is an independent platform. Robot names, team names, and league
+          Roboxing is an independent platform. Robot names, team names, and league
           marks belong to their respective owners.
         </div>
       </div>

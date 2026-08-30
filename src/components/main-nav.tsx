@@ -21,7 +21,10 @@ export function MainNav({ className }: { className?: string }) {
     <nav
       aria-label="Main"
       className={cn(
-        "scrollbar-none -mx-4 flex items-center gap-1 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0",
+        // no-scrollbar + scroll-fade-x come from shadcn's stylesheet. The fade
+        // is the affordance: without it, five items on a 375px screen clip at
+        // the edge with no cue that "Results" exists off to the right.
+        "no-scrollbar scroll-fade-x -mx-4 flex items-center gap-1 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0",
         className,
       )}
     >

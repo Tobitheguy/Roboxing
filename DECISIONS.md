@@ -1,4 +1,4 @@
-# Robox — Decisions
+# Roboxing — Decisions
 
 Why this file exists: the reasoning behind these choices is more valuable than the
 choices themselves, and it does not survive in a diff. Anything here was decided
@@ -9,13 +9,13 @@ Last updated: 2026-08-30 (project start).
 
 ---
 
-## What Robox is
+## What Roboxing is
 
 A destination for humanoid robot combat. The fights already exist — EngineAI's URKL
 league in Shenzhen, Unitree's boxing events — but the coverage is scattered across
 YouTube uploads, Weibo clips, and news embeds. Nothing treats it like a sport.
 
-Robox licenses broadcast rights from the organizer and streams events on its own
+Roboxing licenses broadcast rights from the organizer and streams events on its own
 branded player, wrapped in real sports infrastructure: competitions, teams, robots,
 fixtures, results, and standings.
 
@@ -29,9 +29,9 @@ data. Licensed content swaps in when paperwork lands.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Streaming | Own React/hls.js player, Cloudflare Stream Live behind it | The player, controls, overlays, and branding are 100% Robox on a Robox domain. What Cloudflare handles is ingest, transcode ladder, and global HLS delivery — weeks of ops work that costs more to hand-build than to buy. If we later want to own the pipe end to end, only the URL handed to the player changes. |
+| Streaming | Own React/hls.js player, Cloudflare Stream Live behind it | The player, controls, overlays, and branding are 100% Roboxing on a Roboxing domain. What Cloudflare handles is ingest, transcode ladder, and global HLS delivery — weeks of ops work that costs more to hand-build than to buy. If we later want to own the pipe end to end, only the URL handed to the player changes. |
 | Accounts | Admin-only in V1 | The public site is read-only. No fan signup, no comments, no team-manager logins. Everything is entered by one or two admins. |
-| Competition data | Supplied by the rights holder | Robox does not run tournaments, so there is no bracket engine, no seeding, no auto-advancing winners. Admin form now, CSV/JSON import for bulk. |
+| Competition data | Supplied by the rights holder | Roboxing does not run tournaments, so there is no bracket engine, no seeding, no auto-advancing winners. Admin form now, CSV/JSON import for bulk. |
 | Standings | **Computed, never stored** | Every table on the site is a query over `bout_results` weighted by the competition's `points_rules`. Enter a result once and the team page, the robot's record, and the league table all move together. A stored table drifts; a computed one cannot. |
 | Points rules | Per-competition row | A new league with different scoring drops in without a code change. |
 | Stack | Next.js 16 App Router, TS, Tailwind v4, shadcn, Neon + Drizzle, Vercel | Deliberately the same core as the FN Scheduler build — the setup, migration workflow, and deploy story are already familiar. |
@@ -55,6 +55,25 @@ data. Licensed content swaps in when paperwork lands.
 | Weight class | Stored on `robots`, shown on profiles and fight cards; **one** standings table per competition | Combat sports essentially always classify by mass, so the column has to exist. But we do not yet know whether URKL runs separate divisions, and an 8-team season split by class produces thin, meaningless tables. Splitting later is a filter on the standings query, not a migration. |
 | Seed data | Obviously invented placeholders + a persistent DEMO DATA banner | The repo and the deploy are public and there is no signed rights deal. A public page showing fabricated results attributed to a real league is exactly the thing that sours a rights conversation. Fictional names cannot be mistaken for a record. |
 | Logo | Generated type-only SVG wordmark, lime X | No illustration, so it stays cheap to replace with a real brand pass and reads correctly at 24px on a phone. |
+
+### The name
+
+Originally **Robox**. Changed to **Roboxing** on 2026-08-30 because no usable domain
+existed — `robox.tv`, `.live`, `.gg`, `.io`, `.co`, and `.app` were all registered,
+as was `roboxing.com`. Every short one-word alternative checked (`clank`, `rivet`,
+`anvil`, `servo`, `kayo`, `ironside`, `robrawl.com`, `botbrawl.com`) was squatted too.
+
+`roboxing.tv` was available and is the better name anyway: it keeps the lime-X
+wordmark and everything already built, and it earns meaning the original lacked —
+robot + boxing states what the product is instead of just sounding like it might.
+`.tv` also happens to be the correct TLD for a broadcast product.
+
+Rejected alternatives that were available: `klank.tv` (strongest pure brand, but a
+full rebuild of the mark), `robrawl.tv` ("brawl" undercuts the league-table framing),
+`mechbrawl.com` (cheaper .com, but "mech" means *piloted* machines — these are
+autonomous humanoids, so it misdescribes the sport).
+
+Note `.tv` renews at roughly $35–40/yr rather than a .com's ~$11.
 
 ### What a bout result holds
 
@@ -136,7 +155,7 @@ And: any content we do not hold rights to.
   geo-blocking a contractual requirement rather than a feature. `events.allowed_countries`
   carries the list through to Cloudflare Stream — but we need the actual list in writing.
 - **Commentary language.** If the source feed is Mandarin, a US audience needs either
-  an English feed from the organizer or a Robox commentary track. Worth raising early;
+  an English feed from the organizer or a Roboxing commentary track. Worth raising early;
   it may be a selling point rather than a problem.
 - **What the league actually records per bout.** Drives what gets promoted out of
   `stats_json` into real columns.
