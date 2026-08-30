@@ -42,7 +42,20 @@ async function resolvePlayback(
   eventId: number,
   status: string,
   allowedCountries: string[] | null,
-): Promise<{ url: string | null; reason?: string }> {
+): Promise<{ url: string | null; reason?: string; direct?: boolean }> {
+  const stream = await getStreamForEvent(eventId);
+
+  // A directly-supplied HLS manifest wins over everything else.
+  //
+  // Two real uses: verifying the player against a public test stream without
+  // paying for a Stream subscription there is nothing yet to broadcast into,
+  // and the case where a rights holder hands over a plain HLS URL rather than
+  // an RTMP feed to restream. Neither needs signing, because neither is a
+  // Cloudflare asset we control.
+  if (stream?.cfPlaybackHlsUrl) {
+    return { url: stream.cfPlaybackHlsUrl, direct: true };
+  }
+
   if (status === "scheduled") {
     return { url: null, reason: "This event has not started yet." };
   }
@@ -50,7 +63,6 @@ async function resolvePlayback(
     return { url: null, reason: "This event was cancelled." };
   }
 
-  const stream = await getStreamForEvent(eventId);
   if (!stream) {
     return {
       url: null,
@@ -146,6 +158,8 @@ export default async function WatchEventPage(
         playbackUrl={playback.url}
         posterUrl={event.posterUrl}
         unavailableReason={playback.reason}
+        // A direct URL is not ours to re-sign, so the player must not try.
+        directSource={playback.direct ?? false}
       />
 
       {isScheduled ? (

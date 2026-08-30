@@ -14,7 +14,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "hash-password": "tsx scripts/hash-password.ts"
+    "hash-password": "tsx scripts/hash-password.ts",
+    "set-test-stream": "tsx scripts/set-test-stream.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

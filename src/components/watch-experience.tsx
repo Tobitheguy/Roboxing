@@ -49,6 +49,7 @@ export function WatchExperience({
   playbackUrl,
   posterUrl,
   unavailableReason,
+  directSource = false,
 }: {
   eventSlug: string;
   initialBouts: BoutDetail[];
@@ -57,6 +58,11 @@ export function WatchExperience({
   playbackUrl: string | null;
   posterUrl?: string | null;
   unavailableReason?: string;
+  /**
+   * The manifest came from outside Cloudflare, so there is no token to renew
+   * and no point asking our own endpoint for one.
+   */
+  directSource?: boolean;
 }) {
   const [eventStatus, setEventStatus] = useState<EventStatus>(initialEventStatus);
   const [playback, setPlayback] = useState<string | null>(playbackUrl);
@@ -163,7 +169,7 @@ export function WatchExperience({
             src={playback}
             poster={posterUrl}
             isLive={isLive}
-            onRefreshSrc={fetchPlayback}
+            onRefreshSrc={directSource ? undefined : fetchPlayback}
           />
         ) : (
           <div className="border-line bg-surface relative aspect-video w-full overflow-hidden rounded-lg border">
