@@ -9,6 +9,7 @@ import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageShell } from "@/components/page-shell";
 import { WatchExperience } from "@/components/watch-experience";
+import { checkEventAccess } from "@/lib/access";
 import { getAppUrl } from "@/lib/app-url";
 import {
   getBoutsForEvent,
@@ -38,11 +39,39 @@ export async function generateMetadata(
  * bookmarks the page during the fight finds the replay there afterwards, which
  * is the whole reason the route is not split into /live and /replay.
  */
+type PlaybackResult = {
+  url: string | null;
+  reason?: string;
+  direct?: boolean;
+  /** Set when access was refused, so the UI can offer the right button. */
+  blocked?: "sign_in_required" | "subscription_required";
+};
+
 async function resolvePlayback(
-  eventId: number,
-  status: string,
-  allowedCountries: string[] | null,
-): Promise<{ url: string | null; reason?: string; direct?: boolean }> {
+  event: {
+    id: number;
+    status: string;
+    access: "free" | "subscription";
+    startsAt: Date;
+    allowedCountries: string[] | null;
+  },
+): Promise<PlaybackResult> {
+  const { id: eventId, status, allowedCountries } = event;
+
+  // Entitlement before anything else. Resolving a URL first and hiding it in
+  // the UI would still put a working manifest in the page's payload.
+  const decision = await checkEventAccess(event);
+  if (!decision.allowed) {
+    return {
+      url: null,
+      blocked: decision.reason,
+      reason:
+        decision.reason === "sign_in_required"
+          ? "Sign in to watch this event."
+          : "This event is included with a Roboxing subscription.",
+    };
+  }
+
   const stream = await getStreamForEvent(eventId);
 
   // A directly-supplied HLS manifest wins over everything else.
@@ -113,7 +142,13 @@ export default async function WatchEventPage(
   const { event, competitionSlug, competitionName } = row;
   const [bouts, playback] = await Promise.all([
     getBoutsForEvent(event.id),
-    resolvePlayback(event.id, event.status, event.allowedCountries),
+    resolvePlayback({
+      id: event.id,
+      status: event.status,
+      access: event.access,
+      startsAt: event.startsAt,
+      allowedCountries: event.allowedCountries,
+    }),
   ]);
 
   const isScheduled = event.status === "scheduled";
@@ -160,6 +195,7 @@ export default async function WatchEventPage(
         unavailableReason={playback.reason}
         // A direct URL is not ours to re-sign, so the player must not try.
         directSource={playback.direct ?? false}
+        blocked={playback.blocked}
       />
 
       {isScheduled ? (

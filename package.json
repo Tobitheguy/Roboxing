@@ -14,10 +14,11 @@
     "db:seed": "tsx src/db/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "hash-password": "tsx scripts/hash-password.ts",
     "set-test-stream": "tsx scripts/set-test-stream.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.8.3",
+    "@clerk/themes": "^2.4.57",
     "@neondatabase/serverless": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

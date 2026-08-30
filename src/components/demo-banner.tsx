@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { DEMO_COMPETITION_SLUG } from "@/db/constants";
 import { competitions } from "@/db/schema";
+import { rethrowControlFlow } from "@/lib/next-errors";
 
 /**
  * Site-wide notice that the data on screen is invented.
@@ -37,6 +38,10 @@ export async function DemoBanner() {
     // suspend. Without this try/catch a transient Neon failure here would
     // propagate out of the root layout and take down every page on the site,
     // not just this banner. Degrade to hiding the notice instead.
+    //
+    // Next's own signals (redirect, notFound, dynamic-usage) are rethrown —
+    // catching those would silently break the thing they are signalling.
+    rethrowControlFlow(error);
     console.error("[DemoBanner] could not determine demo state:", error);
     return null;
   }

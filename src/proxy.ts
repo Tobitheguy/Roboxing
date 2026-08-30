@@ -1,48 +1,36 @@
-import { NextResponse, type NextRequest } from "next/server";
-
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth-tokens";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 /**
- * Gate for everything under /admin and /api/admin.
+ * Request gate.
  *
- * Named `proxy` rather than `middleware`: Next 16 renamed the convention, and
- * the proxy runtime is Node, which this needs — the session check uses
- * node:crypto for a constant-time HMAC comparison.
+ * Named `proxy` rather than `middleware` because Next 16 renamed the
+ * convention. Clerk's handler works unchanged — it is an ordinary request
+ * handler, and the proxy runtime is Node, which it needs.
  *
- * This is the SECOND of two independent layers. Every /api/admin route also
- * calls requireAdmin() itself. That redundancy is deliberate: a single missed
- * check on a single route is the entire breach, and these two layers fail in
- * different ways — a matcher typo here is caught by the route, a forgotten
- * guard in a route is caught here.
+ * This layer only establishes that an administrator is SIGNED IN. Whether that
+ * person is on the admin allowlist is checked again by requireAdmin() in every
+ * route and page, because the allowlist lives in an environment variable that
+ * this layer would have to fetch a Clerk user to compare against — a network
+ * call on every admin request, to duplicate a check the handler does anyway.
+ *
+ * Two layers that fail differently: a matcher typo here is caught by the
+ * handler, a forgotten check in a handler is caught here.
  */
-export function proxy(request: NextRequest) {
-  // Next's matcher is case-insensitive, so /API/admin/... reaches this
-  // function. Comparing case-sensitively below would send an API client an
-  // HTML redirect where it expects JSON — access is denied either way, but
-  // the wrong shape of denial breaks the caller's error handling.
-  const pathname = request.nextUrl.pathname.toLowerCase();
+const isAdminRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"]);
 
-  // The login page itself must stay reachable, or there is no way in.
-  if (pathname === "/admin/login") return NextResponse.next();
+export default clerkMiddleware(async (auth, request) => {
+  if (!isAdminRoute(request)) return;
 
-  const session = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
-  if (session) return NextResponse.next();
-
-  if (pathname.startsWith("/api/admin")) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-
-  const loginUrl = new URL("/admin/login", request.url);
-  // Send them back where they were headed after signing in — but only ever to
-  // a path on this site. An open redirect here would turn the login page into
-  // a phishing tool that borrows Roboxing's domain.
-  loginUrl.searchParams.set("next", pathname);
-  return NextResponse.redirect(loginUrl);
-}
+  // Redirects a browser to sign-in; returns 401 for an API request. Clerk
+  // picks the right one from the Accept header.
+  await auth.protect();
+});
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    // Everything except Next internals and static files, so the auth context
+    // is available to any page that wants to know who is watching.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
 };

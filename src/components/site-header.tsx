@@ -5,7 +5,9 @@ import { connection } from "next/server";
 import { LivePill } from "@/components/live-pill";
 import { MainNav } from "@/components/main-nav";
 import { RoboxingMark } from "@/components/roboxing-mark";
+import { ViewerMenu } from "@/components/viewer-menu";
 import { getLiveNow, type LiveNow } from "@/lib/live";
+import { rethrowControlFlow } from "@/lib/next-errors";
 
 /**
  * Resolves "is anything broadcasting right now" for the header pill.
@@ -30,7 +32,9 @@ async function LiveNowPill({ variant }: { variant: "mobile" | "desktop" }) {
   } catch (error) {
     // Suspense catches suspensions, not thrown errors. This component renders
     // inside the root layout, so an uncaught Neon failure here would 500 every
-    // page on the site. Losing the badge is a far better outcome.
+    // page on the site. Losing the badge is a far better outcome — but Next's
+    // own control-flow signals must still get through.
+    rethrowControlFlow(error);
     console.error("[SiteHeader] could not resolve live state:", error);
     return null;
   }
@@ -64,9 +68,16 @@ export function SiteHeader() {
 
         <MainNav className="md:ml-2" />
 
-        <div className="ml-auto hidden md:block">
-          <Suspense fallback={null}>
-            <LiveNowPill variant="desktop" />
+        <div className="ml-auto flex items-center gap-3">
+          <div className="hidden md:block">
+            <Suspense fallback={null}>
+              <LiveNowPill variant="desktop" />
+            </Suspense>
+          </div>
+          {/* Suspense because ViewerMenu reads Clerk and the database; the
+              shell must paint without waiting on either. */}
+          <Suspense fallback={<div className="size-8" />}>
+            <ViewerMenu />
           </Suspense>
         </div>
       </div>

@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarClock, Radio } from "lucide-react";
 
-import { logout } from "@/app/admin/actions";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
-import { getSession } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { getCompetitions, getUpcomingEvents } from "@/lib/queries";
 
 export const metadata: Metadata = {
@@ -25,7 +24,7 @@ export const metadata: Metadata = {
  * and the import tool are the next step's work.
  */
 export default async function AdminPage() {
-  const session = await getSession();
+  const viewer = await getViewer();
   const [events, competitions] = await Promise.all([
     getUpcomingEvents(),
     getCompetitions(),
@@ -36,16 +35,7 @@ export default async function AdminPage() {
       <PageHeading
         eyebrow="Admin"
         title="Run of show"
-        description={
-          session ? `Signed in as ${session.email}.` : undefined
-        }
-        action={
-          <form action={logout}>
-            <Button type="submit" variant="outline">
-              Sign out
-            </Button>
-          </form>
-        }
+        description={viewer ? `Signed in as ${viewer.email}.` : undefined}
       />
 
       <Card>

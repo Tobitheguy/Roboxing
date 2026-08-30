@@ -7,6 +7,7 @@ import {
   boutResults,
   bouts,
   competitions,
+  entitlements,
   events,
   robots,
   streams,
@@ -329,6 +330,26 @@ export const getEventsForCompetition = cache(async (competitionId: number) => {
     .from(events)
     .where(eq(events.competitionId, competitionId))
     .orderBy(asc(events.startsAt));
+});
+
+/**
+ * Every entitlement a viewer holds.
+ *
+ * Returns them all rather than filtering in SQL by the event's start time.
+ * Nobody accumulates more than a handful of rows, and doing the window
+ * comparison in one tested pure function beats splitting the paywall's logic
+ * across a query and a function where the two can disagree.
+ */
+export const getEntitlementsForUser = cache(async (userId: number) => {
+  return db
+    .select({
+      kind: entitlements.kind,
+      eventId: entitlements.eventId,
+      startsAt: entitlements.startsAt,
+      endsAt: entitlements.endsAt,
+    })
+    .from(entitlements)
+    .where(eq(entitlements.userId, userId));
 });
 
 /** The Cloudflare stream record for an event, if one has been created. */

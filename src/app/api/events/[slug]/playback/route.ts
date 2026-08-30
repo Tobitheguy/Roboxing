@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { events, streams } from "@/db/schema";
+import { checkEventAccess } from "@/lib/access";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   createSignedToken,
@@ -47,10 +48,14 @@ export async function GET(
 
   const rows = await db
     .select({
+      id: events.id,
       status: events.status,
+      access: events.access,
+      startsAt: events.startsAt,
       allowedCountries: events.allowedCountries,
       liveInputId: streams.cfLiveInputId,
       recordingUid: streams.cfRecordingUid,
+      directHlsUrl: streams.cfPlaybackHlsUrl,
     })
     .from(events)
     .leftJoin(streams, eq(streams.eventId, events.id))
@@ -62,6 +67,35 @@ export async function GET(
     return Response.json(
       { error: "Event not found" },
       { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  // THE PAYWALL. Checked here, not only on the page — this endpoint returns a
+  // working manifest URL, so a check that lives only in the UI protects
+  // nothing from anyone who opens the network tab once.
+  const decision = await checkEventAccess({
+    id: row.id,
+    access: row.access,
+    startsAt: row.startsAt,
+  });
+
+  if (!decision.allowed) {
+    return Response.json(
+      { error: "Access denied", reason: decision.reason },
+      {
+        // 401 when signing in might fix it, 403 when it will not. Different
+        // problems, different buttons in the UI.
+        status: decision.reason === "sign_in_required" ? 401 : 403,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  // A directly-supplied manifest is not a Cloudflare asset and needs no token.
+  if (row.directHlsUrl) {
+    return Response.json(
+      { url: row.directHlsUrl },
+      { headers: { "Cache-Control": "no-store" } },
     );
   }
 
@@ -108,7 +142,15 @@ export async function GET(
           //
           // max-age=0 keeps browsers from holding a token past its usefulness
           // while still letting the shared cache absorb the fan-out.
-          "Cache-Control": "public, max-age=0, s-maxage=240, stale-while-revalidate=60",
+          //
+          // ONLY for free events. Once an event is paid, a shared cache entry
+          // would hand the first subscriber's manifest URL to every subsequent
+          // caller — including ones the paywall just refused. Correctness
+          // before fan-out.
+          "Cache-Control":
+            row.access === "free"
+              ? "public, max-age=0, s-maxage=240, stale-while-revalidate=60"
+              : "private, no-store",
         },
       },
     );

@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MonitorPlay, Swords } from "lucide-react";
+import Link from "next/link";
+import { Lock, MonitorPlay, Swords } from "lucide-react";
 
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { RoboxingPlayer } from "@/components/roboxing-player";
+import { Button } from "@/components/ui/button";
 import type { BoutDetail } from "@/lib/queries";
 
 /** Poll cadence while broadcasting. */
@@ -50,6 +52,7 @@ export function WatchExperience({
   posterUrl,
   unavailableReason,
   directSource = false,
+  blocked,
 }: {
   eventSlug: string;
   initialBouts: BoutDetail[];
@@ -63,6 +66,12 @@ export function WatchExperience({
    * and no point asking our own endpoint for one.
    */
   directSource?: boolean;
+  /**
+   * Set when the paywall refused access. Drives which call to action is shown
+   * — "sign in" and "subscribe" are different problems, and offering the wrong
+   * one to an existing subscriber is how you generate a refund request.
+   */
+  blocked?: "sign_in_required" | "subscription_required";
 }) {
   const [eventStatus, setEventStatus] = useState<EventStatus>(initialEventStatus);
   const [playback, setPlayback] = useState<string | null>(playbackUrl);
@@ -102,6 +111,8 @@ export function WatchExperience({
     // Everything else does, including "scheduled": that is precisely the case
     // where the page must notice the broadcast starting.
     if (isFinished) return;
+    // Nothing to poll for a viewer who cannot watch this event.
+    if (blocked) return;
 
     let cancelled = false;
     const controller = new AbortController();
@@ -144,7 +155,7 @@ export function WatchExperience({
       controller.abort();
       clearInterval(id);
     };
-  }, [eventSlug, isLive, isFinished, fetchPlayback]);
+  }, [eventSlug, isLive, isFinished, blocked, fetchPlayback]);
 
   // Merge polled state over the server-rendered bouts. A bout's identity,
   // robots, and teams never change mid-event; only status and result do.
@@ -175,15 +186,33 @@ export function WatchExperience({
           <div className="border-line bg-surface relative aspect-video w-full overflow-hidden rounded-lg border">
             <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
               <div className="text-ink-dim border-line bg-surface-2 mb-4 flex size-12 items-center justify-center rounded-lg border">
-                <MonitorPlay className="size-6" />
+                {blocked ? (
+                  <Lock className="size-6" />
+                ) : (
+                  <MonitorPlay className="size-6" />
+                )}
               </div>
               <p className="font-display text-ink text-base font-semibold uppercase">
-                {isLive ? "Stream not connected" : "Not playing"}
+                {blocked
+                  ? "Subscribers only"
+                  : isLive
+                    ? "Stream not connected"
+                    : "Not playing"}
               </p>
               <p className="text-ink-muted mt-2 max-w-sm text-sm">
                 {unavailableReason ??
                   "There is nothing to play for this event yet."}
               </p>
+              {blocked === "sign_in_required" ? (
+                <Button asChild size="lg" className="mt-6">
+                  <Link href="/sign-in">Sign in</Link>
+                </Button>
+              ) : null}
+              {blocked === "subscription_required" ? (
+                <Button asChild size="lg" className="mt-6">
+                  <Link href="/subscribe">See plans</Link>
+                </Button>
+              ) : null}
             </div>
           </div>
         )}
