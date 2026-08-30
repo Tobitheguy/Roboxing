@@ -9,6 +9,7 @@ import {
   competitions,
   events,
   robots,
+  streams,
   teams,
   type BoutMethodValue,
 } from "@/db/schema";
@@ -328,6 +329,16 @@ export const getEventsForCompetition = cache(async (competitionId: number) => {
     .from(events)
     .where(eq(events.competitionId, competitionId))
     .orderBy(asc(events.startsAt));
+});
+
+/** The Cloudflare stream record for an event, if one has been created. */
+export const getStreamForEvent = cache(async (eventId: number) => {
+  const rows = await db
+    .select()
+    .from(streams)
+    .where(eq(streams.eventId, eventId))
+    .limit(1);
+  return rows[0] ?? null;
 });
 
 /* -------------------------------------------------------------------------- */

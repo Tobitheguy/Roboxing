@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MonitorPlay, Swords } from "lucide-react";
 
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { Badge } from "@/components/badge";
-import { BoutList } from "@/components/bout-row";
-import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { Countdown } from "@/components/countdown";
-import { EmptyState } from "@/components/empty-state";
 import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageShell } from "@/components/page-shell";
+import { WatchExperience } from "@/components/watch-experience";
 import { getAppUrl } from "@/lib/app-url";
-import { getBoutsForEvent, getEventBySlug } from "@/lib/queries";
+import {
+  getBoutsForEvent,
+  getEventBySlug,
+  getStreamForEvent,
+} from "@/lib/queries";
+import { createSignedToken, hlsUrl, isStreamConfigured } from "@/lib/stream";
 
 export async function generateMetadata(
   props: PageProps<"/watch/[slug]">,
@@ -28,6 +30,67 @@ export async function generateMetadata(
   };
 }
 
+/**
+ * Resolve what this event should play right now.
+ *
+ * A live event plays its input; a finished one plays the recording Cloudflare
+ * produced when the broadcast ended. Both at the same URL — a viewer who
+ * bookmarks the page during the fight finds the replay there afterwards, which
+ * is the whole reason the route is not split into /live and /replay.
+ */
+async function resolvePlayback(
+  eventId: number,
+  status: string,
+  allowedCountries: string[] | null,
+): Promise<{ url: string | null; reason?: string }> {
+  if (status === "scheduled") {
+    return { url: null, reason: "This event has not started yet." };
+  }
+  if (status === "cancelled") {
+    return { url: null, reason: "This event was cancelled." };
+  }
+
+  const stream = await getStreamForEvent(eventId);
+  if (!stream) {
+    return {
+      url: null,
+      reason: "No broadcast has been set up for this event yet.",
+    };
+  }
+
+  if (!isStreamConfigured()) {
+    return {
+      url: null,
+      reason: "Streaming is not configured on this deployment.",
+    };
+  }
+
+  const uid =
+    status === "completed" && stream.cfRecordingUid
+      ? stream.cfRecordingUid
+      : stream.cfLiveInputId;
+
+  if (!uid) {
+    return {
+      url: null,
+      reason:
+        status === "completed"
+          ? "The recording for this event is not ready yet."
+          : "The broadcast has not connected yet.",
+    };
+  }
+
+  try {
+    const token = await createSignedToken(uid, { allowedCountries });
+    return { url: hlsUrl(token) };
+  } catch (error) {
+    // A Cloudflare outage must not take the page down — the card and the
+    // results are still worth showing.
+    console.error("[watch] could not mint playback URL:", error);
+    return { url: null, reason: "The stream is temporarily unavailable." };
+  }
+}
+
 export default async function WatchEventPage(
   props: PageProps<"/watch/[slug]">,
 ) {
@@ -36,11 +99,12 @@ export default async function WatchEventPage(
   if (!row) notFound();
 
   const { event, competitionSlug, competitionName } = row;
-  const bouts = await getBoutsForEvent(event.id);
-  const appUrl = getAppUrl();
+  const [bouts, playback] = await Promise.all([
+    getBoutsForEvent(event.id),
+    resolvePlayback(event.id, event.status, event.allowedCountries),
+  ]);
 
-  const isLive = event.status === "live";
-  const isCompleted = event.status === "completed";
+  const isScheduled = event.status === "scheduled";
   const location = [event.venue, event.city, event.country]
     .filter(Boolean)
     .join(", ");
@@ -60,7 +124,7 @@ export default async function WatchEventPage(
           <h1 className="font-display text-hero text-ink uppercase">
             {event.name}
           </h1>
-          {isLive ? <LivePill status="live" /> : null}
+          {event.status === "live" ? <LivePill status="live" /> : null}
           {event.status === "cancelled" ? (
             <Badge variant="danger">Cancelled</Badge>
           ) : null}
@@ -71,86 +135,35 @@ export default async function WatchEventPage(
             timeZone={event.timezone}
             city={event.city}
           />
-          {location ? (
-            <span className="text-ink-dim"> · {location}</span>
-          ) : null}
+          {location ? <span className="text-ink-dim"> · {location}</span> : null}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        {/* ------------------------------------------------------------- */}
-        {/* Player. The real one lands in step 4 — this is the slot it     */}
-        {/* occupies, sized at 16:9 so the layout does not shift when it   */}
-        {/* arrives.                                                       */}
-        <div>
-          <div className="border-line bg-surface relative aspect-video w-full overflow-hidden rounded-lg border">
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              <div className="text-ink-dim border-line bg-surface-2 mb-4 flex size-12 items-center justify-center rounded-lg border">
-                <MonitorPlay className="size-6" />
-              </div>
-              <p className="font-display text-ink text-base font-semibold uppercase">
-                {isLive
-                  ? "Stream not connected"
-                  : isCompleted
-                    ? "No recording yet"
-                    : "Not started"}
-              </p>
-              <p className="text-ink-muted mt-2 max-w-sm text-sm">
-                The Roboxing player is wired up in the next build step. Until
-                then this page carries the card and the results.
-              </p>
-            </div>
-          </div>
+      <WatchExperience
+        eventSlug={event.slug}
+        initialBouts={bouts}
+        initialEventStatus={event.status}
+        playbackUrl={playback.url}
+        posterUrl={event.posterUrl}
+        unavailableReason={playback.reason}
+      />
 
-          {!isLive && !isCompleted ? (
-            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Countdown
-                startsAt={event.startsAt.toISOString()}
-                className="font-display text-volt text-2xl font-bold"
-              />
-              <AddToCalendar
-                eventSlug={event.slug}
-                eventName={event.name}
-                competitionName={competitionName}
-                startsAt={event.startsAt}
-                location={location}
-                appUrl={appUrl}
-              />
-            </div>
-          ) : null}
-        </div>
-
-        {/* ------------------------------------------------------------- */}
-        {/* Fight card.                                                    */}
-        <Card className="lg:sticky lg:top-24 lg:self-start">
-          <CardHeader
-            title="Fight card"
-            action={
-              <span className="text-ink-dim tabular text-xs">
-                {bouts.length} {bouts.length === 1 ? "bout" : "bouts"}
-              </span>
-            }
+      {isScheduled ? (
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <Countdown
+            startsAt={event.startsAt.toISOString()}
+            className="font-display text-volt text-2xl font-bold"
           />
-          <CardBodyFlush>
-            {bouts.length > 0 ? (
-              <BoutList bouts={bouts} />
-            ) : (
-              <EmptyState
-                icon={<Swords />}
-                title="Card not announced"
-                description="Bouts appear here once the organizer confirms the running order."
-              />
-            )}
-          </CardBodyFlush>
-          {bouts.length > 0 ? (
-            <CardBody className="border-line border-t">
-              <p className="text-ink-dim text-xs">
-                Listed in running order — the last bout is the main event.
-              </p>
-            </CardBody>
-          ) : null}
-        </Card>
-      </div>
+          <AddToCalendar
+            eventSlug={event.slug}
+            eventName={event.name}
+            competitionName={competitionName}
+            startsAt={event.startsAt}
+            location={location}
+            appUrl={getAppUrl()}
+          />
+        </div>
+      ) : null}
     </PageShell>
   );
 }
