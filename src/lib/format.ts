@@ -27,6 +27,31 @@ export function formatDateLong(date: Date, timeZone: string): string {
   }).format(date);
 }
 
+/** Calendar date in a given zone as YYYY-MM-DD. en-CA is the locale that yields it. */
+export function isoDateIn(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/**
+ * Whether the same instant falls on a different calendar day in two zones,
+ * as -1, 0, or +1 relative to `from`.
+ *
+ * This is the whole reason a US audience watching an Asian league needs care:
+ * 1:30 PM Sunday in Los Angeles is 4:30 AM Monday in Singapore. Printing one
+ * zone's date beside the other zone's time sends someone on the wrong day.
+ */
+export function dayOffset(date: Date, from: string, to: string): -1 | 0 | 1 {
+  const a = isoDateIn(date, from);
+  const b = isoDateIn(date, to);
+  if (a === b) return 0;
+  return b > a ? 1 : -1;
+}
+
 /** e.g. "8:00 PM" */
 export function formatTime(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", {

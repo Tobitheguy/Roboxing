@@ -67,6 +67,20 @@ const ROBOTS = [
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * An instant N days from now, pinned to a specific UTC hour.
+ *
+ * The UTC hour is chosen so the event lands at a plausible evening slot in its
+ * OWN venue timezone — 02:00 UTC is 7pm in Los Angeles, 12:00 UTC is 8pm in
+ * Singapore. Seeding at an arbitrary time of day produced a demo advertising a
+ * 4:30 AM fight night, which undermines the thing it is demonstrating.
+ */
+function daysFromNow(days: number, utcHour: number): Date {
+  const date = new Date(Date.now() + days * DAY);
+  date.setUTCHours(utcHour, 0, 0, 0);
+  return date;
+}
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -78,9 +92,6 @@ async function main() {
 
   const db = drizzle(neon(url));
 
-  // Guard: this script wipes and rewrites the demo competition. If the
-  // database contains any OTHER competition, something real is in here and we
-  // stop rather than destroying it.
   // Guard. This script deletes rows, so before it does anything it checks that
   // everything it is about to delete is data it put there itself.
   //
@@ -202,7 +213,7 @@ async function main() {
         country: "US",
         // Deliberately relative to now, so the demo never drifts into a state
         // where "upcoming" is in the past and the countdown renders negative.
-        startsAt: new Date(now - 15 * DAY),
+        startsAt: daysFromNow(-15, 2), // 7pm Los Angeles
         timezone: "America/Los_Angeles",
         status: "completed",
       },
@@ -213,7 +224,7 @@ async function main() {
         venue: "Meridian Hall",
         city: "Singapore",
         country: "SG",
-        startsAt: new Date(now + 21 * DAY),
+        startsAt: daysFromNow(21, 12), // 8pm Singapore
         // A non-US venue on purpose: it exercises the dual-timezone rendering
         // ("8:00 AM ET · 8:00 PM Singapore") that a US audience watching an
         // Asian league actually needs.
