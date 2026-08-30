@@ -1,26 +1,277 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ==========================================================================
+   ROBOX DESIGN TOKENS — single source of truth
+
+   Every colour, size, and radius in the product is defined in this file. A
+   real brand pass later should be an edit here, not a rewrite of components.
+
+   The product is video-first, so the UI is permanently dark: a light chrome
+   fights the player for attention. There is no light mode and no theme
+   toggle — `<html class="dark">` is set so shadcn's `dark:` variants resolve,
+   but both themes resolve to the same values.
+
+   THE ONE RULE: --color-live (#FF2D2D) means "broadcasting right now".
+   Never a button, never an error, never decoration. If it is red on this
+   site, something is live. That rule is worth more than the colour.
+   Errors use --destructive. Live-edge drift uses --color-drift.
+   ========================================================================== */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* --- Surfaces: a four-step ramp from canvas up to raised ------------- */
+  --color-canvas: #0b0b0f; /* page background */
+  --color-surface: #15151c; /* cards, table rows, header */
+  --color-surface-2: #1e1e27; /* hover, popovers, inputs */
+  --color-line: #26262f; /* default hairline border */
+  --color-line-strong: #3a3a47; /* emphasised divider */
+
+  /* --- Ink ------------------------------------------------------------- */
+  --color-ink: #ffffff; /* primary text */
+  --color-ink-muted: #a1a1ae; /* secondary text, table headers */
+  --color-ink-dim: #6b6b78; /* metadata, disabled */
+
+  /* --- Accent ---------------------------------------------------------- */
+  /* Named "volt" rather than "accent" on purpose: shadcn already owns
+     --color-accent for its hover backgrounds, and overriding that would turn
+     every hover state lime. */
+  --color-volt: #c8ff00;
+  --color-volt-dim: #9fcc00; /* hover/pressed on volt fills */
+  --color-volt-ink: #0b0b0f; /* text on a volt fill — never white */
+
+  /* --- State ----------------------------------------------------------- */
+  --color-live: #ff2d2d; /* LIVE ONLY. See the rule above. */
+  --color-drift: #ffb020; /* viewer has fallen behind the live edge */
+  --color-win: #c8ff00;
+  --color-loss: #6b6b78;
+
+  /* --- Type ------------------------------------------------------------
+     Display face carries names, scores, and numbers. UI face carries
+     everything else. Mono is for timecodes, RTMP keys, and IDs. */
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Fluid so a fight card headline works on a 375px phone and a 27" desktop
+     without a pile of breakpoint overrides. */
+  --text-display: clamp(2.75rem, 8vw, 5.5rem);
+  --text-display--line-height: 0.88;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+
+  --text-hero: clamp(2rem, 5vw, 3.25rem);
+  --text-hero--line-height: 0.95;
+  --text-hero--letter-spacing: -0.015em;
+  --text-hero--font-weight: 700;
+
+  --text-title: clamp(1.375rem, 2.5vw, 1.875rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  /* Small all-caps label above a section. Used constantly. */
+  --text-eyebrow: 0.6875rem;
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.14em;
+  --text-eyebrow--font-weight: 600;
+
+  /* --- Radii — tight, because the aesthetic is precision not softness --- */
+  --radius: 0.5rem;
+
+  /* --- Motion ---------------------------------------------------------- */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --------------------------------------------------------------------------
+   shadcn semantic variables, mapped onto the Robox palette above so that any
+   component pulled from the registry inherits the brand without edits.
+   -------------------------------------------------------------------------- */
+:root,
+.dark {
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+
+  --card: var(--color-surface);
+  --card-foreground: var(--color-ink);
+
+  --popover: var(--color-surface-2);
+  --popover-foreground: var(--color-ink);
+
+  /* Primary is volt — the one high-energy fill in the system. */
+  --primary: var(--color-volt);
+  --primary-foreground: var(--color-volt-ink);
+
+  --secondary: var(--color-surface-2);
+  --secondary-foreground: var(--color-ink);
+
+  --muted: var(--color-surface-2);
+  --muted-foreground: var(--color-ink-muted);
+
+  /* shadcn's "accent" is a hover background, not the brand accent. */
+  --accent: var(--color-line);
+  --accent-foreground: var(--color-ink);
+
+  /* Errors and destructive actions. Distinct from --color-live by design. */
+  --destructive: #ff4d4f;
+
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-volt);
+
+  --chart-1: var(--color-volt);
+  --chart-2: #7dd3fc;
+  --chart-3: #a78bfa;
+  --chart-4: #fb923c;
+  --chart-5: var(--color-ink-muted);
+
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-volt);
+  --sidebar-primary-foreground: var(--color-volt-ink);
+  --sidebar-accent: var(--color-surface-2);
+  --sidebar-accent-foreground: var(--color-ink);
+  --sidebar-border: var(--color-line);
+  --sidebar-ring: var(--color-volt);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
+
+/* Standings and stat columns must not jitter as numbers change during a live
+   event. Every numeric column gets this. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Horizontally scrollable strips (the mobile nav) without a visible scrollbar. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* The small all-caps section label used throughout the site. */
+@utility eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  letter-spacing: var(--text-eyebrow--letter-spacing);
+  font-weight: var(--text-eyebrow--font-weight);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Slow breathing pulse for the live dot. Deliberately not a fast blink —
+   a blinking red dot on every page is exhausting to sit next to for an hour. */
+@utility pulse-live {
+  animation: robox-pulse 2s var(--ease-out-quint) infinite;
+}
+
+@keyframes robox-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    /* Vertical rhythm is 8px: prefer even Tailwind spacing steps
+       (2, 4, 6, 8, 12, 16, 24) over odd ones. */
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  /* Display face is for names, scores, and numbers — not body copy. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
+  ::selection {
+    background: var(--color-volt);
+    color: var(--color-volt-ink);
+  }
+
+  /* A visible focus ring is not optional. Keyboard users navigate the
+     standings tables and the player controls. */
+  :focus-visible {
+    outline: 2px solid var(--color-volt);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }

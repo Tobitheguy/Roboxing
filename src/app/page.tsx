@@ -1,69 +1,85 @@
-import Image from "next/image";
+import Link from "next/link";
+import { CalendarClock, ListOrdered, Trophy } from "lucide-react";
 
-export default function Home() {
+import { Card, CardHeader, CardBodyFlush } from "@/components/card";
+import { EmptyState } from "@/components/empty-state";
+import { PageShell } from "@/components/page-shell";
+import { RoboxMark } from "@/components/robox-mark";
+
+/**
+ * Home.
+ *
+ * The layout below is the real one — next event, then latest results, then a
+ * standings snapshot — with empty states where the queries will go in step 3.
+ * Nothing here is sample data: the site is publicly reachable and a fabricated
+ * fixture list would be indistinguishable from a real one.
+ */
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <PageShell>
+      <section className="border-line bg-surface relative overflow-hidden rounded-lg border px-6 py-12 sm:px-10 sm:py-16">
+        <p className="eyebrow mb-4">Live humanoid robot combat</p>
+        <h1 className="text-display font-display text-ink max-w-3xl uppercase">
+          Every fight.
+          <br />
+          <span className="text-volt">One place.</span>
+        </h1>
+        <p className="text-ink-muted mt-6 max-w-xl text-base">
+          Streams, league standings, team rosters, and full fight history for
+          humanoid robot combat — treated like the sport it has become.
+        </p>
+        <p className="text-ink-dim mt-8 max-w-xl text-xs">
+          Robox is in build. There are no events loaded yet, and no broadcast
+          rights are in place. See the{" "}
+          <Link
+            href="/styleguide"
+            className="text-volt underline underline-offset-4"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+            styleguide
+          </Link>{" "}
+          for the design system.
+        </p>
+      </section>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title="Next event" />
+          <CardBodyFlush>
+            <EmptyState
+              icon={<CalendarClock />}
+              title="No events scheduled"
+              description="Once a competition and its fixtures are loaded, the next event and a countdown appear here."
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </CardBodyFlush>
+        </Card>
+
+        <Card>
+          <CardHeader title="Standings" />
+          <CardBodyFlush>
+            <EmptyState
+              icon={<ListOrdered />}
+              title="No standings yet"
+              description="Standings are computed from results, so the table appears with the first recorded bout."
+            />
+          </CardBodyFlush>
+        </Card>
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader title="Latest results" />
+        <CardBodyFlush>
+          <EmptyState
+            icon={<Trophy />}
+            title="No results recorded"
+            description="Every completed bout will show here with its winner, method, and round."
+          />
+        </CardBodyFlush>
+      </Card>
+
+      <div className="text-ink-dim mt-12 flex items-center gap-2 text-xs">
+        <RoboxMark size="sm" />
+        <span>· design system v1</span>
+      </div>
+    </PageShell>
   );
 }
