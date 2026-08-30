@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -7,7 +8,6 @@ import {
   bouts,
   competitions,
   pointsRules,
-  robots,
   teams,
   type BoutMethodValue,
 } from "@/db/schema";
@@ -134,11 +134,12 @@ export function computeStandings({
     if (row) fn(row);
   };
 
-  // Defence against a join fan-out upstream producing the same bout twice.
-  // The UNIQUE constraint on bout_results.bout_id makes duplicates impossible
-  // in storage, but a mis-written join could still hand us two copies, and a
-  // silently doubled league table is the worst possible failure here: it looks
-  // plausible. Counting each bout once is one line and removes the class.
+  // Belt and braces. Every join in getStandings() is 1:1 today (all on primary
+  // keys, plus a UNIQUE bout_id), so nothing currently reachable can hand us
+  // the same bout twice. Kept because this function is public and a future
+  // caller assembling rows differently would otherwise double the table
+  // silently — which is the worst failure available here, since it looks
+  // entirely plausible.
   const seen = new Set<number>();
 
   for (const bout of boutList) {
@@ -171,9 +172,20 @@ export function computeStandings({
     }
 
     if (!DECISIVE.has(method) || winnerRobotId == null) {
-      // Defensive: the database CHECK constraint makes this unreachable, but
-      // scoring a decisive method with no winner as anything at all would be
-      // worse than skipping it.
+      // The database CHECK constraint makes this unreachable from stored data,
+      // but scoring a decisive method with no winner as anything at all would
+      // be worse than skipping it.
+      continue;
+    }
+
+    // The winner must be one of the two robots that actually fought.
+    //
+    // Nothing in the database can enforce this: a Postgres CHECK cannot
+    // reference another table, so `winner_robot_id` is free to point at any
+    // robot in the league. Without this guard the code below treats "not
+    // robot A" as "therefore robot B" and credits the win to a team that did
+    // not earn it — silently, with no error and a table that looks correct.
+    if (winnerRobotId !== bout.robotAId && winnerRobotId !== bout.robotBId) {
       continue;
     }
 
@@ -219,64 +231,76 @@ export function computeStandings({
  * the team page, and the robot's record all move together because they are all
  * reading the same rows.
  */
-export async function getStandings(competitionId: number): Promise<StandingRow[]> {
-  const robotA = alias(robots, "robot_a");
-  const robotB = alias(robots, "robot_b");
-  const teamA = alias(teams, "team_a");
-  const teamB = alias(teams, "team_b");
+export const getStandings = cache(
+  async (competitionId: number): Promise<StandingRow[]> => {
+    const teamA = alias(teams, "team_a");
+    const teamB = alias(teams, "team_b");
 
-  const rows = await db
-    .select({
-      boutId: bouts.id,
-      robotAId: bouts.robotAId,
-      robotBId: bouts.robotBId,
-      teamA: { id: teamA.id, name: teamA.name, slug: teamA.slug },
-      teamB: { id: teamB.id, name: teamB.name, slug: teamB.slug },
-      winnerRobotId: boutResults.winnerRobotId,
-      method: boutResults.method,
-    })
-    .from(bouts)
-    .innerJoin(robotA, eq(bouts.robotAId, robotA.id))
-    .innerJoin(robotB, eq(bouts.robotBId, robotB.id))
-    .innerJoin(teamA, eq(robotA.teamId, teamA.id))
-    .innerJoin(teamB, eq(robotB.teamId, teamB.id))
-    // LEFT join: an unresolved bout still appears, with a null result. The
-    // computation is what decides it scores nothing, not the query.
-    .leftJoin(boutResults, eq(boutResults.boutId, bouts.id))
-    .where(eq(bouts.competitionId, competitionId));
+    const rows = await db
+      .select({
+        boutId: bouts.id,
+        robotAId: bouts.robotAId,
+        robotBId: bouts.robotBId,
+        teamA: { id: teamA.id, name: teamA.name, slug: teamA.slug },
+        teamB: { id: teamB.id, name: teamB.name, slug: teamB.slug },
+        winnerRobotId: boutResults.winnerRobotId,
+        method: boutResults.method,
+      })
+      .from(bouts)
+      // Joined on the bout's OWN team columns, not through the robots' current
+      // team. That is the whole point of storing them: a robot transferring
+      // between teams must not retroactively move results it already earned.
+      .innerJoin(teamA, eq(bouts.teamAId, teamA.id))
+      .innerJoin(teamB, eq(bouts.teamBId, teamB.id))
+      // LEFT join: an unresolved bout still appears, with a null result. The
+      // computation is what decides it scores nothing, not the query.
+      .leftJoin(boutResults, eq(boutResults.boutId, bouts.id))
+      .where(eq(bouts.competitionId, competitionId));
 
-  const rule = await db.query.pointsRules.findFirst({
-    where: eq(pointsRules.competitionId, competitionId),
-  });
+    const rule = await db.query.pointsRules.findFirst({
+      where: eq(pointsRules.competitionId, competitionId),
+    });
 
-  // Participating teams are derived from the bouts rather than from a
-  // membership table — a team is in the competition because it has a robot
-  // booked in it, which is the only definition the data actually supports.
-  const teamMap = new Map<number, StandingsTeam>();
-  for (const r of rows) {
-    teamMap.set(r.teamA.id, r.teamA);
-    teamMap.set(r.teamB.id, r.teamB);
-  }
+    // Participating teams are derived from the bouts rather than a membership
+    // table — a team is in the competition because it has a robot booked in
+    // it, which is the only definition the data actually supports.
+    const teamMap = new Map<number, StandingsTeam>();
+    for (const r of rows) {
+      teamMap.set(r.teamA.id, r.teamA);
+      teamMap.set(r.teamB.id, r.teamB);
+    }
 
-  return computeStandings({
-    teams: [...teamMap.values()],
-    bouts: rows.map((r) => ({
-      boutId: r.boutId,
-      robotAId: r.robotAId,
-      robotBId: r.robotBId,
-      teamAId: r.teamA.id,
-      teamBId: r.teamB.id,
-      result: r.method ? { winnerRobotId: r.winnerRobotId, method: r.method } : null,
-    })),
-    rules: rule ?? DEFAULT_POINTS,
-  });
-}
+    return computeStandings({
+      teams: [...teamMap.values()],
+      bouts: rows.map((r) => ({
+        boutId: r.boutId,
+        robotAId: r.robotAId,
+        robotBId: r.robotBId,
+        teamAId: r.teamA.id,
+        teamBId: r.teamB.id,
+        // Explicit null check rather than truthiness: `method` is an enum of
+        // non-empty strings today, but a falsy-but-present value would silently
+        // turn a resolved bout into an unresolved one.
+        result:
+          r.method != null
+            ? { winnerRobotId: r.winnerRobotId, method: r.method }
+            : null,
+      })),
+      // A competition with no points_rules row falls back to the defaults.
+      // Step 5 creates the competition and its rule in one transaction so this
+      // does not silently happen for a real league.
+      rules: rule ?? DEFAULT_POINTS,
+    });
+  },
+);
 
 /** Convenience for pages that only have the slug. */
-export async function getStandingsBySlug(slug: string): Promise<StandingRow[]> {
-  const competition = await db.query.competitions.findFirst({
-    where: eq(competitions.slug, slug),
-  });
-  if (!competition) return [];
-  return getStandings(competition.id);
-}
+export const getStandingsBySlug = cache(
+  async (slug: string): Promise<StandingRow[]> => {
+    const competition = await db.query.competitions.findFirst({
+      where: eq(competitions.slug, slug),
+    });
+    if (!competition) return [];
+    return getStandings(competition.id);
+  },
+);

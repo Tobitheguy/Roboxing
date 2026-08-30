@@ -59,10 +59,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${oswald.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        {/* Suspense so a database round-trip for the banner cannot block the
-            shell from rendering. Absent by default: if the query fails, the
-            page still loads — it just loses the notice, which is the right
-            failure direction for a banner. */}
+        {/* Suspense so the banner's database round trip does not block the
+            shell from painting. Query FAILURE is handled inside DemoBanner
+            itself with a try/catch — Suspense only catches components that
+            suspend, never ones that throw, and this sits in the root layout
+            where an uncaught error would take down every page. */}
         <Suspense fallback={null}>
           <DemoBanner />
         </Suspense>

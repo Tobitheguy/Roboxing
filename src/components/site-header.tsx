@@ -5,26 +5,36 @@ import { connection } from "next/server";
 import { LivePill } from "@/components/live-pill";
 import { MainNav } from "@/components/main-nav";
 import { RoboxingMark } from "@/components/roboxing-mark";
-import { getLiveNow } from "@/lib/live";
+import { getLiveNow, type LiveNow } from "@/lib/live";
 
 /**
  * Resolves "is anything broadcasting right now" for the header pill.
  *
- * Split into its own component and wrapped in Suspense at the call site on
- * purpose. This runs inside the root layout, so it executes on every route —
- * once step 2 turns getLiveNow() into a real per-request Postgres query, an
- * un-isolated await here would drag every page on the site into dynamic
- * rendering, including the static content pages step 3 adds. Isolating it now
- * costs nothing; retrofitting it after step 3 means revisiting every page.
+ * Split out and wrapped in Suspense at the call site so the shell can paint
+ * without waiting on a database round trip. Note this does NOT keep the route
+ * static — without Cache Components enabled, any request-time read forces the
+ * whole route to render on demand. That is the correct trade here: a LIVE
+ * badge frozen at build time would be worse than useless on a site whose
+ * entire premise is that the page changes while you are watching it.
  */
 async function LiveNowPill({ variant }: { variant: "mobile" | "desktop" }) {
-  // Request-time, not build-time. This is the single most important correctness
-  // line in the shell: without it Next prerenders the pill's ABSENCE into
-  // static HTML at build, and the LIVE badge would never appear no matter what
-  // is actually broadcasting — a bug that would only surface on event day.
+  // Request-time, not build-time. This is the single most important line in
+  // the shell: without it Next prerenders the pill's ABSENCE into static HTML
+  // at build, and the LIVE badge never appears no matter what is actually
+  // broadcasting — a bug that would only surface on event day.
   await connection();
 
-  const live = await getLiveNow();
+  let live: LiveNow = null;
+  try {
+    live = await getLiveNow();
+  } catch (error) {
+    // Suspense catches suspensions, not thrown errors. This component renders
+    // inside the root layout, so an uncaught Neon failure here would 500 every
+    // page on the site. Losing the badge is a far better outcome.
+    console.error("[SiteHeader] could not resolve live state:", error);
+    return null;
+  }
+
   if (!live) return null;
 
   return (

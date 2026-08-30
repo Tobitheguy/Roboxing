@@ -98,17 +98,29 @@ export const competitions = pgTable("competitions", {
  * hard-coding 3-1-0. `koBonusPoints` is added on top of the win points when a
  * bout ends by KO or TKO, which is how combat leagues typically reward finishes.
  */
-export const pointsRules = pgTable("points_rules", {
-  id: serial("id").primaryKey(),
-  competitionId: integer("competition_id")
-    .notNull()
-    .unique()
-    .references(() => competitions.id, { onDelete: "cascade" }),
-  winPoints: integer("win_points").notNull().default(3),
-  drawPoints: integer("draw_points").notNull().default(1),
-  lossPoints: integer("loss_points").notNull().default(0),
-  koBonusPoints: integer("ko_bonus_points").notNull().default(1),
-});
+export const pointsRules = pgTable(
+  "points_rules",
+  {
+    id: serial("id").primaryKey(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .unique()
+      .references(() => competitions.id, { onDelete: "cascade" }),
+    winPoints: integer("win_points").notNull().default(3),
+    drawPoints: integer("draw_points").notNull().default(1),
+    lossPoints: integer("loss_points").notNull().default(0),
+    koBonusPoints: integer("ko_bonus_points").notNull().default(1),
+  },
+  (t) => [
+    // Negative scoring is representable without this, and a negative loss
+    // value (or a bonus large enough to make a loss outscore a win) produces a
+    // table that is nonsense but renders perfectly happily.
+    check(
+      "points_rules_non_negative",
+      sql`${t.winPoints} >= 0 AND ${t.drawPoints} >= 0 AND ${t.lossPoints} >= 0 AND ${t.koBonusPoints} >= 0`,
+    ),
+  ],
+);
 
 /* -------------------------------------------------------------------------- */
 /* Teams and robots                                                            */
@@ -230,6 +242,23 @@ export const bouts = pgTable(
     robotBId: integer("robot_b_id")
       .notNull()
       .references(() => robots.id, { onDelete: "restrict" }),
+    /**
+     * The teams these robots represented IN THIS BOUT, captured when the bout
+     * is created and never updated afterwards.
+     *
+     * This is not redundant with `robots.team_id`. That column is the robot's
+     * CURRENT team, and resolving standings through it means a mid-season
+     * transfer silently rewrites history: every past result the robot earned
+     * would move to its new team the moment the transfer is saved, changing
+     * the final table of a season that has already aired. A completed result
+     * has to stay attached to the team that actually earned it.
+     */
+    teamAId: integer("team_a_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "restrict" }),
+    teamBId: integer("team_b_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "restrict" }),
     scheduledRounds: integer("scheduled_rounds").notNull().default(3),
     status: boutStatus("status").notNull().default("scheduled"),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -237,6 +266,11 @@ export const bouts = pgTable(
   (t) => [
     index("bouts_event_id_idx").on(t.eventId),
     index("bouts_competition_id_idx").on(t.competitionId),
+    // Robot profile and team pages ask "every bout this robot fought", which
+    // is a WHERE robot_a_id = ? OR robot_b_id = ? shape. Without these it is a
+    // sequential scan over every bout ever staged, getting worse each event.
+    index("bouts_robot_a_id_idx").on(t.robotAId),
+    index("bouts_robot_b_id_idx").on(t.robotBId),
     // One slot per position on a card, so a drag-reorder in admin cannot
     // produce two "bout 3"s and a nondeterministic running order.
     unique("bouts_event_order_unique").on(t.eventId, t.orderIndex),
@@ -286,9 +320,14 @@ export const boutResults = pgTable(
   },
   (t) => [
     index("bout_results_winner_idx").on(t.winnerRobotId),
-    // A decisive method must name a winner; a drawn one must not. Without
-    // this, a mis-click in the admin console produces a "KO" with nobody
-    // winning, which the standings would silently score as a draw.
+    // A decisive method must name a winner; a drawn one must not. Without it
+    // a mis-click in the admin console stores a "KO" with nobody winning —
+    // the standings would drop that bout entirely, so a fight that happened
+    // would silently vanish from both teams' records.
+    //
+    // Note what this CANNOT express: a Postgres CHECK cannot reference another
+    // table, so it can't verify the winner is one of THIS bout's two robots.
+    // computeStandings() guards that case instead.
     check(
       "bout_results_winner_matches_method",
       sql`(${t.method} IN ('draw','no_contest') AND ${t.winnerRobotId} IS NULL)
@@ -395,6 +434,9 @@ export const boutsRelations = relations(bouts, ({ one }) => ({
   }),
   robotA: one(robots, { fields: [bouts.robotAId], references: [robots.id] }),
   robotB: one(robots, { fields: [bouts.robotBId], references: [robots.id] }),
+  // The teams as of this bout, not the robots' current teams.
+  teamA: one(teams, { fields: [bouts.teamAId], references: [teams.id] }),
+  teamB: one(teams, { fields: [bouts.teamBId], references: [teams.id] }),
   result: one(boutResults, {
     fields: [bouts.id],
     references: [boutResults.boutId],

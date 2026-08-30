@@ -2,18 +2,16 @@ import { connection } from "next/server";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
+import { DEMO_COMPETITION_SLUG } from "@/db/constants";
 import { competitions } from "@/db/schema";
-
-/** Kept in sync with src/db/seed.ts. */
-const DEMO_COMPETITION_SLUG = "exhibition-season-1";
 
 /**
  * Site-wide notice that the data on screen is invented.
  *
  * This is a safety feature, not decoration. The site is publicly reachable and
  * there is no signed broadcast rights deal, so every team, robot, and result
- * currently rendered is fictional. Anyone who lands on a standings table has
- * no way to know that from the table itself — a league table looks exactly as
+ * currently rendered is fictional. Anyone landing on a standings table has no
+ * way to tell that from the table itself — a league table looks exactly as
  * authoritative whether or not the fights happened.
  *
  * It disappears on its own: the banner is driven by the presence of the demo
@@ -22,17 +20,28 @@ const DEMO_COMPETITION_SLUG = "exhibition-season-1";
  */
 export async function DemoBanner() {
   // Request-time, not build-time. Without this Next prerenders the banner into
-  // static HTML, and the notice would keep claiming the data is fake for as
-  // long as the old deployment is cached after real data replaces it.
+  // static HTML, and the notice would keep asserting the data is fake for as
+  // long as that deployment is served after real data replaces it.
   await connection();
 
-  const rows = await db
-    .select({ id: competitions.id })
-    .from(competitions)
-    .where(eq(competitions.slug, DEMO_COMPETITION_SLUG))
-    .limit(1);
+  let isDemo = false;
+  try {
+    const rows = await db
+      .select({ id: competitions.id })
+      .from(competitions)
+      .where(eq(competitions.slug, DEMO_COMPETITION_SLUG))
+      .limit(1);
+    isDemo = rows.length > 0;
+  } catch (error) {
+    // Suspense does NOT catch thrown errors — it only catches components that
+    // suspend. Without this try/catch a transient Neon failure here would
+    // propagate out of the root layout and take down every page on the site,
+    // not just this banner. Degrade to hiding the notice instead.
+    console.error("[DemoBanner] could not determine demo state:", error);
+    return null;
+  }
 
-  if (rows.length === 0) return null;
+  if (!isDemo) return null;
 
   return (
     <div className="border-drift/30 bg-drift/10 border-b">

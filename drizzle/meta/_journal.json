@@ -8,6 +8,13 @@
       "when": 1788120868555,
       "tag": "0000_melted_marauders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788121833594,
+      "tag": "0001_tidy_rogue",
+      "breakpoints": true
     }
   ]
 }

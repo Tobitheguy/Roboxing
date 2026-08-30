@@ -9,10 +9,10 @@ config({ path: ".env" });
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { ne } from "drizzle-orm";
+import { ne, notInArray } from "drizzle-orm";
 
+import { DEMO_COMPETITION_SLUG } from "./constants";
 import {
-  adminAudit,
   boutResults,
   bouts,
   competitions,
@@ -36,8 +36,6 @@ import {
  * The competition is named so that anyone landing on it knows immediately that
  * it is demonstration data.
  */
-
-const DEMO_COMPETITION_SLUG = "exhibition-season-1";
 
 /* -------------------------------------------------------------------------- */
 
@@ -83,16 +81,38 @@ async function main() {
   // Guard: this script wipes and rewrites the demo competition. If the
   // database contains any OTHER competition, something real is in here and we
   // stop rather than destroying it.
-  const foreign = await db
+  // Guard. This script deletes rows, so before it does anything it checks that
+  // everything it is about to delete is data it put there itself.
+  //
+  // Checking only `competitions` is not enough: teams and robots have no FK to
+  // a competition, so a real roster entered before it was ever booked into a
+  // bout would be invisible to a competition-only check and deleted anyway.
+  const foreignCompetitions = await db
     .select({ slug: competitions.slug })
     .from(competitions)
     .where(ne(competitions.slug, DEMO_COMPETITION_SLUG));
 
+  const foreignTeams = await db
+    .select({ slug: teams.slug })
+    .from(teams)
+    .where(notInArray(teams.slug, TEAMS.map((t) => t.slug)));
+
+  const foreignRobots = await db
+    .select({ slug: robots.slug })
+    .from(robots)
+    .where(notInArray(robots.slug, ROBOTS.map((r) => r.slug)));
+
+  const foreign = [
+    ...foreignCompetitions.map((c) => `competition:${c.slug}`),
+    ...foreignTeams.map((t) => `team:${t.slug}`),
+    ...foreignRobots.map((r) => `robot:${r.slug}`),
+  ];
+
   if (foreign.length > 0) {
     throw new Error(
-      `Refusing to seed: this database holds competitions that are not demo ` +
-        `data (${foreign.map((c) => c.slug).join(", ")}). Seeding would delete ` +
-        `them. Point DATABASE_URL at a scratch database, or remove them first.`,
+      `Refusing to seed: this database holds records that are not demo data ` +
+        `(${foreign.join(", ")}). Seeding would delete them. Point ` +
+        `DATABASE_URL at a scratch database, or remove them first.`,
     );
   }
 
@@ -106,7 +126,9 @@ async function main() {
   await db.delete(competitions);
   await db.delete(robots);
   await db.delete(teams);
-  await db.delete(adminAudit);
+  // admin_audit is deliberately NOT cleared. It is the record of who changed
+  // what, which is exactly the thing that must survive a data reset — and it
+  // references nothing, so leaving it breaks no constraint.
 
   console.log("Inserting competition…");
   const [competition] = await db
@@ -154,6 +176,18 @@ async function main() {
   const robotBySlug = new Map(insertedRobots.map((r) => [r.slug, r]));
   const R = (slug: string) => robotBySlug.get(slug)!.id;
 
+  /**
+   * Build a matchup, capturing the teams as they stand when the bout is
+   * created. The bout stores its own team columns rather than relying on the
+   * robots' current team, so a later transfer cannot rewrite a finished result.
+   */
+  const matchup = (aSlug: string, bSlug: string) => ({
+    robotAId: R(aSlug),
+    robotBId: R(bSlug),
+    teamAId: robotBySlug.get(aSlug)!.teamId,
+    teamBId: robotBySlug.get(bSlug)!.teamId,
+  });
+
   console.log("Inserting events…");
   const now = Date.now();
   const [past, upcoming] = await db
@@ -195,11 +229,11 @@ async function main() {
   const night1 = await db
     .insert(bouts)
     .values([
-      { eventId: past.id, competitionId: competition.id, orderIndex: 1, robotAId: R("kestrel-1"), robotBId: R("pale-6"), scheduledRounds: 3, status: "completed" },
-      { eventId: past.id, competitionId: competition.id, orderIndex: 2, robotAId: R("ronin-8"), robotBId: R("vector-3"), scheduledRounds: 3, status: "completed" },
-      { eventId: past.id, competitionId: competition.id, orderIndex: 3, robotAId: R("nb-11"), robotBId: R("obsidian-4"), scheduledRounds: 3, status: "completed" },
-      { eventId: past.id, competitionId: competition.id, orderIndex: 4, robotAId: R("helix-c"), robotBId: R("vector-9"), scheduledRounds: 5, status: "completed" },
-      { eventId: past.id, competitionId: competition.id, orderIndex: 5, robotAId: R("titan-07"), robotBId: R("ronin-2"), scheduledRounds: 5, status: "completed" },
+      { eventId: past.id, competitionId: competition.id, orderIndex: 1, ...matchup("kestrel-1", "pale-6"), scheduledRounds: 3, status: "completed" as const },
+      { eventId: past.id, competitionId: competition.id, orderIndex: 2, ...matchup("ronin-8", "vector-3"), scheduledRounds: 3, status: "completed" as const },
+      { eventId: past.id, competitionId: competition.id, orderIndex: 3, ...matchup("nb-11", "obsidian-4"), scheduledRounds: 3, status: "completed" as const },
+      { eventId: past.id, competitionId: competition.id, orderIndex: 4, ...matchup("helix-c", "vector-9"), scheduledRounds: 5, status: "completed" as const },
+      { eventId: past.id, competitionId: competition.id, orderIndex: 5, ...matchup("titan-07", "ronin-2"), scheduledRounds: 5, status: "completed" as const },
     ])
     .returning();
 
@@ -214,11 +248,11 @@ async function main() {
   // Night 2 — scheduled, no results. These bouts must contribute nothing to
   // the standings, which is the case the unit test pins down.
   await db.insert(bouts).values([
-    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 1, robotAId: R("vector-3"), robotBId: R("helix-d"), scheduledRounds: 3, status: "scheduled" },
-    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 2, robotAId: R("titan-11"), robotBId: R("kestrel-1"), scheduledRounds: 3, status: "scheduled" },
-    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 3, robotAId: R("obsidian-4"), robotBId: R("vector-9"), scheduledRounds: 3, status: "scheduled" },
-    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 4, robotAId: R("ronin-2"), robotBId: R("nb-11"), scheduledRounds: 5, status: "scheduled" },
-    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 5, robotAId: R("titan-07"), robotBId: R("helix-c"), scheduledRounds: 5, status: "scheduled" },
+    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 1, ...matchup("vector-3", "helix-d"), scheduledRounds: 3, status: "scheduled" as const },
+    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 2, ...matchup("titan-11", "kestrel-1"), scheduledRounds: 3, status: "scheduled" as const },
+    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 3, ...matchup("obsidian-4", "vector-9"), scheduledRounds: 3, status: "scheduled" as const },
+    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 4, ...matchup("ronin-2", "nb-11"), scheduledRounds: 5, status: "scheduled" as const },
+    { eventId: upcoming.id, competitionId: competition.id, orderIndex: 5, ...matchup("titan-07", "helix-c"), scheduledRounds: 5, status: "scheduled" as const },
   ]);
 
   const counts = {
@@ -235,9 +269,10 @@ async function main() {
   );
 }
 
+// No exports from this module. Its top level runs a destructive main(), so
+// anything importing it for a constant would wipe and rewrite the database as
+// an import side effect. Shared values live in ./constants.
 main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
-export { DEMO_COMPETITION_SLUG };

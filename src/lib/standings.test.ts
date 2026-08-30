@@ -223,6 +223,57 @@ describe("computeStandings", () => {
     expect(table[0].points).toBe(4);
   });
 
+  it("ignores a result whose winner fought in neither slot of the bout", () => {
+    // The database cannot catch this: a Postgres CHECK cannot reference
+    // another table, so winner_robot_id is free to name any robot in the
+    // league. Before this guard existed, "not robot A" was treated as
+    // "therefore robot B" and the win was credited to a team that did not
+    // earn it — silently, with a table that still looked correct.
+    const bogus: StandingsBout[] = [
+      {
+        boutId: 300,
+        robotAId: 11,
+        robotBId: 21,
+        teamAId: ALPHA.id,
+        teamBId: BRAVO.id,
+        // 31 is Charlie's robot and is not in this bout at all.
+        result: { winnerRobotId: 31, method: "ko" },
+      },
+    ];
+    const table = computeStandings({
+      teams: TEAMS,
+      bouts: bogus,
+      rules: DEFAULT_POINTS,
+    });
+    // Nobody is credited and nobody is charged a loss.
+    expect(table.every((r) => r.played === 0)).toBe(true);
+    expect(table.every((r) => r.points === 0)).toBe(true);
+  });
+
+  it("still scores correctly when a winner is legitimately robot B", () => {
+    // Guards the guard: proving the check above did not break the ordinary
+    // case where the second-listed robot wins.
+    const table = computeStandings({
+      teams: TEAMS,
+      bouts: [
+        {
+          boutId: 301,
+          robotAId: 11,
+          robotBId: 21,
+          teamAId: ALPHA.id,
+          teamBId: BRAVO.id,
+          result: { winnerRobotId: 21, method: "ko" },
+        },
+      ],
+      rules: DEFAULT_POINTS,
+    });
+    const bravo = table.find((r) => r.team.slug === "bravo")!;
+    const alpha = table.find((r) => r.team.slug === "alpha")!;
+    expect(bravo.won).toBe(1);
+    expect(bravo.points).toBe(4);
+    expect(alpha.lost).toBe(1);
+  });
+
   it("ignores a bout whose teams are not in the supplied list", () => {
     // Skipping is correct; fabricating a row would hide a data problem.
     const table = computeStandings({
