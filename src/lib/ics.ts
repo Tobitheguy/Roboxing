@@ -8,6 +8,18 @@
 
 const encoder = new TextEncoder();
 
+/**
+ * How long an event is assumed to run. Organizers do not publish an end time.
+ * Defined once here because both the .ics route and the Google Calendar link
+ * need it, and two hand-synced copies would drift.
+ */
+export const ASSUMED_DURATION_MINUTES = 150;
+
+/** The assumed end of an event starting at `start`. */
+export function assumedEnd(start: Date): Date {
+  return new Date(start.getTime() + ASSUMED_DURATION_MINUTES * 60_000);
+}
+
 /** RFC 5545 wants UTC timestamps as YYYYMMDDTHHMMSSZ. */
 export function toIcsStamp(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -67,6 +79,11 @@ export type IcsEvent = {
   description?: string;
   location?: string | null;
   url?: string;
+  /**
+   * CANCELLED tells the calendar client to strike the entry through rather
+   * than leave a normal-looking invite for an event that is not happening.
+   */
+  status?: "CONFIRMED" | "CANCELLED";
   /** Injected rather than read from the clock, so output is testable. */
   stamp?: Date;
 };
@@ -87,6 +104,7 @@ export function buildEventIcs(event: IcsEvent): string {
     event.description ? `DESCRIPTION:${escapeIcsText(event.description)}` : null,
     event.location ? `LOCATION:${escapeIcsText(event.location)}` : null,
     event.url ? `URL:${event.url}` : null,
+    `STATUS:${event.status ?? "CONFIRMED"}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].filter((l): l is string => l !== null);

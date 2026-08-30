@@ -24,15 +24,18 @@ import {
 import { getStandings } from "@/lib/standings";
 
 export default async function HomePage() {
-  const [live, primary, next] = await Promise.all([
+  // getLatestResults does not depend on the competition, so it belongs in the
+  // first batch — Neon's HTTP driver pays a full round trip per query with no
+  // server-side batching, so an avoidable second phase is an avoidable delay.
+  const [live, primary, next, latest] = await Promise.all([
     getLiveNow(),
     getPrimaryCompetition(),
     getNextEvent(),
+    getLatestResults(5),
   ]);
 
-  const [standings, latest, seasonResults] = await Promise.all([
+  const [standings, seasonResults] = await Promise.all([
     primary ? getStandings(primary.id) : Promise.resolve([]),
-    getLatestResults(5),
     primary ? getAllResults(primary.slug) : Promise.resolve([]),
   ]);
 
@@ -101,12 +104,21 @@ export default async function HomePage() {
             </div>
           </div>
         ) : (
-          <EmptyState
-            icon={<CalendarClock />}
-            title="No events scheduled"
-            description="When the next event is announced, it appears here with a countdown."
-            className="py-20"
-          />
+          <div className="px-6 py-16 text-center sm:py-20">
+            {/* An h1 even in the empty state — this is a reachable state
+                (pre-launch, off-season, after the last event) and a page with
+                no heading at all is a real accessibility defect, not a
+                cosmetic one. */}
+            <h1 className="font-display text-hero text-ink uppercase">
+              Live robot combat
+            </h1>
+            <EmptyState
+              icon={<CalendarClock />}
+              title="No events scheduled"
+              description="When the next event is announced, it appears here with a countdown."
+              className="pt-6 pb-0"
+            />
+          </div>
         )}
       </section>
 

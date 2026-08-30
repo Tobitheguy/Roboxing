@@ -1,5 +1,5 @@
 import { getAppUrl } from "@/lib/app-url";
-import { buildEventIcs } from "@/lib/ics";
+import { assumedEnd, buildEventIcs } from "@/lib/ics";
 import { getEventBySlug } from "@/lib/queries";
 
 /**
@@ -13,9 +13,6 @@ import { getEventBySlug } from "@/lib/queries";
  * The generation itself lives in @/lib/ics so it can be unit tested; a route
  * module may only export handlers.
  */
-
-/** Events run about this long. The organizer does not publish an end time. */
-const ASSUMED_DURATION_MINUTES = 150;
 
 export async function GET(
   _request: Request,
@@ -36,11 +33,12 @@ export async function GET(
     // rather than creating a duplicate in the viewer's calendar.
     uid: `event-${event.id}@roboxing`,
     start: event.startsAt,
-    end: new Date(event.startsAt.getTime() + ASSUMED_DURATION_MINUTES * 60_000),
+    end: assumedEnd(event.startsAt),
     summary: event.name,
     description: `${competitionName} — watch at ${url}`,
     location: [event.venue, event.city, event.country].filter(Boolean).join(", "),
     url,
+    status: event.status === "cancelled" ? "CANCELLED" : "CONFIRMED",
   });
 
   return new Response(body, {

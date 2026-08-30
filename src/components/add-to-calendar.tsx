@@ -1,13 +1,7 @@
 import { CalendarPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
-/** Same wire format the .ics route uses. */
-function toStamp(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-}
-
-const ASSUMED_DURATION_MINUTES = 150;
+import { assumedEnd, toIcsStamp } from "@/lib/ics";
 
 /**
  * "Add to calendar" for an event.
@@ -33,13 +27,13 @@ export function AddToCalendar({
   location?: string | null;
   appUrl: string;
 }) {
-  const end = new Date(startsAt.getTime() + ASSUMED_DURATION_MINUTES * 60_000);
+  const end = assumedEnd(startsAt);
   const watchUrl = `${appUrl}/watch/${eventSlug}`;
 
   const google = new URL("https://calendar.google.com/calendar/render");
   google.searchParams.set("action", "TEMPLATE");
   google.searchParams.set("text", eventName);
-  google.searchParams.set("dates", `${toStamp(startsAt)}/${toStamp(end)}`);
+  google.searchParams.set("dates", `${toIcsStamp(startsAt)}/${toIcsStamp(end)}`);
   google.searchParams.set(
     "details",
     `${competitionName} — watch at ${watchUrl}`,

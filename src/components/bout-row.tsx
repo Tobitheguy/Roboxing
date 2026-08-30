@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-import { Badge, MethodBadge, METHOD_LABELS } from "@/components/badge";
+import { Badge, MethodBadge } from "@/components/badge";
 import { EventTime } from "@/components/event-time";
 import { RobotAvatar } from "@/components/robot-avatar";
-import { formatFinish } from "@/lib/format";
+import { formatFinishDetail } from "@/lib/format";
 import type { BoutDetail, BoutParticipant } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -123,13 +123,9 @@ export function BoutRow({
         {result ? (
           <>
             <MethodBadge method={result.method} />
-            {result.endRound != null ? (
+            {formatFinishDetail(result.endRound, result.endTimeSeconds) ? (
               <span className="text-ink-muted tabular text-xs">
-                {formatFinish(
-                  METHOD_LABELS[result.method],
-                  result.endRound,
-                  result.endTimeSeconds,
-                ).replace(`${METHOD_LABELS[result.method]} · `, "")}
+                {formatFinishDetail(result.endRound, result.endTimeSeconds)}
               </span>
             ) : null}
             {result.knockdownsA + result.knockdownsB > 0 ? (

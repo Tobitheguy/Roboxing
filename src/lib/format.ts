@@ -95,6 +95,22 @@ export function formatClock(seconds: number | null | undefined): string | null {
 }
 
 /**
+ * Just the round and clock: "R2 1:14", or "R2", or null when unrecorded.
+ *
+ * Separate from formatFinish so a caller that already renders the method as a
+ * badge can ask for the remainder directly, instead of building the full
+ * string and then string-replacing the method back out of it.
+ */
+export function formatFinishDetail(
+  endRound: number | null,
+  endTimeSeconds: number | null,
+): string | null {
+  if (endRound == null) return null;
+  const clock = formatClock(endTimeSeconds);
+  return clock ? `R${endRound} ${clock}` : `R${endRound}`;
+}
+
+/**
  * How a bout ended, in the form a fight card uses: "KO · R2 1:14".
  * Returns just the method when the round and time are not recorded.
  */
@@ -103,11 +119,8 @@ export function formatFinish(
   endRound: number | null,
   endTimeSeconds: number | null,
 ): string {
-  const clock = formatClock(endTimeSeconds);
-  if (endRound == null) return methodLabel;
-  return clock
-    ? `${methodLabel} · R${endRound} ${clock}`
-    : `${methodLabel} · R${endRound}`;
+  const detail = formatFinishDetail(endRound, endTimeSeconds);
+  return detail ? `${methodLabel} · ${detail}` : methodLabel;
 }
 
 /** Height in cm as "172 cm", or null. */

@@ -29,6 +29,16 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
     getUpcomingBouts(competition),
   ]);
 
+  // Group once rather than filtering the whole bout list per event, which is
+  // O(events x bouts). /results already does it this way; there was no reason
+  // for the two pages to differ.
+  const boutsByEvent = new Map<number, typeof bouts>();
+  for (const bout of bouts) {
+    const list = boutsByEvent.get(bout.event.id) ?? [];
+    list.push(bout);
+    boutsByEvent.set(bout.event.id, list);
+  }
+
   return (
     <PageShell>
       <PageHeading
@@ -58,7 +68,7 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
       ) : (
         <div className="space-y-6">
           {events.map(({ event, competitionName, boutCount }) => {
-            const eventBouts = bouts.filter((b) => b.event.id === event.id);
+            const eventBouts = boutsByEvent.get(event.id) ?? [];
             return (
               <Card key={event.id}>
                 <CardHeader

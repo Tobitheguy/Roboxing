@@ -298,6 +298,27 @@ export const getUpcomingEvents = cache(async (competitionSlug?: string) => {
     .orderBy(asc(events.startsAt));
 });
 
+/**
+ * Events that have already happened, newest first.
+ *
+ * Queried on `status` rather than derived from recorded results — an event
+ * that ran but whose results have not been entered yet is still an event that
+ * happened, and deriving this list from `bout_results` would make it vanish
+ * from the archive until someone typed its card in.
+ */
+export const getPastEvents = cache(async () => {
+  return db
+    .select({
+      event: events,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+    })
+    .from(events)
+    .innerJoin(competitions, eq(events.competitionId, competitions.id))
+    .where(eq(events.status, "completed"))
+    .orderBy(desc(events.startsAt));
+});
+
 export const getEventsForCompetition = cache(async (competitionId: number) => {
   return db
     .select({

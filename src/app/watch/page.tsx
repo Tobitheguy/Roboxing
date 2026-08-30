@@ -10,19 +10,19 @@ import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { getLiveNow } from "@/lib/live";
-import { getAllResults, getUpcomingEvents } from "@/lib/queries";
+import { getPastEvents, getUpcomingEvents } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Watch" };
 
 export default async function WatchIndexPage() {
-  const [live, upcoming] = await Promise.all([
+  const [live, upcoming, pastEvents] = await Promise.all([
     getLiveNow(),
     getUpcomingEvents(),
+    // Queried on status, not derived from recorded results: an event that ran
+    // but has not had its card entered yet would otherwise disappear from the
+    // archive entirely.
+    getPastEvents(),
   ]);
-
-  // Events that already happened, newest first — the recordings.
-  const results = await getAllResults();
-  const pastEvents = [...new Map(results.map((b) => [b.event.id, b.event])).values()];
 
   return (
     <PageShell>
@@ -99,7 +99,7 @@ export default async function WatchIndexPage() {
           <CardHeader title="Past events" />
           <CardBodyFlush>
             <ul>
-              {pastEvents.map((event) => (
+              {pastEvents.map(({ event }) => (
                 <li
                   key={event.id}
                   className="border-line/60 border-b last:border-b-0"

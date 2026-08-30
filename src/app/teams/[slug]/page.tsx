@@ -11,7 +11,11 @@ import { RobotAvatar } from "@/components/robot-avatar";
 import { StatRow, StatTile } from "@/components/stat-tile";
 import { TeamCrest } from "@/components/team-crest";
 import { formatWeight } from "@/lib/format";
-import { computeRobotRecord, formatRecord } from "@/lib/records";
+import {
+  computeRobotRecord,
+  computeTeamRecord,
+  formatRecord,
+} from "@/lib/records";
 import {
   getBoutsForTeam,
   getRobotsForTeam,
@@ -39,30 +43,13 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
   const resolved = teamBouts.filter((b) => b.result);
   const upcoming = teamBouts.filter((b) => !b.result).reverse();
 
-  // The team's record is the sum of its robots' records in bouts fought FOR
-  // this team — read off the bout's own team columns, so a robot that has
-  // since transferred still counts here for the bouts it fought here.
-  let won = 0;
-  let lost = 0;
-  let drawn = 0;
-  let ko = 0;
-  for (const bout of resolved) {
-    const isA = bout.robotA.teamId === team.id;
-    const result = bout.result!;
-    if (result.method === "no_contest") continue;
-    if (result.method === "draw") {
-      drawn += 1;
-      continue;
-    }
-    if (result.winnerRobotId == null) continue;
-    const ourRobotId = isA ? bout.robotA.id : bout.robotB.id;
-    if (result.winnerRobotId === ourRobotId) {
-      won += 1;
-      if (result.method === "ko" || result.method === "tko") ko += 1;
-    } else {
-      lost += 1;
-    }
-  }
+  // Shared with the standings rather than computed inline. The obvious inline
+  // version gets two cases wrong that the league table gets right — a winner
+  // belonging to neither corner, and a bout between two of this team's own
+  // robots — and either one makes this page contradict the table for the same
+  // row. Team attribution comes from the bout's own team columns, so a robot
+  // that has since transferred still counts for the bouts it fought here.
+  const record = computeTeamRecord(team.id, teamBouts);
 
   return (
     <PageShell>
@@ -86,12 +73,12 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
       <StatRow className="mb-8">
         <StatTile
           label="Record"
-          value={formatRecord({ won, lost, drawn, ko, fought: won + lost + drawn })}
-          sub={ko > 0 ? `${ko} by KO` : undefined}
+          value={formatRecord(record)}
+          sub={record.ko > 0 ? `${record.ko} by KO` : undefined}
           emphasis
         />
         <StatTile label="Robots" value={robots.length} />
-        <StatTile label="Bouts fought" value={won + lost + drawn} />
+        <StatTile label="Bouts fought" value={record.fought} />
         <StatTile label="Upcoming" value={upcoming.length} />
       </StatRow>
 
@@ -107,7 +94,7 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
           ) : (
             <ul>
               {robots.map((robot) => {
-                const record = computeRobotRecord(robot.id, teamBouts);
+                const robotRecord = computeRobotRecord(robot.id, teamBouts);
                 return (
                   <li
                     key={robot.id}
@@ -138,7 +125,7 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
                         </p>
                       </div>
                       <span className="font-display tabular text-ink-muted shrink-0 text-sm font-semibold">
-                        {formatRecord(record)}
+                        {formatRecord(robotRecord)}
                       </span>
                     </Link>
                   </li>
