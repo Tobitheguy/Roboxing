@@ -5,6 +5,7 @@ import { LoginForm } from "@/app/admin/login/login-form";
 import { Card, CardBody } from "@/components/card";
 import { RoboxingMark } from "@/components/roboxing-mark";
 import { getSession } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
 export default async function LoginPage(props: PageProps<"/admin/login">) {
   const params = await props.searchParams;
   const raw = params.next;
-  const next = Array.isArray(raw) ? raw[0] : raw;
+  // Sanitised here too, so a hostile value never reaches the page.
+  const next = safeNextPath(Array.isArray(raw) ? raw[0] : raw);
 
   // Already signed in — no reason to show a login form.
   if (await getSession()) redirect("/admin");
@@ -28,7 +30,7 @@ export default async function LoginPage(props: PageProps<"/admin/login">) {
 
       <Card>
         <CardBody>
-          <LoginForm next={next ?? "/admin"} />
+          <LoginForm next={next} />
         </CardBody>
       </Card>
 

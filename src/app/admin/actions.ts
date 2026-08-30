@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { safeNextPath } from "@/lib/safe-redirect";
 
 const LoginSchema = z.object({
   email: z.string().trim().min(1).max(320),
@@ -19,20 +20,6 @@ const LoginSchema = z.object({
 });
 
 export type LoginState = { error?: string };
-
-/**
- * Only ever redirect to a path on this site.
- *
- * `next` comes from the query string, so without this the login page becomes
- * an open redirect — a phishing page that borrows Roboxing's domain and its
- * credibility. Protocol-relative URLs (`//evil.com`) are the case a naive
- * `startsWith("/")` check misses.
- */
-function safeNext(next: string | undefined): string {
-  if (!next) return "/admin";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/admin";
-  return next;
-}
 
 export async function login(
   _prev: LoginState,
@@ -80,7 +67,7 @@ export async function login(
   const store = await cookies();
   store.set(SESSION_COOKIE, createSessionToken(email), SESSION_COOKIE_OPTIONS);
 
-  redirect(safeNext(formData.get("next")?.toString()));
+  redirect(safeNextPath(formData.get("next")?.toString()));
 }
 
 export async function logout() {
