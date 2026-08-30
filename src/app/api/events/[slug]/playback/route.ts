@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { events, streams } from "@/db/schema";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   createSignedToken,
   hlsUrl,
@@ -22,10 +23,27 @@ import {
  * viewer's stream dies partway through the main event.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/events/[slug]/playback">,
 ) {
   const { slug } = await ctx.params;
+
+  // A player stuck in a retry loop must not be able to hammer Cloudflare's
+  // token API on our account. The player has its own backoff and retry cap;
+  // this is the backstop for the client that ignores both.
+  const limit = rateLimit(`playback:${clientIp(request)}`, 30, 60);
+  if (!limit.allowed) {
+    return Response.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(limit.retryAfterSeconds),
+        },
+      },
+    );
+  }
 
   const rows = await db
     .select({
@@ -80,10 +98,17 @@ export async function GET(
       { url: hlsUrl(token) },
       {
         headers: {
-          // Never cached, at any layer: a signed token is per-request and
-          // handing a cached one to a later viewer would extend its life
-          // beyond what was minted for it.
-          "Cache-Control": "no-store",
+          // Cacheable at the CDN, deliberately. A signed token is not
+          // per-viewer: its expiry is absolute and Cloudflare evaluates the
+          // geo rules against the watching IP at playback time, so one token
+          // is safely shared for a short window. Without this, every viewer
+          // arriving at once is a separate call to Cloudflare's API — and
+          // exhausting that limit breaks playback for everybody at the same
+          // moment, during the event.
+          //
+          // max-age=0 keeps browsers from holding a token past its usefulness
+          // while still letting the shared cache absorb the fan-out.
+          "Cache-Control": "public, max-age=0, s-maxage=240, stale-while-revalidate=60",
         },
       },
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MonitorPlay, Swords } from "lucide-react";
 
 import { BoutList } from "@/components/bout-row";
@@ -9,8 +9,16 @@ import { EmptyState } from "@/components/empty-state";
 import { RoboxingPlayer } from "@/components/roboxing-player";
 import type { BoutDetail } from "@/lib/queries";
 
-/** How often the fight card asks whether anything has changed. */
-const POLL_INTERVAL_MS = 10_000;
+/** Poll cadence while broadcasting. */
+const LIVE_POLL_MS = 10_000;
+/**
+ * Cadence before the event starts. Slower because nothing is changing yet, but
+ * NOT zero — a viewer who opens the page early must see it go live without
+ * refreshing, and "arrives early" is the single most common way people show up.
+ */
+const PRE_LIVE_POLL_MS = 30_000;
+
+type EventStatus = "scheduled" | "live" | "completed" | "cancelled";
 
 type BoutState = {
   id: number;
@@ -19,7 +27,7 @@ type BoutState = {
 };
 
 type EventState = {
-  eventStatus: "scheduled" | "live" | "completed" | "cancelled";
+  eventStatus: EventStatus;
   currentBoutId: number | null;
   bouts: BoutState[];
 };
@@ -27,12 +35,12 @@ type EventState = {
 /**
  * The watch page's live half.
  *
- * Polling rather than WebSockets is a deliberate V1 choice: it is trivially
- * robust, survives a dropped connection with no reconnect logic, and the
- * endpoint behind it is CDN-cached so the load does not scale with the
- * audience. The one rule is that a result landing must never touch the video
- * element — re-rendering the player would restart the stream, which is the one
- * thing a viewer will not forgive.
+ * Polling rather than WebSockets is a deliberate V1 choice: trivially robust,
+ * survives a dropped connection with no reconnect logic, and the endpoint
+ * behind it is CDN-cached so load does not scale with the audience. The one
+ * inviolable rule is that a result landing must never change the player's
+ * `src` — that would restart the video, which is the one thing a viewer will
+ * not forgive. `src` changes only when the broadcast itself changes state.
  */
 export function WatchExperience({
   eventSlug,
@@ -44,14 +52,14 @@ export function WatchExperience({
 }: {
   eventSlug: string;
   initialBouts: BoutDetail[];
-  initialEventStatus: "scheduled" | "live" | "completed" | "cancelled";
+  initialEventStatus: EventStatus;
   /** Signed HLS manifest, or null when there is nothing to play yet. */
   playbackUrl: string | null;
   posterUrl?: string | null;
-  /** Why there is no stream, shown in the player's place. */
   unavailableReason?: string;
 }) {
-  const [eventStatus, setEventStatus] = useState(initialEventStatus);
+  const [eventStatus, setEventStatus] = useState<EventStatus>(initialEventStatus);
+  const [playback, setPlayback] = useState<string | null>(playbackUrl);
   const [boutStates, setBoutStates] = useState<Map<number, BoutState>>(
     () =>
       new Map(
@@ -66,10 +74,28 @@ export function WatchExperience({
   );
 
   const isLive = eventStatus === "live";
+  const isFinished = eventStatus === "completed" || eventStatus === "cancelled";
+
+  const fetchPlayback = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/events/${eventSlug}/playback`);
+      if (!response.ok) return null;
+      const body = (await response.json()) as { url?: string };
+      return body.url ?? null;
+    } catch {
+      return null;
+    }
+  }, [eventSlug]);
+
+  // Tracks the status the last poll saw, so a TRANSITION can be detected
+  // rather than just the current value.
+  const lastStatusRef = useRef<EventStatus>(initialEventStatus);
 
   useEffect(() => {
-    // Nothing changes on a finished or unstarted event, so no polling.
-    if (!isLive) return;
+    // A finished or cancelled event never changes again — nothing to poll.
+    // Everything else does, including "scheduled": that is precisely the case
+    // where the page must notice the broadcast starting.
+    if (isFinished) return;
 
     let cancelled = false;
     const controller = new AbortController();
@@ -86,21 +112,35 @@ export function WatchExperience({
         setEventStatus(state.eventStatus);
         setCurrentBoutId(state.currentBoutId);
         setBoutStates(new Map(state.bouts.map((b) => [b.id, b])));
+
+        // The broadcast changed state: scheduled -> live needs a stream that
+        // did not exist when the page rendered, and live -> completed needs to
+        // roll over to the recording. Without this the viewer who sat through
+        // the whole card is left staring at a frozen final frame.
+        if (state.eventStatus !== lastStatusRef.current) {
+          lastStatusRef.current = state.eventStatus;
+          const url = await fetchPlayback();
+          if (!cancelled && url) setPlayback(url);
+        }
       } catch {
-        // A failed poll is not worth surfacing — the next one is ten seconds
-        // away and the video is unaffected either way.
+        // A failed poll is not worth surfacing — the next one is seconds away
+        // and the video is unaffected either way.
       }
     }
 
-    const id = setInterval(poll, POLL_INTERVAL_MS);
+    // Poll once immediately so a page opened seconds after a result lands is
+    // not stale for a full interval.
+    void poll();
+
+    const id = setInterval(poll, isLive ? LIVE_POLL_MS : PRE_LIVE_POLL_MS);
     return () => {
       cancelled = true;
       controller.abort();
       clearInterval(id);
     };
-  }, [eventSlug, isLive]);
+  }, [eventSlug, isLive, isFinished, fetchPlayback]);
 
-  // Merge polled state over the server-rendered bouts. The bout's identity,
+  // Merge polled state over the server-rendered bouts. A bout's identity,
   // robots, and teams never change mid-event; only status and result do.
   const bouts = useMemo(
     () =>
@@ -115,29 +155,15 @@ export function WatchExperience({
 
   const currentBout = bouts.find((b) => b.id === currentBoutId) ?? null;
 
-  const refreshSrc = useMemo(
-    () => async () => {
-      try {
-        const response = await fetch(`/api/events/${eventSlug}/playback`);
-        if (!response.ok) return null;
-        const body = (await response.json()) as { url?: string };
-        return body.url ?? null;
-      } catch {
-        return null;
-      }
-    },
-    [eventSlug],
-  );
-
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div>
-        {playbackUrl ? (
+        {playback ? (
           <RoboxingPlayer
-            src={playbackUrl}
+            src={playback}
             poster={posterUrl}
             isLive={isLive}
-            onRefreshSrc={refreshSrc}
+            onRefreshSrc={fetchPlayback}
           />
         ) : (
           <div className="border-line bg-surface relative aspect-video w-full overflow-hidden rounded-lg border">

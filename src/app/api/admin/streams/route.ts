@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { adminAudit, events, streams } from "@/db/schema";
-import { getSession, requireAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createLiveInput, getLiveInput, isStreamConfigured } from "@/lib/stream";
 
 const BodySchema = z.object({
@@ -20,10 +20,8 @@ const BodySchema = z.object({
  * it in every backup of that database too.
  */
 export async function POST(request: Request) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
-
-  const session = await getSession();
+  const auth = await requireAdmin();
+  if (auth instanceof Response) return auth;
 
   if (!isStreamConfigured()) {
     return Response.json(
@@ -87,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     await db.insert(adminAudit).values({
-      adminEmail: session?.email ?? "unknown",
+      adminEmail: auth.email,
       action: existing ? "stream.read" : "stream.create",
       entity: "event",
       entityId: String(eventId),

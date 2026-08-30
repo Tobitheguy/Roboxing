@@ -54,14 +54,22 @@ export async function getSession(): Promise<Session | null> {
 /**
  * Guard for API route handlers.
  *
- * Returns a 401 Response when there is no valid session, or null when the
- * caller may proceed. Every /api/admin/* handler begins with this, and the
- * proxy blocks those paths as well — two independent layers, because a single
- * missed check on one route is the whole breach.
+ * Returns the Session when the caller may proceed, or a 401 Response when not.
+ * Returning the session rather than a boolean means a handler never has to
+ * read the cookie and verify the HMAC a second time to find out who it is
+ * talking to.
+ *
+ * Every /api/admin/* handler begins with this, and the proxy blocks those
+ * paths as well — two independent layers, because one missed check on one
+ * route is the whole breach.
+ *
+ *   const auth = await requireAdmin();
+ *   if (auth instanceof Response) return auth;
+ *   // auth.email is now available
  */
-export async function requireAdmin(): Promise<Response | null> {
+export async function requireAdmin(): Promise<Session | Response> {
   const session = await getSession();
-  if (session) return null;
+  if (session) return session;
 
   return Response.json(
     { error: "Unauthorized" },

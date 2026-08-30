@@ -21,25 +21,36 @@ import { cn } from "@/lib/utils";
  *
  * Everything a viewer sees is ours: our controls, our LIVE badge, our
  * branding, on our domain. Cloudflare is the pipe behind it and is never
- * visible. hls.js drives playback everywhere except Safari and iOS, which
- * play HLS natively — attaching hls.js there as well is the classic way to
- * break iOS fullscreen, so the native path is deliberate rather than a
- * fallback.
+ * visible. hls.js drives playback everywhere except Safari and iOS, which play
+ * HLS natively — attaching hls.js there as well is the classic way to break
+ * iOS fullscreen, so the native path is a deliberate branch rather than a
+ * fallback. Both branches recover from an expired token; a two-hour broadcast
+ * outlives any sensible signed-URL TTL, and the native branch carries a large
+ * share of the mobile audience.
  */
 
 /** How far behind the live edge counts as drifted, in seconds. */
 const DRIFT_THRESHOLD_SECONDS = 12;
+
+/**
+ * Recovery attempts before giving up.
+ *
+ * Without a cap, a stream that cannot be recovered — a Cloudflare outage, or a
+ * viewer outside the licensed territory whose geo-block surfaces as a network
+ * error — turns into a tight loop hammering our token endpoint and
+ * Cloudflare's API, from every affected viewer simultaneously, during the
+ * event. The cap is the difference between one broken player and a
+ * self-inflicted outage.
+ */
+const MAX_RECOVERY_ATTEMPTS = 4;
+const RETRY_BASE_DELAY_MS = 1000;
 
 export type RoboxingPlayerProps = {
   /** HLS manifest URL. For signed playback this already contains the token. */
   src: string;
   poster?: string | null;
   isLive?: boolean;
-  /**
-   * Mints a fresh manifest URL. Signed tokens are short-lived and a two-hour
-   * broadcast outlives any sensible TTL, so without this a viewer's stream
-   * dies partway through the main event with no explanation.
-   */
+  /** Mints a fresh manifest URL when the signed token behind `src` expires. */
   onRefreshSrc?: () => Promise<string | null>;
   className?: string;
 };
@@ -56,17 +67,17 @@ export function RoboxingPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-  // Kept in a ref so the hls error handler always sees the latest callback
-  // without tearing down and rebuilding the player on every render. Assigned
-  // in an effect rather than during render — a ref mutated mid-render is not
-  // safe under concurrent rendering, where a render can be discarded.
+  const qualityMenuRef = useRef<HTMLDivElement>(null);
+
+  // Latest-callback ref, assigned in an effect rather than during render — a
+  // ref mutated mid-render is unsafe under concurrent rendering.
   const refreshRef = useRef(onRefreshSrc);
   useEffect(() => {
     refreshRef.current = onRefreshSrc;
   }, [onRefreshSrc]);
 
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -87,19 +98,62 @@ export function RoboxingPlayer({
 
     let cancelled = false;
     let hls: Hls | null = null;
+    let attempts = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let nativeErrorHandler: (() => void) | null = null;
+
+    const giveUp = () => {
+      if (!cancelled) setError("The stream is unavailable right now.");
+    };
+
+    /** Exponential backoff so a persistent failure does not become a flood. */
+    const backoff = (fn: () => void) => {
+      attempts += 1;
+      if (attempts > MAX_RECOVERY_ATTEMPTS) {
+        giveUp();
+        return;
+      }
+      retryTimer = setTimeout(fn, RETRY_BASE_DELAY_MS * 2 ** (attempts - 1));
+    };
 
     async function attach() {
       const canPlayNatively = video!.canPlayType(
         "application/vnd.apple.mpegurl",
       );
 
-      // Safari and iOS: hand the manifest straight to the element. Layering
-      // hls.js on top here is what breaks native fullscreen and AirPlay.
+      /* --- Safari / iOS: hand the manifest straight to the element -------- */
       if (canPlayNatively) {
         video!.src = src;
+
+        // The element's own error event is the ONLY signal available here —
+        // none of the hls.js recovery below runs on this path. Without it,
+        // every Safari and iOS viewer loses the stream when the signed token
+        // expires roughly an hour in, which on a two-hour card is the middle
+        // of the main event.
+        nativeErrorHandler = () => {
+          if (cancelled) return;
+          backoff(async () => {
+            const refreshed = await refreshRef.current?.();
+            if (cancelled) return;
+            if (refreshed) {
+              const resumeAt = video!.currentTime;
+              video!.src = refreshed;
+              video!.load();
+              // Live streams resume at the edge; VOD keeps its position.
+              if (!isLive && Number.isFinite(resumeAt)) {
+                video!.currentTime = resumeAt;
+              }
+              void video!.play().catch(() => {});
+            } else {
+              giveUp();
+            }
+          });
+        };
+        video!.addEventListener("error", nativeErrorHandler);
         return;
       }
 
+      /* --- Everywhere else: hls.js --------------------------------------- */
       const { default: HlsLib } = await import("hls.js");
       if (cancelled) return;
 
@@ -109,8 +163,6 @@ export function RoboxingPlayer({
       }
 
       hls = new HlsLib({
-        // Low-latency HLS where the origin offers it. Glass-to-glass delay is
-        // measured before anything is promised about it.
         lowLatencyMode: true,
         backBufferLength: 90,
         enableWorker: true,
@@ -119,6 +171,8 @@ export function RoboxingPlayer({
 
       hls.on(HlsLib.Events.MANIFEST_PARSED, (_e, data) => {
         if (cancelled) return;
+        // A successful load means whatever went wrong is over.
+        attempts = 0;
         setLevels(
           (data.levels as Level[]).map((l, index) => ({
             index,
@@ -133,29 +187,27 @@ export function RoboxingPlayer({
         if (!cancelled) setLevel(hls?.autoLevelEnabled ? -1 : data.level);
       });
 
-      hls.on(HlsLib.Events.ERROR, async (_e, data) => {
+      hls.on(HlsLib.Events.ERROR, (_e, data) => {
         if (!data.fatal || cancelled) return;
 
         if (data.type === HlsLib.ErrorTypes.NETWORK_ERROR) {
-          // The most likely cause on a long broadcast is an expired signed
-          // token, which looks exactly like any other network failure. Ask for
-          // a fresh URL before falling back to a plain retry.
-          const refreshed = await refreshRef.current?.();
-          if (cancelled) return;
-          if (refreshed) {
-            hls?.loadSource(refreshed);
-            return;
-          }
-          hls?.startLoad();
+          // On a long broadcast the likeliest cause is an expired signed
+          // token, which is indistinguishable from any other network failure.
+          backoff(async () => {
+            const refreshed = await refreshRef.current?.();
+            if (cancelled) return;
+            if (refreshed) hls?.loadSource(refreshed);
+            else hls?.startLoad();
+          });
           return;
         }
 
         if (data.type === HlsLib.ErrorTypes.MEDIA_ERROR) {
-          hls?.recoverMediaError();
+          backoff(() => hls?.recoverMediaError());
           return;
         }
 
-        setError("The stream stopped unexpectedly.");
+        giveUp();
       });
 
       hls.loadSource(src);
@@ -166,10 +218,17 @@ export function RoboxingPlayer({
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (nativeErrorHandler) {
+        video.removeEventListener("error", nativeErrorHandler);
+      }
       hls?.destroy();
       hlsRef.current = null;
+      // Release the old source so a src swap does not leave the previous
+      // manifest loading in the background.
+      if (!hlsRef.current) video.removeAttribute("src");
     };
-  }, [src]);
+  }, [src, isLive]);
 
   /* ---------------------------------------------------------------------- */
   /* Element events                                                          */
@@ -189,13 +248,13 @@ export function RoboxingPlayer({
     const onTime = () => {
       setCurrentTime(video.currentTime);
 
-      // Live-edge drift. hls.js knows the true edge; native HLS only exposes
-      // the end of the seekable range, which is close enough.
       if (!isLive) return;
       const hls = hlsRef.current;
       const edge =
         hls?.liveSyncPosition ??
-        (video.seekable.length ? video.seekable.end(video.seekable.length - 1) : null);
+        (video.seekable.length
+          ? video.seekable.end(video.seekable.length - 1)
+          : null);
       if (edge == null) return;
       setBehindLive(edge - video.currentTime > DRIFT_THRESHOLD_SECONDS);
     };
@@ -221,6 +280,28 @@ export function RoboxingPlayer({
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // Dismiss the quality menu the way every other menu on the web dismisses.
+  // Without this a keyboard user who opens it has no way back out.
+  useEffect(() => {
+    if (!showQuality) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowQuality(false);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (!qualityMenuRef.current?.contains(e.target as Node)) {
+        setShowQuality(false);
+      }
+    };
+
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [showQuality]);
+
   /* ---------------------------------------------------------------------- */
   /* Controls                                                                */
   /* ---------------------------------------------------------------------- */
@@ -238,7 +319,9 @@ export function RoboxingPlayer({
     const hls = hlsRef.current;
     const edge =
       hls?.liveSyncPosition ??
-      (video.seekable.length ? video.seekable.end(video.seekable.length - 1) : null);
+      (video.seekable.length
+        ? video.seekable.end(video.seekable.length - 1)
+        : null);
     if (edge != null) video.currentTime = edge;
     if (video.paused) void video.play().catch(() => {});
     setBehindLive(false);
@@ -246,8 +329,7 @@ export function RoboxingPlayer({
 
   const toggleMute = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
+    if (video) video.muted = !video.muted;
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -290,14 +372,12 @@ export function RoboxingPlayer({
         ref={videoRef}
         poster={poster ?? undefined}
         playsInline
-        muted={muted}
-        // Native controls stay off — these are ours.
         className="h-full w-full bg-black"
         onClick={togglePlay}
       />
 
-      {/* Live / drift badge. The only red on the site means broadcasting;
-          amber means "you have fallen behind", which is a different message. */}
+      {/* Live / drift badge. Red means broadcasting and nothing else; amber
+          means "you have fallen behind", which is a different message. */}
       {isLive ? (
         <button
           type="button"
@@ -328,7 +408,6 @@ export function RoboxingPlayer({
         </div>
       ) : null}
 
-      {/* Big centre play affordance while paused. */}
       {!playing && !error ? (
         <button
           type="button"
@@ -342,7 +421,7 @@ export function RoboxingPlayer({
         </button>
       ) : null}
 
-      {/* Control bar. Visible on hover, on focus, and whenever paused, so it
+      {/* Control bar: visible on hover, on focus, and whenever paused, so it
           is reachable by keyboard and does not vanish on a touch device. */}
       <div
         className={cn(
@@ -370,15 +449,20 @@ export function RoboxingPlayer({
         ) : null}
 
         <div className="flex items-center gap-2">
-          <ControlButton
-            onClick={togglePlay}
-            label={playing ? "Pause" : "Play"}
-          >
-            {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+          <ControlButton onClick={togglePlay} label={playing ? "Pause" : "Play"}>
+            {playing ? (
+              <Pause className="size-4" />
+            ) : (
+              <Play className="size-4" />
+            )}
           </ControlButton>
 
           <ControlButton onClick={toggleMute} label={muted ? "Unmute" : "Mute"}>
-            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+            {muted ? (
+              <VolumeX className="size-4" />
+            ) : (
+              <Volume2 className="size-4" />
+            )}
           </ControlButton>
 
           <input
@@ -403,7 +487,7 @@ export function RoboxingPlayer({
 
           <div className="ml-auto flex items-center gap-2">
             {levels.length > 1 ? (
-              <div className="relative">
+              <div className="relative" ref={qualityMenuRef}>
                 <ControlButton
                   onClick={() => setShowQuality((v) => !v)}
                   label="Quality"

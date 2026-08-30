@@ -16,7 +16,11 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth-tokens";
  * guard in a route is caught here.
  */
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  // Next's matcher is case-insensitive, so /API/admin/... reaches this
+  // function. Comparing case-sensitively below would send an API client an
+  // HTML redirect where it expects JSON — access is denied either way, but
+  // the wrong shape of denial breaks the caller's error handling.
+  const pathname = request.nextUrl.pathname.toLowerCase();
 
   // The login page itself must stay reachable, or there is no way in.
   if (pathname === "/admin/login") return NextResponse.next();

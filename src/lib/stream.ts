@@ -165,24 +165,66 @@ export type SignedTokenOptions = {
  * without renewal a viewer's stream dies partway through the main event. The
  * player refreshes on a fatal network error; this is the endpoint behind that.
  */
+type CachedToken = { token: string; expiresAt: number };
+
+/**
+ * Minted tokens, reused until shortly before they expire.
+ *
+ * A signed token is not per-viewer: expiry is absolute and the geo rules are
+ * evaluated by Cloudflare against the viewer's IP at playback time, so one
+ * token is safely shared by everyone watching in that window.
+ *
+ * That matters because without this, every page render, refresh, crawler hit
+ * and link-unfurl was a live call to Cloudflare's API. The same reasoning that
+ * put a CDN cache in front of the state poll applies here, and this dependency
+ * is the one that gates playback for every viewer: exhaust its rate limit
+ * during an event and everybody's stream breaks at once.
+ *
+ * Per-instance and best-effort — the CDN cache on /playback is the other half.
+ */
+const tokenCache = new Map<string, CachedToken>();
+
+/** Re-mint this long before actual expiry, so nobody gets a nearly-dead token. */
+const TOKEN_REFRESH_MARGIN_SECONDS = 600;
+
 export async function createSignedToken(
   videoOrInputUid: string,
   options: SignedTokenOptions = {},
 ): Promise<string> {
   const ttl = options.ttlSeconds ?? 60 * 60; // one hour
 
-  const accessRules = options.allowedCountries?.length
-    ? [
-        {
-          type: "ip.geoip.country",
-          country: options.allowedCountries.map((c) => c.toUpperCase()),
-          action: "allow",
-        },
-        // Anything not explicitly allowed is blocked. The order matters —
-        // Cloudflare evaluates rules top to bottom and takes the first match.
-        { type: "any", action: "block" },
-      ]
-    : undefined;
+  // null/undefined means "no territory restriction configured".
+  // An EMPTY ARRAY means "no territory is permitted" and blocks everyone.
+  //
+  // Those must not collapse into the same thing. Territory limits come from a
+  // rights agreement, so the failure directions are not symmetric: blocking
+  // everyone is a loud, immediately-reported bug, while silently serving
+  // worldwide because a form submitted [] instead of null is a breach of
+  // contract that nobody notices until the rights holder does.
+  const countries = options.allowedCountries;
+  const accessRules =
+    countries == null
+      ? undefined
+      : [
+          ...(countries.length > 0
+            ? [
+                {
+                  type: "ip.geoip.country",
+                  country: countries.map((c) => c.toUpperCase()),
+                  action: "allow",
+                },
+              ]
+            : []),
+          // Anything not explicitly allowed is blocked. Order matters —
+          // Cloudflare takes the first matching rule.
+          { type: "any", action: "block" },
+        ];
+
+  const cacheKey = `${videoOrInputUid}|${ttl}|${
+    countries == null ? "*" : countries.join(",")
+  }`;
+  const cached = tokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.token;
 
   const result = await cf<{ token: string }>(
     `/stream/${videoOrInputUid}/token`,
@@ -194,6 +236,11 @@ export async function createSignedToken(
       }),
     },
   );
+
+  tokenCache.set(cacheKey, {
+    token: result.token,
+    expiresAt: Date.now() + Math.max(ttl - TOKEN_REFRESH_MARGIN_SECONDS, 30) * 1000,
+  });
 
   return result.token;
 }

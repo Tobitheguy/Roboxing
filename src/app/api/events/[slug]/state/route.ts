@@ -33,7 +33,13 @@ export async function GET(
   if (!event) {
     return Response.json(
       { error: "Event not found" },
-      { status: 404, headers: { "Cache-Control": "no-store" } },
+      {
+        status: 404,
+        // Cached briefly on purpose. The CDN key is the slug, so an attacker
+        // generating arbitrary slugs would otherwise reach Postgres on every
+        // single request — caching the miss puts a ceiling on that.
+        headers: { "Cache-Control": "public, s-maxage=60" },
+      },
     );
   }
 
@@ -54,6 +60,12 @@ export async function GET(
     .where(eq(bouts.eventId, event.id))
     .orderBy(bouts.orderIndex);
 
+  // An event that has not started cannot have public results. If any exist —
+  // test data, an early entry, a mis-click — they are withheld rather than
+  // published ahead of the broadcast. This endpoint is public and directly
+  // curlable, so gating it in the client would gate nothing.
+  const withholdResults = event.status === "scheduled";
+
   const body = {
     eventSlug: event.slug,
     eventStatus: event.status,
@@ -63,7 +75,7 @@ export async function GET(
       orderIndex: b.orderIndex,
       status: b.status,
       result:
-        b.method != null
+        !withholdResults && b.method != null
           ? {
               winnerRobotId: b.winnerRobotId,
               method: b.method,
