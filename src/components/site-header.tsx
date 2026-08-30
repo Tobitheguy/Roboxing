@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import { LivePill } from "@/components/live-pill";
 import { MainNav } from "@/components/main-nav";
@@ -17,6 +18,12 @@ import { getLiveNow } from "@/lib/live";
  * costs nothing; retrofitting it after step 3 means revisiting every page.
  */
 async function LiveNowPill({ variant }: { variant: "mobile" | "desktop" }) {
+  // Request-time, not build-time. This is the single most important correctness
+  // line in the shell: without it Next prerenders the pill's ABSENCE into
+  // static HTML at build, and the LIVE badge would never appear no matter what
+  // is actually broadcasting — a bug that would only surface on event day.
+  await connection();
+
   const live = await getLiveNow();
   if (!live) return null;
 

@@ -1,3 +1,8 @@
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import { events } from "@/db/schema";
+
 export type LiveNow = {
   eventSlug: string;
   eventName: string;
@@ -6,15 +11,22 @@ export type LiveNow = {
 /**
  * Whether anything is broadcasting right now.
  *
- * Drives the LIVE pill in the site header, which is the site's single global
- * piece of state — it has to be correct on every page, so it is resolved in one
- * place rather than passed down from whichever page happens to know.
+ * Drives the LIVE pill in the site header, which is the site's one piece of
+ * global state — it has to be correct on every page, so it is resolved here
+ * rather than passed down from whichever page happens to know.
  *
- * STEP 1: returns null. There is no database yet, and inventing a fake live
- * event to make the header look interesting would put a red LIVE badge on a
- * public URL with nothing behind it. Step 2 replaces the body with a query for
- * `events where status = 'live'`; the signature does not change.
+ * `status` is the single source of truth rather than a time window around
+ * `starts_at`: an event that begins late, runs long, or is cancelled mid-card
+ * must not show a LIVE badge with nothing behind it, and only an admin
+ * flipping the switch knows which of those is happening.
  */
 export async function getLiveNow(): Promise<LiveNow> {
-  return null;
+  const rows = await db
+    .select({ slug: events.slug, name: events.name })
+    .from(events)
+    .where(eq(events.status, "live"))
+    .limit(1);
+
+  const event = rows[0];
+  return event ? { eventSlug: event.slug, eventName: event.name } : null;
 }

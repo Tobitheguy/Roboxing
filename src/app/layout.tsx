@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter, Oswald } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 
+import { DemoBanner } from "@/components/demo-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
@@ -57,6 +59,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${oswald.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* Suspense so a database round-trip for the banner cannot block the
+            shell from rendering. Absent by default: if the query fails, the
+            page still loads — it just loses the notice, which is the right
+            failure direction for a banner. */}
+        <Suspense fallback={null}>
+          <DemoBanner />
+        </Suspense>
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />

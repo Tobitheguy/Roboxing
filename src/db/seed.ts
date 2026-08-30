@@ -1,4 +1,11 @@
-import "dotenv/config";
+import { config } from "dotenv";
+
+// This runs outside Next, so it does not inherit Next's automatic .env
+// loading. `dotenv/config` alone reads only `.env` — the Vercel/Neon
+// integration writes the connection string to `.env.local`, so that file has
+// to be named explicitly or the script sees an empty environment.
+config({ path: ".env.local" });
+config({ path: ".env" });
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
