@@ -71,6 +71,31 @@ export const boutMethod = pgEnum("bout_method", [
 
 export const streamStatus = pgEnum("stream_status", ["idle", "live", "ended"]);
 
+/**
+ * What it takes to watch an event.
+ *
+ * `free` today for everything, because there are no broadcast rights yet and
+ * nothing to sell. The entitlement check still runs on every playback request
+ * — the switch flips per event when there is something to charge for, and the
+ * code that must never be wrong has been exercised for months by then rather
+ * than written in the fortnight before the first paid night.
+ */
+export const eventAccess = pgEnum("event_access", ["free", "subscription"]);
+
+/** How someone came to be entitled. */
+export const entitlementKind = pgEnum("entitlement_kind", [
+  "subscription",
+  /**
+   * Not sold today — the model is subscription-only. Present because an
+   * irregular calendar tends to produce subscribe-watch-cancel behaviour, and
+   * a per-event option is the usual answer. Reserving the value now means
+   * adding it later is a new row, not a migration of live billing data.
+   */
+  "ppv",
+  /** Comped access: press, the organizer, the team behind the robot. */
+  "complimentary",
+]);
+
 /* -------------------------------------------------------------------------- */
 /* Competitions                                                                */
 /* -------------------------------------------------------------------------- */
@@ -195,6 +220,12 @@ export const events = pgTable(
      */
     timezone: text("timezone").notNull().default("UTC"),
     status: eventStatus("status").notNull().default("scheduled"),
+    /**
+     * What it takes to watch this one. Defaults to `free` so nothing is
+     * accidentally paywalled by omission — a viewer wrongly refused access is
+     * a support ticket and a refund, and it happens at the worst moment.
+     */
+    access: eventAccess("access").notNull().default("free"),
     posterUrl: text("poster_url"),
     /**
      * ISO 3166-1 alpha-2 codes this event may be played in, passed through to
@@ -367,6 +398,90 @@ export const streams = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Viewers and access                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A viewer.
+ *
+ * Clerk owns identity — passwords, social sign-in, sessions, MFA. This table
+ * exists only so entitlements have something with a foreign key to hang off,
+ * and so a purchase survives independently of the auth provider. If Clerk were
+ * ever swapped out, `clerk_user_id` is the only column that would need
+ * remapping; who paid for what would be untouched.
+ *
+ * Email is stored denormalised for the admin UI and for matching against
+ * ADMIN_EMAILS. It is refreshed from Clerk on sign-in, because a user can
+ * change their email there and this copy would otherwise rot.
+ */
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull().unique(),
+    email: text("email").notNull(),
+    displayName: text("display_name"),
+    imageUrl: text("image_url"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  },
+  (t) => [index("users_email_idx").on(t.email)],
+);
+
+/**
+ * What a viewer is allowed to watch.
+ *
+ * A row grants access over a time WINDOW rather than merely pointing at a
+ * subscription id. That matters for a subscription business: someone who
+ * cancels keeps what they already paid for until the period ends, and someone
+ * who subscribes after an event does not retroactively gain access to it.
+ * Checking "was this entitlement active when the event started" answers both,
+ * and a boolean `is_subscribed` on the user answers neither.
+ */
+export const entitlements = pgTable(
+  "entitlements",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: entitlementKind("kind").notNull().default("subscription"),
+    /** Only set for per-event grants; null means "everything in the window". */
+    eventId: integer("event_id").references(() => events.id, {
+      onDelete: "cascade",
+    }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    /** Null means open-ended — used for complimentary access. */
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    /** Stripe's id for the subscription or payment behind this grant. */
+    stripeRef: text("stripe_ref"),
+    /** Free-text note for complimentary grants: who authorised it, and why. */
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("entitlements_user_id_idx").on(t.userId),
+    index("entitlements_event_id_idx").on(t.eventId),
+    // A window that ends before it starts would silently grant nothing, and
+    // the bug would look like "the customer says they paid but cannot watch".
+    check(
+      "entitlements_window_ordered",
+      sql`${t.endsAt} IS NULL OR ${t.endsAt} > ${t.startsAt}`,
+    ),
+    // A per-event grant must name an event; a blanket one must not.
+    check(
+      "entitlements_event_matches_kind",
+      sql`(${t.kind} = 'ppv' AND ${t.eventId} IS NOT NULL)
+          OR (${t.kind} <> 'ppv')`,
+    ),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Audit                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -455,6 +570,18 @@ export const streamsRelations = relations(streams, ({ one }) => ({
   event: one(events, { fields: [streams.eventId], references: [events.id] }),
 }));
 
+export const usersRelations = relations(users, ({ many }) => ({
+  entitlements: many(entitlements),
+}));
+
+export const entitlementsRelations = relations(entitlements, ({ one }) => ({
+  user: one(users, { fields: [entitlements.userId], references: [users.id] }),
+  event: one(events, {
+    fields: [entitlements.eventId],
+    references: [events.id],
+  }),
+}));
+
 /* -------------------------------------------------------------------------- */
 /* Inferred types                                                              */
 /* -------------------------------------------------------------------------- */
@@ -467,4 +594,8 @@ export type Event = typeof events.$inferSelect;
 export type Bout = typeof bouts.$inferSelect;
 export type BoutResult = typeof boutResults.$inferSelect;
 export type Stream = typeof streams.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type Entitlement = typeof entitlements.$inferSelect;
 export type BoutMethodValue = (typeof boutMethod.enumValues)[number];
+export type EventAccessValue = (typeof eventAccess.enumValues)[number];
+export type EntitlementKindValue = (typeof entitlementKind.enumValues)[number];

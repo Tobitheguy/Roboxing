@@ -138,6 +138,60 @@ difference between a surprise and a decision.
 
 ---
 
+## Reversed on 2026-08-30: Roboxing is a paid platform
+
+The original plan assumed a free, ad-free, account-free V1 and deferred fan
+accounts, Clerk, and payments to "post-POC". That was wrong about the business,
+and the correction arrived before it got expensive.
+
+**Roboxing sells access.** Watching is not free. That single fact changes three
+things that would each have been painful to retrofit:
+
+1. **Accounts are not optional.** You cannot sell access without identity.
+   Every viewer signs in — not just admins.
+2. **Signed playback URLs are no longer enough.** `/api/events/[slug]/playback`
+   minted a token for anyone who asked, which was correct while watching was
+   free. Under a paywall that endpoint must check entitlement first, or the
+   paywall is decoration and the stream is one open URL away from free.
+3. **The rights deal changes.** Distribution rights that permit *free* viewing
+   do not automatically permit *selling* access. This has to be on the table
+   with the organizer from the first conversation — it is a different licence
+   and usually a different price.
+
+### Model: subscription
+
+One recurring subscription grants access to everything, rather than
+per-event purchases.
+
+Accepted risk, recorded so it is not a surprise later: with an irregular
+calendar — and URKL has no fixed schedule yet — subscribers tend to cancel
+after each event and resubscribe for the next. A per-event option is the usual
+answer to that. The `entitlements` table stores a date range rather than a
+subscription id alone, so adding pay-per-view later is a new row shape, not a
+migration of existing data.
+
+### Timing: build the gate now, switch it on later
+
+`events.access` is `free | subscription`. Everything is `free` today, so
+nothing changes for a visitor, and the entitlement check runs on every playback
+request from day one — exercised, tested, and boring by the time real money
+touches it. The alternative was writing the one piece of code that must never
+be wrong in the fortnight before the first paid event.
+
+### Auth: Clerk
+
+Native Vercel Marketplace integration, so environment variables are
+provisioned automatically and billing is unified. Social sign-in (Google,
+GitHub) plus email codes.
+
+Admins are ordinary Clerk users whose email appears in `ADMIN_EMAILS`. This
+replaces the shared admin password from deviation 1 below — which was the right
+call while admin-only was the whole story, but a shared credential cannot tell
+you *who* changed a result, and revoking one person's access meant changing the
+password for everyone.
+
+---
+
 ## Explicitly deferred
 
 Fan accounts, comments, follows, predictions. Tournament/bracket generation.
