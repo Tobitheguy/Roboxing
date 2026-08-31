@@ -25,18 +25,31 @@ export async function syncSubscriptionEntitlement(
       ? subscription.customer
       : subscription.customer.id;
 
-  const [user] = await db
+  const byCustomerId = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.stripeCustomerId, customerId))
     .limit(1);
 
+  let user: { id: number } | undefined = byCustomerId[0];
+
   if (!user) {
-    // The webhook can beat our own database write on a first purchase. Logged
-    // rather than thrown: throwing makes Stripe retry, and the retry is
-    // exactly the right recovery — by then the customer id will be stored.
-    console.warn(
-      `[stripe] no local user for customer ${customerId}; will retry on redelivery`,
+    // Fall back to matching on email, then store the link.
+    //
+    // Two cases this rescues, both of which otherwise end as "they paid and
+    // cannot watch": a subscription created directly in the Stripe dashboard
+    // (a comp, or support fixing something), and a customer whose id never got
+    // written back because the checkout was started elsewhere. Stripe stops
+    // retrying after a few days, so a webhook that only ever waits for our own
+    // write to appear will eventually give up in silence.
+    user = await linkByEmail(customerId);
+  }
+
+  if (!user) {
+    console.error(
+      `[stripe] no local user for customer ${customerId} and no email match. ` +
+        `Subscription ${subscription.id} is UNAPPLIED — someone may have paid ` +
+        `and be unable to watch.`,
     );
     return { userId: null, granted: false };
   }
@@ -54,11 +67,15 @@ export async function syncSubscriptionEntitlement(
     )
     .limit(1);
 
-  // Not entitled any more — the subscription lapsed or was never paid. The row
-  // is removed rather than left with a past end date, so a cancelled customer
-  // does not accumulate dead entitlements. Their access to events that already
-  // happened inside a paid window is unaffected: access is decided against the
-  // EVENT's date, and a removed row simply removes a window that had ended.
+  // Not entitled any more — the subscription lapsed or was never paid.
+  //
+  // Removing the row and leaving it with a past end date are equivalent: access
+  // is decided against the PRESENT moment, so an expired window denies either
+  // way. Removing keeps cancelled customers from accumulating dead rows.
+  //
+  // This does mean a lapsed subscriber loses the back catalogue, which is
+  // correct and is what the pricing page says — access runs until the period
+  // ends. Cancelling is not a purchase.
   if (!window) {
     if (existing) {
       await db.delete(entitlements).where(eq(entitlements.id, existing.id));
@@ -82,6 +99,44 @@ export async function syncSubscriptionEntitlement(
   }
 
   return { userId: user.id, granted: true };
+}
+
+/**
+ * Find a user by the Stripe customer's email address and record the link.
+ *
+ * Only reached when the customer id is not already stored, so the extra Stripe
+ * call costs nothing in the normal path.
+ */
+async function linkByEmail(
+  customerId: string,
+): Promise<{ id: number } | undefined> {
+  try {
+    const customer = await stripe().customers.retrieve(customerId);
+    if (customer.deleted) return undefined;
+
+    const email = customer.email?.trim().toLowerCase();
+    if (!email) return undefined;
+
+    const [match] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (!match) return undefined;
+
+    await db
+      .update(users)
+      .set({ stripeCustomerId: customerId })
+      .where(eq(users.id, match.id));
+
+    console.warn(
+      `[stripe] linked customer ${customerId} to user ${match.id} by email`,
+    );
+    return match;
+  } catch (error) {
+    console.error("[stripe] email fallback failed:", error);
+    return undefined;
+  }
 }
 
 /**

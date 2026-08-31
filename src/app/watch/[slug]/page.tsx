@@ -60,7 +60,7 @@ async function resolvePlayback(
 
   // Entitlement before anything else. Resolving a URL first and hiding it in
   // the UI would still put a working manifest in the page's payload.
-  const decision = await checkEventAccess(event);
+  const decision = await checkEventAccess({ id: event.id, access: event.access });
   if (!decision.allowed) {
     return {
       url: null,

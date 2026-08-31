@@ -20,7 +20,6 @@ export const checkEventAccess = cache(
   async (event: {
     id: number;
     access: EventAccessValue;
-    startsAt: Date;
   }): Promise<AccessDecision> => {
     // Skip the viewer lookup entirely for free events — which is every event
     // today, so this is the path that actually runs.
@@ -33,7 +32,7 @@ export const checkEventAccess = cache(
       return decideAccess({
         eventId: event.id,
         eventAccess: event.access,
-        eventStartsAt: event.startsAt,
+        now: new Date(),
         entitlements: null,
       });
     }
@@ -50,7 +49,7 @@ export const checkEventAccess = cache(
     return decideAccess({
       eventId: event.id,
       eventAccess: event.access,
-      eventStartsAt: event.startsAt,
+      now: new Date(),
       entitlements,
     });
   },

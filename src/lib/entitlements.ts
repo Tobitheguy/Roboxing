@@ -8,21 +8,28 @@ import type {
  *
  * This is the only thing standing between a paying subscriber and a stranger
  * with the URL, so it is a pure function with no database, no clock, and no
- * network — every branch is reachable from a test. The query layer feeds it.
+ * network — `now` is passed in — and every branch is reachable from a test.
  *
- * The rule it enforces is deliberately about TIME, not about a boolean on the
- * user. A subscription grants access to events that happen inside its window.
- * That single choice answers two questions correctly that a simple
- * `user.isSubscribed` flag gets wrong in opposite directions:
+ * THE RULE: a subscription grants the whole library while it is active. Not
+ * "the events that happened during your subscription" — the whole library, for
+ * as long as you are paying. That is what a subscription is, it is what the
+ * pricing page promises, and it is why the back catalogue is worth anything to
+ * a new subscriber.
  *
- *   - Someone who cancels keeps access to events they had already paid for.
- *   - Someone who subscribes today does not retroactively unlock last month's
- *     card, which they never paid for.
+ * The first version of this file checked the entitlement window against the
+ * EVENT's start time instead of the present moment. That is pay-per-view
+ * logic wearing a subscription's clothes: it locked a brand-new subscriber out
+ * of every event that happened before they joined, which is most of the value
+ * they just paid for. Corrected here, and the tests below pin the corrected
+ * behaviour in both directions.
+ *
+ * A per-event grant (`ppv`, not sold today) still works the other way round —
+ * it unlocks one named event, and keeps doing so.
  */
 
 export type EntitlementRecord = {
   kind: EntitlementKindValue;
-  /** Null for blanket grants; set for a single-event purchase. */
+  /** Null for a blanket grant; set for a single-event purchase. */
   eventId: number | null;
   startsAt: Date;
   /** Null means open-ended. */
@@ -33,11 +40,11 @@ export type AccessRequest = {
   eventId: number;
   eventAccess: EventAccessValue;
   /**
-   * When the event starts. The entitlement window is checked against this
-   * rather than against "now", so a replay watched months later still plays
-   * for whoever was subscribed on the night.
+   * The moment the question is being asked. Passed in rather than read from
+   * the clock so this function stays pure and testable — and so a single
+   * render cannot see two different "now"s.
    */
-  eventStartsAt: Date;
+  now: Date;
   /** Null when nobody is signed in. */
   entitlements: EntitlementRecord[] | null;
 };
@@ -46,7 +53,7 @@ export type AccessDecision =
   | { allowed: true; reason: "free" | "entitled" }
   | { allowed: false; reason: "sign_in_required" | "subscription_required" };
 
-function coversInstant(entitlement: EntitlementRecord, instant: Date): boolean {
+function isActiveAt(entitlement: EntitlementRecord, instant: Date): boolean {
   if (entitlement.startsAt.getTime() > instant.getTime()) return false;
   if (entitlement.endsAt === null) return true;
   return entitlement.endsAt.getTime() > instant.getTime();
@@ -59,21 +66,23 @@ export function decideAccess(request: AccessRequest): AccessDecision {
     return { allowed: true, reason: "free" };
   }
 
-  // Not signed in: there is no entitlement to find. Distinguished from
-  // "signed in but not subscribed" so the UI can say the useful thing —
-  // "sign in" and "subscribe" are different buttons.
+  // Not signed in: there is no entitlement to find. Kept distinct from
+  // "signed in but not subscribed" so the UI can offer the right button —
+  // telling an existing subscriber to buy again is how refunds happen.
   if (request.entitlements === null) {
     return { allowed: false, reason: "sign_in_required" };
   }
 
   const entitled = request.entitlements.some((entitlement) => {
-    // A per-event grant only unlocks its own event.
-    if (entitlement.eventId !== null && entitlement.eventId !== request.eventId) {
+    // A per-event grant only ever unlocks its own event.
+    if (
+      entitlement.eventId !== null &&
+      entitlement.eventId !== request.eventId
+    ) {
       return false;
     }
-    // Complimentary and per-event grants still respect their window; an
-    // open-ended one simply has no end.
-    return coversInstant(entitlement, request.eventStartsAt);
+    // Active right now — not "active when the event happened".
+    return isActiveAt(entitlement, request.now);
   });
 
   return entitled

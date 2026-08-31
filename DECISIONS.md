@@ -158,6 +158,23 @@ things that would each have been painful to retrofit:
    with the organizer from the first conversation — it is a different licence
    and usually a different price.
 
+### Corrected 2026-08-30: a subscription unlocks the whole library
+
+The first implementation checked an entitlement's window against the EVENT's
+start time. That is pay-per-view logic, and it produced exactly the wrong
+behaviour for a subscription: a new subscriber was locked out of every event
+that happened before they joined — most of what they had just paid for, and the
+direct opposite of what the pricing page promises.
+
+Access is now checked against the PRESENT moment. While a subscription is
+active you can watch everything; when it lapses you can watch nothing, which is
+what "cancel any time, you keep access until the period ends" means and how
+every comparable service behaves.
+
+A per-event grant still works the other way round — it unlocks one named event
+and keeps doing so — which is why the distinction is worth keeping in the data
+model even though only subscriptions are sold.
+
 ### Model: subscription
 
 One recurring subscription grants access to everything, rather than

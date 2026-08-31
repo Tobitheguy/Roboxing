@@ -6,7 +6,10 @@ import { getViewer } from "@/lib/auth";
 import { getAppUrl } from "@/lib/app-url";
 import { PLAN } from "@/lib/plan";
 import { isStripeConfigured, stripe } from "@/lib/stripe";
-import { ensureStripeCustomer } from "@/lib/subscriptions";
+import {
+  ensureStripeCustomer,
+  getSubscriptionState,
+} from "@/lib/subscriptions";
 
 /**
  * Start checkout.
@@ -21,6 +24,14 @@ export async function startCheckout(): Promise<string | void> {
   if (!isStripeConfigured()) {
     return "Checkout is not configured yet.";
   }
+
+  // Checked HERE, not only by hiding the button. A Server Action is a POST
+  // endpoint that anyone with the action id can call, and the ordinary way to
+  // hit this is not an attack — it is a double-click before the redirect
+  // fires, or a second tab. Either would create a second subscription against
+  // the same customer and bill them twice.
+  const { active } = await getSubscriptionState(viewer.id);
+  if (active) return "You already have an active subscription.";
 
   const appUrl = getAppUrl();
   let url: string | null = null;

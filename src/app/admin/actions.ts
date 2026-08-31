@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -445,9 +445,14 @@ export async function saveBout(
 
       // Capture each robot's team AS OF NOW. The bout keeps these for good, so
       // a later transfer cannot move a finished result to a different team.
+      //
+      // Fetch only the two robots involved: reading the whole table worked
+      // fine at a dozen robots and becomes a full scan on every bout write
+      // once a league has hundreds.
       const chosen = await db
         .select({ id: robots.id, teamId: robots.teamId })
-        .from(robots);
+        .from(robots)
+        .where(inArray(robots.id, [input.robotAId, input.robotBId]));
       const teamOf = (robotId: number) =>
         chosen.find((r) => r.id === robotId)?.teamId;
 

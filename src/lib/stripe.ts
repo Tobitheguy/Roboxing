@@ -64,8 +64,12 @@ export function subscriptionWindow(subscription: Stripe.Subscription): {
   ];
   if (!entitledStatuses.includes(subscription.status)) return null;
 
+  // start_date is when the subscription was FIRST created and never moves.
+  // current_period_start advances every renewal, so using it would rewrite the
+  // window's start each month — harmless for "is it active now", misleading in
+  // every support conversation and in the audit trail.
   const item = subscription.items.data[0];
-  const start = item?.current_period_start ?? subscription.start_date;
+  const start = subscription.start_date ?? item?.current_period_start;
   const end = item?.current_period_end;
   if (!start || !end) return null;
 

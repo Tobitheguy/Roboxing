@@ -73,11 +73,7 @@ export async function GET(
   // THE PAYWALL. Checked here, not only on the page — this endpoint returns a
   // working manifest URL, so a check that lives only in the UI protects
   // nothing from anyone who opens the network tab once.
-  const decision = await checkEventAccess({
-    id: row.id,
-    access: row.access,
-    startsAt: row.startsAt,
-  });
+  const decision = await checkEventAccess({ id: row.id, access: row.access });
 
   if (!decision.allowed) {
     return Response.json(
@@ -92,6 +88,23 @@ export async function GET(
   }
 
   // A directly-supplied manifest is not a Cloudflare asset and needs no token.
+  //
+  // IT ALSO CANNOT BE GEO-RESTRICTED. Territory limits are enforced by the
+  // signed-token access rules, which only exist for Cloudflare-hosted streams.
+  // If an event carries a territory restriction, refuse rather than quietly
+  // serving it worldwide — a rights breach nobody notices is worse than a
+  // broken player somebody reports.
+  if (row.directHlsUrl && row.allowedCountries?.length) {
+    console.error(
+      `[playback] event ${slug} has a direct HLS URL and a territory ` +
+        `restriction; a direct URL cannot enforce one. Refusing.`,
+    );
+    return Response.json(
+      { error: "This event cannot be played in your region." },
+      { status: 451, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   if (row.directHlsUrl) {
     return Response.json(
       { url: row.directHlsUrl },
@@ -143,13 +156,18 @@ export async function GET(
           // max-age=0 keeps browsers from holding a token past its usefulness
           // while still letting the shared cache absorb the fan-out.
           //
+          // 30s rather than minutes: flipping an event from free to paid takes
+          // effect on the next request, not after a cached free response has
+          // finished handing out working manifests. Still absorbs the burst
+          // when a few thousand viewers arrive at once, which is the point.
+          //
           // ONLY for free events. Once an event is paid, a shared cache entry
           // would hand the first subscriber's manifest URL to every subsequent
           // caller — including ones the paywall just refused. Correctness
           // before fan-out.
           "Cache-Control":
             row.access === "free"
-              ? "public, max-age=0, s-maxage=240, stale-while-revalidate=60"
+              ? "public, max-age=0, s-maxage=30"
               : "private, no-store",
         },
       },
