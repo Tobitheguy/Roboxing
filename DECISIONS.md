@@ -195,6 +195,21 @@ request from day one — exercised, tested, and boring by the time real money
 touches it. The alternative was writing the one piece of code that must never
 be wrong in the fortnight before the first paid event.
 
+### Tax: off until there is a registered business
+
+`automatic_tax` is behind `STRIPE_AUTOMATIC_TAX`, default off. Stripe Tax has
+to be switched on in the dashboard and backed by real registrations before it
+computes anything; called without that it fails the checkout outright, so the
+first thing a customer would meet is an error rather than a payment form.
+
+The deeper reason is not technical: a business with no tax registrations has
+no tax to collect, and a checkout that shows a tax line anyway misstates what
+is owed. Flip the flag once the company is registered — nothing else changes.
+
+Related: passing an existing customer together with `automatic_tax` requires
+`customer_update: { address: "auto" }`, or Stripe refuses the call. That is
+attached only when tax is on, because it is invalid when tax is off.
+
 ### Auth: Clerk
 
 Native Vercel Marketplace integration, so environment variables are
