@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SignIn } from "@clerk/nextjs";
 
-import { AuthPitch } from "@/components/auth/auth-pitch";
+import { AuthCard } from "@/components/auth/auth-card";
+import { ChosenPlan } from "@/components/auth/chosen-plan";
 import { authAppearance } from "@/components/auth/appearance";
+import { intervalFromPath } from "@/lib/plan";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
 export const metadata: Metadata = {
@@ -22,51 +24,50 @@ export default async function SignInPage({
   const raw = params.redirect_url;
   const destination = safeRedirectPath(Array.isArray(raw) ? raw[0] : raw);
 
+  // Sign-in is reached two ways, and they are different journeys. Mid-subscribe
+  // it is step 2 of 2 and the chosen plan should still be on screen. Reached
+  // directly by a returning viewer, counting steps would invent a journey they
+  // are not on.
+  const interval = intervalFromPath(destination);
+
   // Everyone lands on /welcome first, which is where the second-factor check
   // and the hand-off animation live. Passing the destination through means a
-  // deep link survives the whole detour.
+  // deep link — or a chosen plan — survives the whole detour.
   const afterAuth = `/welcome?redirect_url=${encodeURIComponent(destination)}`;
 
   return (
-    <div className="grid w-full max-w-6xl gap-12 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-20">
-      <AuthPitch
-        eyebrow="Members only"
-        headline={
-          <>
-            Every fight.
-            <br />
-            Every robot.
-            <br />
-            <span className="text-volt">One subscription.</span>
-          </>
-        }
-        body="Live humanoid robot combat, the full archive on demand, league standings and every team roster. Sign in to watch."
-      />
-
-      <div className="w-full lg:w-[26rem]">
-        <SignIn
-          appearance={authAppearance}
-          signUpUrl="/sign-up"
-          forceRedirectUrl={afterAuth}
-          signUpForceRedirectUrl={afterAuth}
-        />
-
-        {/* Clerk renders its own "Sign up" link, but it is small print at the
-            bottom of a card. A new visitor who has never heard of Roboxing
-            needs the second door to be as visible as the first. */}
-        <div className="border-line bg-surface/60 mt-4 rounded-lg border p-4 text-center backdrop-blur-sm">
-          <p className="text-ink-muted text-sm">New to Roboxing?</p>
+    <AuthCard
+      step={interval ? 2 : undefined}
+      title={interval ? "Sign in to continue" : "Sign in"}
+      subtitle={
+        interval
+          ? "Sign in and we will take you straight to payment."
+          : "Welcome back."
+      }
+      footer={
+        <>
+          New to Roboxing?{" "}
           <Link
             href={`/sign-up?redirect_url=${encodeURIComponent(destination)}`}
-            className="text-volt hover:text-volt-dim focus-visible:ring-volt mt-1 inline-block rounded-sm text-sm font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="text-volt font-semibold underline underline-offset-4"
           >
             Create an account
           </Link>
-          <p className="text-ink-dim mt-1 text-xs">
-            14 days free, then $9.99 a month. Cancel any time.
-          </p>
+        </>
+      }
+    >
+      {interval ? (
+        <div className="mb-6">
+          <ChosenPlan interval={interval} />
         </div>
-      </div>
-    </div>
+      ) : null}
+
+      <SignIn
+        appearance={authAppearance}
+        signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(destination)}`}
+        forceRedirectUrl={afterAuth}
+        signUpForceRedirectUrl={afterAuth}
+      />
+    </AuthCard>
   );
 }

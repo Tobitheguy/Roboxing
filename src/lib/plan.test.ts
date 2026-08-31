@@ -7,6 +7,7 @@ import {
   availablePlans,
   isBillingInterval,
   monthlyEquivalent,
+  intervalFromPath,
   priceIdFor,
 } from "./plan";
 
@@ -115,5 +116,32 @@ describe("interval parsing", () => {
 
   it("has a default that is itself a valid interval", () => {
     expect(isBillingInterval(DEFAULT_INTERVAL)).toBe(true);
+  });
+});
+
+describe("reading the chosen plan back out of a destination", () => {
+  it("finds it in the checkout path", () => {
+    expect(intervalFromPath("/subscribe/checkout?plan=year")).toBe("year");
+    expect(intervalFromPath("/subscribe/checkout?plan=month")).toBe("month");
+  });
+
+  it("survives other parameters around it", () => {
+    expect(intervalFromPath("/subscribe/checkout?a=1&plan=year&b=2")).toBe(
+      "year",
+    );
+  });
+
+  it.each([
+    ["no query at all", "/subscribe/checkout"],
+    ["a different parameter", "/subscribe/checkout?tier=year"],
+    ["an unknown value", "/subscribe/checkout?plan=forever"],
+    ["an empty value", "/subscribe/checkout?plan="],
+    ["a bare path", "/"],
+    ["null", null],
+    ["undefined", undefined],
+  ])("returns null for %s", (_label, path) => {
+    // Null rather than a default: a summary naming the wrong plan is worse
+    // than no summary, because the customer would only notice on the receipt.
+    expect(intervalFromPath(path)).toBeNull();
   });
 });

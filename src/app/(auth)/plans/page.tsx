@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
 
+import { AuthCard } from "@/components/auth/auth-card";
+
 import { getViewer } from "@/lib/auth";
 import {
   DEFAULT_INTERVAL,
@@ -82,24 +84,29 @@ export default async function PlansPage({
   const perMonth = monthlyEquivalent(plan);
 
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center">
-        <p className="text-eyebrow text-volt font-semibold uppercase">
-          Step 1 of 2
-        </p>
-        <h1 className="font-display text-hero text-ink mt-3 uppercase">
-          Choose your plan
-        </h1>
-        <p className="text-ink-muted mt-3 text-sm">
-          Start free. You will not be charged until the trial ends.
-        </p>
-      </div>
-
+    <AuthCard
+      step={1}
+      title="Choose your plan"
+      subtitle="Start free. You will not be charged until the trial ends."
+      footer={
+        !viewer ? (
+          <>
+            Already have an account?{" "}
+            <Link
+              href="/sign-in"
+              className="text-volt font-semibold underline underline-offset-4"
+            >
+              Sign in
+            </Link>
+          </>
+        ) : null
+      }
+    >
       {showSwitcher ? (
         <div
           role="tablist"
           aria-label="Billing period"
-          className="border-line bg-surface mt-8 flex rounded-lg border p-1"
+          className="border-line bg-surface flex rounded-lg border p-1"
         >
           {offered.map((option) => {
             const selected = option.interval === interval;
@@ -214,17 +221,6 @@ export default async function PlansPage({
         </p>
       ) : null}
 
-      {!viewer ? (
-        <p className="text-ink-dim mt-6 text-center text-sm">
-          Already have an account?{" "}
-          <Link
-            href="/sign-in"
-            className="text-volt font-semibold underline underline-offset-4"
-          >
-            Sign in
-          </Link>
-        </p>
-      ) : null}
-    </div>
+    </AuthCard>
   );
 }

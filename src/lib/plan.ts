@@ -68,6 +68,28 @@ export function isBillingInterval(value: unknown): value is BillingInterval {
 }
 
 /**
+ * Which plan a destination path is carrying, if any.
+ *
+ * Sign-in and sign-up sit in the middle of the subscribe flow and need to show
+ * what was chosen a screen earlier. The only thing they receive is the
+ * `redirect_url` they will send the visitor on to, so the answer is read back
+ * out of it rather than threaded through a second parameter that could
+ * disagree with the first.
+ *
+ * Returns null for anything it cannot read. A missing summary is a quieter
+ * failure than a confident one naming the wrong plan.
+ */
+export function intervalFromPath(
+  path: string | null | undefined,
+): BillingInterval | null {
+  if (typeof path !== "string") return null;
+  const query = path.indexOf("?");
+  if (query === -1) return null;
+  const value = new URLSearchParams(path.slice(query + 1)).get("plan");
+  return isBillingInterval(value) ? value : null;
+}
+
+/**
  * The Stripe price id for a plan, or null when it has not been created yet.
  *
  * Null rather than a throw: an environment with only the monthly price
