@@ -18,6 +18,7 @@ const ADMIN_NAV = [
   { href: "/admin/competitions", label: "Competitions" },
   { href: "/admin/teams", label: "Teams" },
   { href: "/admin/robots", label: "Robots" },
+  { href: "/admin/import", label: "Import" },
 ];
 
 export default async function AdminLayout({
