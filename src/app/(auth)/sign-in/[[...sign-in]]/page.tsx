@@ -62,12 +62,18 @@ export default async function SignInPage({
         </div>
       ) : null}
 
-      <SignIn
-        appearance={authAppearance}
-        signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(destination)}`}
-        forceRedirectUrl={afterAuth}
-        signUpForceRedirectUrl={afterAuth}
-      />
+      {/* Clerk's card has its own narrower max-width, which left it out of
+          line with everything else in the funnel. Forced to fill the column
+          by targeting the child ELEMENT rather than a Clerk class name — the
+          structure is stable across upgrades, the class names are not. */}
+      <div className="[&>*]:w-full">
+        <SignIn
+          appearance={authAppearance}
+          signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(destination)}`}
+          forceRedirectUrl={afterAuth}
+          signUpForceRedirectUrl={afterAuth}
+        />
+      </div>
     </AuthCard>
   );
 }

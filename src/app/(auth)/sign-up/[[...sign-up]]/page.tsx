@@ -52,12 +52,18 @@ export default async function SignUpPage({
         </div>
       ) : null}
 
-      <SignUp
-        appearance={authAppearance}
-        signInUrl={`/sign-in?redirect_url=${encodeURIComponent(destination)}`}
-        forceRedirectUrl={afterAuth}
-        signInForceRedirectUrl={afterAuth}
-      />
+      {/* Clerk's card has its own narrower max-width, which left it out of
+          line with everything else in the funnel. Forced to fill the column
+          by targeting the child ELEMENT rather than a Clerk class name — the
+          structure is stable across upgrades, the class names are not. */}
+      <div className="[&>*]:w-full">
+        <SignUp
+          appearance={authAppearance}
+          signInUrl={`/sign-in?redirect_url=${encodeURIComponent(destination)}`}
+          forceRedirectUrl={afterAuth}
+          signInForceRedirectUrl={afterAuth}
+        />
+      </div>
 
       {/* Said here rather than discovered two screens later. Being asked for
           an authenticator app you have not installed, at the moment you

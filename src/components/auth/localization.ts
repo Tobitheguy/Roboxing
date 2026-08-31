@@ -33,12 +33,20 @@ type Localization = NonNullable<
  * the point: it is a patch over a setting, and it should be deleted the day
  * the setting is right.
  */
+/**
+ * Clerk's card prints its own title and subtitle above the fields. Our page
+ * already prints one, in the display face, matching step 1 of the funnel — so
+ * Clerk's is the second heading saying the same thing, in a different type.
+ *
+ * Blanked rather than restyled: the page owns the heading, the card owns the
+ * form. Empty strings collapse the elements to nothing without depending on a
+ * Clerk class name surviving an upgrade.
+ */
+const NO_HEADING = { title: " ", subtitle: " " };
+
 export const roboxingLocalization: Localization = {
   signIn: {
-    start: {
-      title: "Sign in to Roboxing",
-      subtitle: "Welcome back. Sign in to keep watching.",
-    },
+    start: NO_HEADING,
     password: {
       title: "Enter your password",
       subtitle: "Enter the password for your Roboxing account",
@@ -55,10 +63,7 @@ export const roboxingLocalization: Localization = {
     },
   },
   signUp: {
-    start: {
-      title: "Create your Roboxing account",
-      subtitle: "Every event live and on demand. Start with a free trial.",
-    },
+    start: NO_HEADING,
     emailCode: {
       title: "Check your email",
       subtitle: "Enter the code we sent you to finish creating your account",
