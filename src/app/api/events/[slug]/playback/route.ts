@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, streams } from "@/db/schema";
 import { checkEventAccess } from "@/lib/access";
+import { requireViewer } from "@/lib/auth";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   createSignedToken,
@@ -13,11 +14,15 @@ import {
 /**
  * Mint a fresh signed playback URL for an event.
  *
- * Public by design, and that is not a hole: signed tokens do not gate WHO may
- * watch — the watch page itself is public — they gate how long a manifest URL
- * stays valid and which territories it plays in. Both matter because broadcast
- * rights are almost always territory-limited, which makes geo-blocking a
- * contractual obligation rather than a feature.
+ * Three separate things decide whether a URL comes back, and they are not
+ * interchangeable:
+ *
+ *   1. An ACCOUNT, with a second factor — every route on the site needs one.
+ *   2. An ENTITLEMENT, for events that are not free. That is the paywall.
+ *   3. The SIGNED TOKEN itself, which gates neither of those. It gates how
+ *      long a manifest URL stays valid and which territories it plays in —
+ *      broadcast rights are almost always territory-limited, so geo-blocking
+ *      is a contractual obligation rather than a feature.
  *
  * The player calls this on a fatal network error. Tokens are short-lived and a
  * two-hour broadcast outlives any sensible TTL, so without this endpoint a
@@ -28,6 +33,19 @@ export async function GET(
   ctx: RouteContext<"/api/events/[slug]/playback">,
 ) {
   const { slug } = await ctx.params;
+
+  // The proxy has already turned away anyone without a session. This adds the
+  // second factor, which the proxy cannot check without a network call on
+  // every request to the whole site.
+  //
+  // Caveat, stated rather than glossed over: a FREE event's response is shared
+  // in the CDN for 30 seconds, so a cache hit is served without reaching this
+  // line. The gap is bounded to free content, to callers who already hold a
+  // valid session, and to 30 seconds. Paid events are `no-store` and cannot be
+  // served from a shared cache at all, which is where it would actually cost
+  // something.
+  const gate = await requireViewer();
+  if (gate instanceof Response) return gate;
 
   // A player stuck in a retry loop must not be able to hammer Cloudflare's
   // token API on our account. The player has its own backoff and retry cap;

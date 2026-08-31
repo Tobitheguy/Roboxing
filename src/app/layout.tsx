@@ -1,13 +1,8 @@
-import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter, Oswald } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
-
-import { DemoBanner } from "@/components/demo-banner";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 
 import "./globals.css";
 
@@ -50,12 +45,29 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
+/**
+ * The root layout holds only what EVERY response needs: fonts, the theme
+ * class, and the Clerk provider.
+ *
+ * Chrome lives one level down, because the two halves of the site want
+ * opposite things. `(app)` gets the header, footer and demo banner — and the
+ * gate that says you must be signed in with a second factor. `(auth)` gets a
+ * full-bleed screen with no navigation at all, because a sign-in page with a
+ * menu bar invites you to go somewhere else, and there is nowhere else to go.
+ *
+ * Putting the gate in `(app)/layout.tsx` rather than here is the point: a new
+ * page added under `(app)` is protected by existing, not by remembering.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // Clerk's own UI is themed to match rather than left on its defaults —
     // a white sign-in modal on a near-black broadcast site reads as a
     // third-party interruption, which is exactly what a payment flow must not.
     <ClerkProvider
+      // Signing out lands on the sign-in screen directly. The default is "/",
+      // which the gate would bounce straight back here anyway — one extra
+      // round trip and a flash of a page nobody is allowed to see.
+      afterSignOutUrl="/sign-in"
       appearance={{
         theme: dark,
         variables: {
@@ -74,19 +86,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         lang="en"
         className={`dark ${oswald.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <body className="flex min-h-full flex-col">
-          {/* Suspense so the banner's database round trip does not block the
-              shell from painting. Query FAILURE is handled inside DemoBanner
-              itself with a try/catch — Suspense only catches components that
-              suspend, never ones that throw, and this sits in the root layout
-              where an uncaught error would take down every page. */}
-          <Suspense fallback={null}>
-            <DemoBanner />
-          </Suspense>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </body>
+        <body className="flex min-h-full flex-col">{children}</body>
       </html>
     </ClerkProvider>
   );

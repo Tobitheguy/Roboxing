@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { boutResults, bouts, events } from "@/db/schema";
+import { requireViewer } from "@/lib/auth";
 
 /**
  * Live state for one event: which bout is running, and what has been decided.
@@ -21,6 +22,16 @@ export async function GET(
   _request: Request,
   ctx: RouteContext<"/api/events/[slug]/state">,
 ) {
+  // Sign-in is already enforced by the proxy, before the CDN is consulted.
+  // This adds the second factor — but only on a cache MISS, because a hit
+  // never reaches this handler. Said plainly rather than implied: the check
+  // is real for origin traffic and absent for the five-second cache window.
+  // What leaks in that window is which bout is currently running, to someone
+  // who already holds a valid session. That is the correct trade against
+  // turning thirty thousand polls a minute into thirty thousand queries.
+  const gate = await requireViewer();
+  if (gate instanceof Response) return gate;
+
   const { slug } = await ctx.params;
 
   const eventRows = await db

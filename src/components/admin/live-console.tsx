@@ -13,7 +13,7 @@ import {
   recordResult,
   setBoutStatus,
   setEventStatus,
-} from "@/app/admin/actions";
+} from "@/app/(app)/admin/actions";
 import type { BoutDetail } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 

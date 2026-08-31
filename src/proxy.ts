@@ -8,20 +8,47 @@ import { NextResponse } from "next/server";
  * convention. Clerk's handler works unchanged — it is an ordinary request
  * handler, and the proxy runtime is Node, which it needs.
  *
- * This layer only establishes that someone is SIGNED IN. Whether they are on
- * the admin allowlist is checked again by requireAdmin() in every route and
- * page, because the allowlist lives in an environment variable this layer
- * would have to fetch a Clerk user to compare against — a network call on
- * every admin request, duplicating a check the handler does anyway.
+ * Roboxing is closed: every route requires an account. So this file is an
+ * ALLOWLIST, not a blocklist. The difference matters — with a blocklist, a
+ * route added tomorrow is public until someone remembers to list it, and the
+ * person who would notice is the one who cannot see the problem because they
+ * are signed in.
  *
- * Two layers that fail differently: a matcher typo here is caught by the
- * handler, a forgotten check in a handler is caught here.
+ * This layer establishes only that someone is SIGNED IN. Two further checks
+ * live deeper, where they can be made without a network call per request:
+ *
+ *   - the second factor, in `(app)/layout.tsx` and `requireViewer()`
+ *   - the admin allowlist, in `requireAdmin()`
+ *
+ * Layers that fail differently: a matcher typo here is caught by the handler,
+ * a forgotten check in a handler is caught here.
  */
-const isAdminRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"]);
+
+/**
+ * The only routes reachable without a session.
+ *
+ * `/api/stripe/webhook` is the one that must never be removed from this list.
+ * Stripe is not a signed-in browser — redirect it and every subscription
+ * event silently stops arriving. Nobody would see an error; entitlements
+ * would simply stop being written, and the first sign would be a paying
+ * customer who cannot watch.
+ *
+ * `/welcome` is here because it is where an account WITHOUT a second factor
+ * goes to get one. Behind the gate it enforces, enrolling would require
+ * having already enrolled.
+ */
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/welcome(.*)",
+  "/api/stripe/webhook",
+  "/robots.txt",
+]);
+
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (!isAdminRoute(request)) return;
+  if (isPublicRoute(request)) return;
 
   const { userId } = await auth();
   if (userId) return;
@@ -38,10 +65,14 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // A browser gets sent somewhere useful, with a way back to where it was
-  // heading. `redirect_url` is Clerk's own parameter and it validates the
-  // destination, so this cannot become an open redirect.
+  // heading. The destination is re-validated by safeRedirectPath() on the
+  // sign-in page before anything is done with it — this value arrives from
+  // the request and is not trusted just because we wrote it.
   const signIn = new URL("/sign-in", request.url);
-  signIn.searchParams.set("redirect_url", request.nextUrl.pathname);
+  signIn.searchParams.set(
+    "redirect_url",
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
   return NextResponse.redirect(signIn);
 });
 

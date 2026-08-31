@@ -1,14 +1,18 @@
 import { getAppUrl } from "@/lib/app-url";
+import { requireViewer } from "@/lib/auth";
 import { assumedEnd, buildEventIcs } from "@/lib/ics";
 import { getEventBySlug } from "@/lib/queries";
 
 /**
  * An .ics file for one event.
  *
- * This is the countdown hero's call to action. It gives a visitor a real
- * reason to come back without a fan account, a subscribers table, an email
- * provider, or an unsubscribe flow — which is what "set a reminder" would
- * otherwise have required, all of it outside V1's admin-only scope.
+ * This is the countdown hero's call to action: a real reason to come back,
+ * with no subscribers table, no email provider and no unsubscribe flow to
+ * build and maintain. The viewer's own calendar does the reminding.
+ *
+ * Behind the wall like everything else. A calendar file names an event, a
+ * venue and a URL — and on a site where the schedule itself requires an
+ * account, handing that out unauthenticated would be the one open door.
  *
  * The generation itself lives in @/lib/ics so it can be unit tested; a route
  * module may only export handlers.
@@ -18,6 +22,9 @@ export async function GET(
   _request: Request,
   ctx: RouteContext<"/api/events/[slug]/calendar.ics">,
 ) {
+  const gate = await requireViewer();
+  if (gate instanceof Response) return gate;
+
   const { slug } = await ctx.params;
   const row = await getEventBySlug(slug);
 

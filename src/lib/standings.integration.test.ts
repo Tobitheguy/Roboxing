@@ -18,6 +18,17 @@ import { getStandingsBySlug, type StandingRow } from "./standings";
  */
 const hasDb = Boolean(process.env.DATABASE_URL);
 
+// Say so, loudly. A suite that skips itself prints the same green summary as
+// one that passed, and the difference only shows up in a number nobody reads.
+// This ran once against a machine that DID have a DATABASE_URL and skipped
+// anyway; without a line in the output there was nothing to notice.
+if (!hasDb) {
+  console.warn(
+    "\n[standings.integration] SKIPPED — no DATABASE_URL.\n" +
+      "The joins that attribute a result to a team are NOT covered by this run.\n",
+  );
+}
+
 describe.skipIf(!hasDb)("getStandings (live database)", () => {
   let table: StandingRow[];
 

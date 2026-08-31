@@ -11,7 +11,7 @@ import {
   previewImport,
   type ImportKind,
   type PreviewResult,
-} from "@/app/admin/import/actions";
+} from "@/app/(app)/admin/import/actions";
 import type { ActionResult } from "@/lib/admin-action";
 import { cn } from "@/lib/utils";
 

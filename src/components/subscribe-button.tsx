@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { openBillingPortal, startCheckout } from "@/app/subscribe/actions";
+import { openBillingPortal, startCheckout } from "@/app/(app)/subscribe/actions";
 
 /**
  * Checkout and billing entry points.

@@ -16,7 +16,7 @@ import {
   saveEvent,
   saveRobot,
   saveTeam,
-} from "@/app/admin/actions";
+} from "@/app/(app)/admin/actions";
 import type { ActionResult } from "@/lib/admin-action";
 
 /**

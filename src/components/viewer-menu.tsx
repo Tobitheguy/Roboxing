@@ -14,9 +14,11 @@ import { rethrowControlFlow } from "@/lib/next-errors";
  * already has to load the viewer to know whether to show the admin link, so
  * asking twice would be wasteful anyway.
  *
- * Signed out shows a single "Sign in", not a "Sign up" beside it: Clerk's
- * sign-in screen offers account creation itself, and two adjacent buttons
- * leading to nearly the same place is a decision no visitor should have to make.
+ * The signed-out branch should now be unreachable — this header only renders
+ * inside `(app)`, which the gate guards. It is kept as a fallback for the one
+ * case that can still produce it: getViewer() throwing, below. Rendering a
+ * sign-in link then is the safe direction, and it is a link rather than a
+ * silent empty slot so the person can act on it.
  *
  * The admin link appears only for administrators. That is a convenience, not a
  * security boundary — /admin is gated by the proxy and again by requireAdmin(),
@@ -61,6 +63,9 @@ export async function ViewerMenu() {
           <Link href="/admin">Admin</Link>
         </Button>
       ) : null}
+      {/* Where signing out lands is set once on ClerkProvider — in Core 3 it
+          is an instance option rather than a prop here, which is better: it
+          holds for every route out of a session, not just this button. */}
       <UserButton appearance={{ elements: { avatarBox: "size-8" } }} />
     </div>
   );
