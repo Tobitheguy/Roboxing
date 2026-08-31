@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { SignUp } from "@clerk/nextjs";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -34,17 +33,6 @@ export default async function SignUpPage({
         interval
           ? "One more step, then payment. You will not be charged today."
           : "Every Roboxing event, live and on demand."
-      }
-      footer={
-        <>
-          Already have an account?{" "}
-          <Link
-            href={`/sign-in?redirect_url=${encodeURIComponent(destination)}`}
-            className="text-volt font-semibold underline underline-offset-4"
-          >
-            Sign in
-          </Link>
-        </>
       }
     >
       {interval ? (

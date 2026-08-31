@@ -86,6 +86,7 @@ export default async function PlansPage({
   return (
     <AuthCard
       step={1}
+      emphasis="display"
       title="Choose your plan"
       subtitle="Start free. You will not be charged until the trial ends."
       footer={

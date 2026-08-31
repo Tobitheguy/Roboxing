@@ -43,21 +43,26 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         }}
       />
 
-      <header className="relative z-10 px-5 py-6 sm:px-10 sm:py-8">
+      <header className="relative z-10 px-5 py-5 sm:px-10">
+        {/* Home, not sign-in. This pointed at /sign-in back when that WAS the
+            front door; once the landing page took that job, the mark started
+            throwing people out of the middle of checkout and onto a different
+            auth screen — which is exactly why the flow felt like two sign-up
+            pages rather than one. */}
         <Link
-          href="/sign-in"
+          href="/"
           className="focus-visible:ring-volt inline-flex rounded-sm focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none"
         >
           <RoboxingMark size="md" />
-          <span className="sr-only">Roboxing</span>
+          <span className="sr-only">Roboxing — home</span>
         </Link>
       </header>
 
-      <main className="relative z-10 flex flex-1 items-start justify-center px-5 pb-16 sm:items-center sm:px-6 sm:pb-24">
+      <main className="relative z-10 flex flex-1 items-start justify-center px-5 pb-10 sm:items-center sm:px-6">
         {children}
       </main>
 
-      <footer className="text-ink-dim relative z-10 px-5 py-6 text-xs sm:px-10">
+      <footer className="text-ink-dim relative z-10 px-5 py-5 text-xs sm:px-10">
         <p>
           Roboxing is a demonstration build. Events and results shown after
           sign-in are placeholders, not a record of any real competition.
