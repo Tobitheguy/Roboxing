@@ -76,25 +76,41 @@ npm run db:seed      # load placeholder data
 6. **Set a billing alert.** Delivery is $1 per 1,000 minutes summed across all
    viewers — 5,000 viewers for two hours is roughly $600.
 
-### 3. Admin credentials
+### 3. Clerk (accounts)
 
 ```bash
-npm run hash-password        # prompts, prints a scrypt hash
+vercel integration add clerk
 ```
 
-Put the hash in `ADMIN_PASSWORD_HASH` and your email in `ADMIN_EMAILS`. The plaintext
-password goes in a password manager and nowhere else — never in a file, never in an
-env var, never in this repo.
+Accept the marketplace terms in the browser when prompted, then rerun. `CLERK_SECRET_KEY`
+and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` are provisioned automatically.
 
-Then generate a cookie signing secret:
+Set `ADMIN_EMAILS` to a comma-separated list of the addresses allowed into `/admin`.
+Everyone else can sign in as an ordinary viewer.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+> The Clerk instance created this way is a **development** instance. Before real
+> users, create a production instance in Clerk bound to your own domain — dev
+> instances have shorter sessions and browser requirements that will confuse people.
 
-into `SESSION_SECRET`.
+### 4. Stripe (subscriptions)
 
-### 4. Vercel
+Test keys work fully before the account is verified, so the whole flow can be built
+and exercised while business verification is pending.
+
+1. Stripe → Developers → API keys → copy the **test** secret key into
+   `STRIPE_SECRET_KEY`.
+2. `npm run stripe:setup` — creates the product and the $9.99/month price from
+   `src/lib/plan.ts`, and prints the `STRIPE_PRICE_ID` to add.
+3. Stripe → Developers → Webhooks → add `https://<your-domain>/api/stripe/webhook`
+   for `checkout.session.completed`, `customer.subscription.*`, `invoice.paid` and
+   `invoice.payment_failed`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+> **Do not activate the live account** until there is a signed rights agreement and
+> a registered company. A Stripe account is bound to a legal entity, and moving from
+> a private individual to a company later means a NEW account — subscriptions and
+> saved payment methods do not transfer.
+
+### 5. Vercel
 
 Import the repo, add every variable from `.env.example` under Project Settings →
 Environment Variables, and set `APP_URL` to the deploy URL.
@@ -114,8 +130,14 @@ This repository is **public**. Before every push:
 - Every `/api/admin/*` route returns 401 without a valid session cookie. This is
   verified with `curl` against the deployed URL, not assumed.
 
-Admin auth is email **plus** a shared password. An email allowlist alone would be
-identification rather than authentication — see deviation 1 in `DECISIONS.md`.
+Admin access is Clerk sign-in **plus** an email allowlist, checked in two independent
+places: the proxy (`src/proxy.ts`) and `requireAdmin()` in every route and page. One
+missed check on one route is the whole breach, so the layers fail differently — a
+matcher typo is caught by the handler, a forgotten guard is caught by the proxy.
+
+The paywall is enforced at `/api/events/[slug]/playback`, not in the UI. That endpoint
+returns a working manifest URL, so a check that lived only on the page would protect
+nothing from anyone who opens the network tab.
 
 ---
 
@@ -131,7 +153,8 @@ identification rather than authentication — see deviation 1 in `DECISIONS.md`.
 | `npm run db:seed` | Load placeholder data |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run test` | Unit tests (standings correctness lives here) |
-| `npm run hash-password` | Generate an `ADMIN_PASSWORD_HASH` |
+| `npm run stripe:setup` | Create the Stripe product and price from `src/lib/plan.ts` |
+| `npm run set-test-stream` | Point an event at a plain HLS URL, for testing the player |
 
 ---
 
@@ -140,14 +163,29 @@ identification rather than authentication — see deviation 1 in `DECISIONS.md`.
 ```
 src/
   app/
-    (public)/          home, competitions, teams, robots, schedule, results
-    watch/[slug]/      the player page
-    admin/             gated CRUD + run-of-show console
+    (public)          home, competitions, teams, robots, schedule, results
+    watch/[slug]      the player page — live and replay at the same URL
+    subscribe         plan, checkout, billing portal
+    admin             gated CRUD, CSV import, run-of-show console
     api/
-  components/          shared primitives — Card, Badge, StatTile, DataTable, ...
-  db/                  Drizzle schema, client, seed
-  lib/                 standings, stream client, auth, formatting
+  components/         shared primitives — Card, Badge, DataTable, the player, ...
+  db/                 Drizzle schema, client, seed
+  lib/
+    standings.ts      the league table — computed, never stored
+    entitlements.ts   the paywall decision, pure and exhaustively tested
+    access.ts         one entitlement check, shared by page and endpoint
+    stream.ts         Cloudflare Stream client
+    subscriptions.ts  Stripe <-> entitlement reconciliation
+  proxy.ts            Next 16's renamed middleware — the admin gate
 ```
+
+### The four things most worth reading first
+
+- `src/lib/standings.ts` — why the table is derived rather than stored
+- `src/lib/entitlements.ts` — why access is a time window, not a flag
+- `src/app/api/stripe/webhook/route.ts` — why the webhook, not the redirect,
+  grants access
+- `DECISIONS.md` — what was chosen, what was reversed, and why
 
 `/styleguide` renders every design token and primitive on one page. It is the fastest
 way to see the design system and doubles as a regression check.
