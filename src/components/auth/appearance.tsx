@@ -13,26 +13,25 @@ type Appearance = NonNullable<ComponentProps<typeof SignIn>["appearance"]>;
 /**
  * How Clerk's forms sit inside the Roboxing auth screen.
  *
- * Deliberately a short list. Every override here is a bet that a Clerk class
- * name stays put across upgrades, so this restyles the container and leaves
- * the internals — inputs, buttons, error states — to the dark theme already
- * configured on ClerkProvider. A sign-in form that is 90% themed and correct
- * beats one that is 100% themed until the next release.
+ * Empty, and that is the finding rather than an oversight.
  *
- * The card loses its own background and border because the page already
- * provides a surface; two nested cards look like a modal that failed to open.
+ * This started as a block of `elements` overrides — transparent card, display
+ * font on the heading, no border — on the assumption that Clerk's class names
+ * were still addressable. Checked against the deployed page: none of them
+ * applied. The heading renders in the UI face, not the condensed display
+ * face, and the card keeps its own surface. Core 3 changed the contract.
+ *
+ * What DOES work is the `variables` block on ClerkProvider in the root
+ * layout: the accent, the surface colour and the radius all land, which is
+ * why the form already matches the brand. So the overrides bought nothing and
+ * cost a false impression that the styling was under our control.
+ *
+ * Deleted rather than left in place. Styling code that silently does nothing
+ * is worse than none: the next person to change the look edits this file,
+ * sees no effect, and starts debugging the wrong layer.
+ *
+ * If the card ever needs to lose its background, do it through `variables`
+ * (`colorBackground`) or check Clerk's current appearance docs first — do not
+ * reintroduce guesses at class names.
  */
-export const authAppearance: Appearance = {
-  elements: {
-    rootBox: "w-full",
-    cardBox: "w-full shadow-none",
-    card: "bg-transparent shadow-none border-0 px-0",
-    header: "text-left",
-    headerTitle: "font-display text-2xl tracking-tight",
-    headerSubtitle: "text-sm",
-    // Clerk's footer carries the "already have an account" / "sign up"
-    // cross-link. Kept, but quiet — the page renders a louder one of its own.
-    footer: "bg-transparent",
-    footerAction: "bg-transparent",
-  },
-};
+export const authAppearance: Appearance = {};
