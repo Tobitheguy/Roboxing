@@ -114,10 +114,12 @@ export async function presignImageUpload({
     uploadUrl,
     publicUrl: publicUrlFor(config.publicUrl, key),
     key,
-    headers: {
-      "Content-Type": contentType,
-      "Content-Length": String(sizeBytes),
-    },
+    // Only Content-Type. `Content-Length` is a FORBIDDEN header name: fetch()
+    // strips it silently, so handing it to the client would look like a
+    // constraint and be nothing. The browser sets it itself from the body, and
+    // that is the value R2 checks against the signature — so the size limit
+    // still holds, it is just not ours to send.
+    headers: { "Content-Type": contentType },
     expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
   };
 }

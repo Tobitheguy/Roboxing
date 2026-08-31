@@ -98,7 +98,14 @@ export function ImageField({
     } catch (error) {
       console.error("[upload] failed:", error);
       setStage("error");
-      setMessage("The upload did not complete. You can paste a URL instead.");
+      // A cross-origin PUT that the bucket has not allowed fails here, as a
+      // thrown TypeError with no status — indistinguishable from being offline
+      // unless we say so. Naming the likely cause turns a dead end into a fix.
+      setMessage(
+        "The upload did not complete. If this is the first upload, the R2 " +
+          "bucket may need a CORS rule allowing PUT from this site. You can " +
+          "paste a URL instead.",
+      );
     }
   }, []);
 
