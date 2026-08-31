@@ -4,9 +4,15 @@ import { Check } from "lucide-react";
 
 import { Card, CardBody } from "@/components/card";
 import { PageShell } from "@/components/page-shell";
+import {
+  ManageBillingButton,
+  SubscribeButton,
+} from "@/components/subscribe-button";
 import { Button } from "@/components/ui/button";
 import { getViewer } from "@/lib/auth";
 import { PLAN } from "@/lib/plan";
+import { isStripeConfigured, isStripeTestMode } from "@/lib/stripe";
+import { getSubscriptionState } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "Subscribe",
@@ -14,16 +20,14 @@ export const metadata: Metadata = {
     "Every Roboxing event, live and on demand. Free trial, then one monthly price.",
 };
 
-/**
- * The plan.
- *
- * Checkout is not wired yet — Stripe comes once there are broadcast rights and
- * therefore something to sell. The page exists now because the paywall already
- * links here, and a call to action that leads nowhere is worse than no call to
- * action at all.
- */
 export default async function SubscribePage() {
   const viewer = await getViewer().catch(() => null);
+
+  const { active, until: currentUntil } = viewer
+    ? await getSubscriptionState(viewer.id)
+    : { active: false, until: null };
+
+  const configured = isStripeConfigured();
 
   return (
     <PageShell>
@@ -46,9 +50,11 @@ export default async function SubscribePage() {
             <span className="text-ink-dim text-lg font-semibold"> / month</span>
           </p>
 
-          <p className="text-volt font-display mt-2 text-sm font-semibold tracking-wide uppercase">
-            {PLAN.trialDays} days free
-          </p>
+          {!active ? (
+            <p className="text-volt font-display mt-2 text-sm font-semibold tracking-wide uppercase">
+              {PLAN.trialDays} days free
+            </p>
+          ) : null}
 
           <ul className="text-ink-muted mt-8 space-y-3 text-left text-sm">
             {[
@@ -65,22 +71,39 @@ export default async function SubscribePage() {
           </ul>
 
           <div className="mt-8">
-            {viewer ? (
+            {!viewer ? (
+              <Button asChild size="lg" className="w-full">
+                <Link href="/sign-in?redirect_url=%2Fsubscribe">
+                  Create an account
+                </Link>
+              </Button>
+            ) : !configured ? (
               <Button size="lg" className="w-full" disabled>
                 Checkout opens with the first licensed event
               </Button>
+            ) : active ? (
+              <ManageBillingButton />
             ) : (
-              <Button asChild size="lg" className="w-full">
-                <Link href="/sign-in">Create an account</Link>
-              </Button>
+              <SubscribeButton />
             )}
           </div>
 
           <p className="text-ink-dim mt-4 text-xs">
-            {viewer
-              ? "Nothing to pay yet — every event on the site is currently free to watch."
-              : "An account is free. You will not be charged until there is something to charge for."}
+            {active
+              ? currentUntil
+                ? `Your access runs until ${currentUntil.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}.`
+                : "Your access is active."
+              : !viewer
+                ? "An account is free. You will not be charged until there is something to charge for."
+                : "Every event on the site is currently free to watch."}
           </p>
+
+          {configured && isStripeTestMode() ? (
+            <p className="border-drift/30 bg-drift/10 text-drift mt-4 rounded-md border px-3 py-2 text-xs">
+              Stripe is in test mode. Use card 4242 4242 4242 4242 — no real
+              money moves.
+            </p>
+          ) : null}
         </CardBody>
       </Card>
 

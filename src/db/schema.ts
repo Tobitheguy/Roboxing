@@ -422,6 +422,15 @@ export const users = pgTable(
     email: text("email").notNull(),
     displayName: text("display_name"),
     imageUrl: text("image_url"),
+    /**
+     * Stripe's customer id.
+     *
+     * Stored so a returning subscriber is billed against the same customer
+     * rather than accumulating a new one per checkout — which would scatter
+     * their payment methods and invoices across duplicates and make a refund
+     * or a cancellation a search operation.
+     */
+    stripeCustomerId: text("stripe_customer_id").unique(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
