@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { ImageField } from "@/components/admin/image-field";
 import {
   FormStatus,
   SelectField,
@@ -213,10 +214,10 @@ export function TeamForm({
           errors={errors.foundedYear}
         />
       </div>
-      <TextField
-        label="Logo URL"
+      <ImageField
+        label="Logo"
         name="logoUrl"
-        hint="Upload to R2 and paste the public URL."
+        hint="Upload an image, or paste a URL."
         defaultValue={team?.logoUrl}
         errors={errors.logoUrl}
       />
@@ -315,9 +316,10 @@ export function RobotForm({
           }
           errors={errors.weightKg}
         />
-        <TextField
-          label="Photo URL"
+        <ImageField
+          label="Photo"
           name="photoUrl"
+          hint="Upload an image, or paste a URL."
           defaultValue={robot?.photoUrl}
           errors={errors.photoUrl}
         />
@@ -461,9 +463,10 @@ export function EventForm({
         defaultValue={event?.allowedCountries?.join(", ")}
         errors={errors.allowedCountries}
       />
-      <TextField
-        label="Poster URL"
+      <ImageField
+        label="Poster"
         name="posterUrl"
+        hint="Upload an image, or paste a URL."
         defaultValue={event?.posterUrl}
         errors={errors.posterUrl}
       />
