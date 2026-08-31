@@ -38,9 +38,24 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
 }
 
-/** Whether the configured key is a test key. Surfaced in the admin UI. */
+/**
+ * Whether the configured key is a test key.
+ *
+ * Matches on the `_test_` segment rather than an `sk_test_` prefix, because a
+ * RESTRICTED key is `rk_test_…` — and a restricted key is the better one to
+ * deploy, since it can only do what it was granted. Checking the prefix alone
+ * meant a perfectly good restricted test key looked like production, and the
+ * "no real money moves" notice silently disappeared from the pricing page.
+ */
 export function isStripeTestMode(): boolean {
-  return (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_test_");
+  const key = process.env.STRIPE_SECRET_KEY ?? "";
+  return key.startsWith("sk_test_") || key.startsWith("rk_test_");
+}
+
+/** Guards against deploying a key of the wrong shape entirely. */
+export function isStripeKeyShapeValid(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY ?? "";
+  return /^(sk|rk)_(test|live)_/.test(key);
 }
 
 /**
