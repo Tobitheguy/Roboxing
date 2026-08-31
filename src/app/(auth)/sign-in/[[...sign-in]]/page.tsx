@@ -4,6 +4,7 @@ import { SignIn } from "@clerk/nextjs";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { ChosenPlan } from "@/components/auth/chosen-plan";
+import { ClerkFill } from "@/components/auth/clerk-fill";
 import { authAppearance } from "@/components/auth/appearance";
 import { intervalFromPath } from "@/lib/plan";
 import { safeRedirectPath } from "@/lib/safe-redirect";
@@ -62,18 +63,14 @@ export default async function SignInPage({
         </div>
       ) : null}
 
-      {/* Clerk's card has its own narrower max-width, which left it out of
-          line with everything else in the funnel. Forced to fill the column
-          by targeting the child ELEMENT rather than a Clerk class name — the
-          structure is stable across upgrades, the class names are not. */}
-      <div className="[&>*]:w-full">
+      <ClerkFill>
         <SignIn
           appearance={authAppearance}
           signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(destination)}`}
           forceRedirectUrl={afterAuth}
           signUpForceRedirectUrl={afterAuth}
         />
-      </div>
+      </ClerkFill>
     </AuthCard>
   );
 }

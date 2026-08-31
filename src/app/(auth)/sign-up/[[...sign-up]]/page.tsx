@@ -4,6 +4,7 @@ import { SignUp } from "@clerk/nextjs";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { ChosenPlan } from "@/components/auth/chosen-plan";
+import { ClerkFill } from "@/components/auth/clerk-fill";
 import { authAppearance } from "@/components/auth/appearance";
 import { isTwoFactorRequired } from "@/lib/auth";
 import { intervalFromPath } from "@/lib/plan";
@@ -52,18 +53,14 @@ export default async function SignUpPage({
         </div>
       ) : null}
 
-      {/* Clerk's card has its own narrower max-width, which left it out of
-          line with everything else in the funnel. Forced to fill the column
-          by targeting the child ELEMENT rather than a Clerk class name — the
-          structure is stable across upgrades, the class names are not. */}
-      <div className="[&>*]:w-full">
+      <ClerkFill>
         <SignUp
           appearance={authAppearance}
           signInUrl={`/sign-in?redirect_url=${encodeURIComponent(destination)}`}
           forceRedirectUrl={afterAuth}
           signInForceRedirectUrl={afterAuth}
         />
-      </div>
+      </ClerkFill>
 
       {/* Said here rather than discovered two screens later. Being asked for
           an authenticator app you have not installed, at the moment you
