@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { requireVerifiedViewer } from "@/lib/auth";
 import { createCheckoutSession } from "@/lib/checkout";
+import { DEFAULT_INTERVAL, isBillingInterval } from "@/lib/plan";
 
 export const metadata: Metadata = {
   title: "Payment",
@@ -27,9 +28,22 @@ export const metadata: Metadata = {
  * or misconfigured, this page says so instead of leaving a blank screen at the
  * exact moment someone was trying to pay.
  */
-export default async function CheckoutPage() {
-  const viewer = await requireVerifiedViewer("/subscribe/checkout");
-  const result = await createCheckoutSession(viewer);
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const raw = Array.isArray(params.plan) ? params.plan[0] : params.plan;
+  // An unrecognised value falls back to the monthly plan rather than failing.
+  // It cannot select a plan that does not exist: the interval is validated
+  // here, and the price id is looked up from it rather than taken from input.
+  const interval = isBillingInterval(raw) ? raw : DEFAULT_INTERVAL;
+
+  const viewer = await requireVerifiedViewer(
+    `/subscribe/checkout?plan=${interval}`,
+  );
+  const result = await createCheckoutSession(viewer, interval);
 
   if (result.ok) {
     // Outside a try/catch on purpose: redirect() signals by throwing.
@@ -53,7 +67,7 @@ export default async function CheckoutPage() {
       <p className="text-ink-muted mt-4 text-sm leading-relaxed">{message}</p>
       <div className="mt-8 flex flex-col gap-3">
         <Link
-          href="/subscribe/checkout"
+          href="/plans"
           className="bg-volt text-volt-ink hover:bg-volt-dim flex h-11 items-center justify-center rounded-md text-sm font-semibold"
         >
           Try again

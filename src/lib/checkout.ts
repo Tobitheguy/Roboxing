@@ -2,7 +2,13 @@ import "server-only";
 
 import { getAppUrl } from "@/lib/app-url";
 import type { Viewer } from "@/lib/auth";
-import { PLAN } from "@/lib/plan";
+import {
+  DEFAULT_INTERVAL,
+  PLANS,
+  TRIAL_DAYS,
+  priceIdFor,
+  type BillingInterval,
+} from "@/lib/plan";
 import {
   isStripeAutomaticTaxEnabled,
   isStripeConfigured,
@@ -26,8 +32,17 @@ export type CheckoutResult =
 
 export async function createCheckoutSession(
   viewer: Viewer,
+  interval: BillingInterval = DEFAULT_INTERVAL,
 ): Promise<CheckoutResult> {
   if (!isStripeConfigured()) return { ok: false, reason: "not_configured" };
+
+  // Resolved from the plan rather than read straight out of the environment.
+  // The annual plan deliberately has no fallback to the legacy single-price
+  // variable — that variable holds a MONTHLY price, and using it here would
+  // charge $9.99 for a year of access.
+  const plan = PLANS[interval];
+  const priceId = priceIdFor(plan);
+  if (!priceId) return { ok: false, reason: "not_configured" };
 
   // Checked HERE rather than only by hiding a button. Both callers are
   // reachable directly: a Server Action is a POST endpoint anyone with the
@@ -47,10 +62,13 @@ export async function createCheckoutSession(
     const session = await stripe().checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: PLAN.trialDays,
-        metadata: { userId: String(viewer.id) },
+        trial_period_days: TRIAL_DAYS,
+        // The interval is recorded so a support question about which plan
+        // someone bought is answered by the subscription itself rather than by
+        // reverse-engineering it from the price id.
+        metadata: { userId: String(viewer.id), interval: plan.interval },
       },
       // The card is taken now even though nothing is charged today. That is
       // the whole shape of a trial: the customer is set up, and the first
@@ -62,7 +80,7 @@ export async function createCheckoutSession(
       // confirmation. Access itself comes from the webhook, never from this
       // redirect — a customer who closes the tab has still paid.
       success_url: `${appUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/plans`,
+      cancel_url: `${appUrl}/plans?plan=${plan.interval}`,
       automatic_tax: { enabled: taxEnabled },
       // Stripe REQUIRES this whenever automatic_tax is on and an existing
       // customer is passed, and rejects it when tax is off.
