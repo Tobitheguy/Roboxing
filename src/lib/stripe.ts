@@ -2,6 +2,8 @@ import "server-only";
 
 import Stripe from "stripe";
 
+import { isTestStripeKey, isValidStripeKeyShape } from "@/lib/stripe-key";
+
 /**
  * Stripe client and the subscription lifecycle.
  *
@@ -39,23 +41,17 @@ export function isStripeConfigured(): boolean {
 }
 
 /**
- * Whether the configured key is a test key.
- *
- * Matches on the `_test_` segment rather than an `sk_test_` prefix, because a
- * RESTRICTED key is `rk_test_…` — and a restricted key is the better one to
- * deploy, since it can only do what it was granted. Checking the prefix alone
- * meant a perfectly good restricted test key looked like production, and the
- * "no real money moves" notice silently disappeared from the pricing page.
+ * Whether the configured key is a test key. Drives the "no real money moves"
+ * notice on the pricing page. See stripe-key.ts for why this is not a prefix
+ * check on `sk_`.
  */
 export function isStripeTestMode(): boolean {
-  const key = process.env.STRIPE_SECRET_KEY ?? "";
-  return key.startsWith("sk_test_") || key.startsWith("rk_test_");
+  return isTestStripeKey(process.env.STRIPE_SECRET_KEY);
 }
 
 /** Guards against deploying a key of the wrong shape entirely. */
 export function isStripeKeyShapeValid(): boolean {
-  const key = process.env.STRIPE_SECRET_KEY ?? "";
-  return /^(sk|rk)_(test|live)_/.test(key);
+  return isValidStripeKeyShape(process.env.STRIPE_SECRET_KEY);
 }
 
 /**

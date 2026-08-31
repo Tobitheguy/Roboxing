@@ -6,6 +6,11 @@ config({ path: ".env" });
 import Stripe from "stripe";
 
 import { PLAN } from "../src/lib/plan";
+import {
+  describeStripeKey,
+  isLiveStripeKey,
+  isValidStripeKeyShape,
+} from "../src/lib/stripe-key";
 
 /**
  * Create the Roboxing product and its recurring price in Stripe.
@@ -35,9 +40,28 @@ async function main() {
     process.exit(1);
   }
 
+  // Refuse a key we cannot identify rather than guessing at its mode. Guessing
+  // wrong in the reassuring direction means creating live objects while the
+  // console says TEST.
+  if (!isValidStripeKeyShape(key)) {
+    console.error(
+      "STRIPE_SECRET_KEY does not look like a Stripe secret key.\n" +
+        "Expected it to start with sk_test_, sk_live_, rk_test_ or rk_live_.\n" +
+        "A publishable key (pk_…) will not work here — it cannot write.",
+    );
+    process.exit(1);
+  }
+
   const stripe = new Stripe(key, { apiVersion: "2026-08-26.dahlia" });
-  const mode = key.startsWith("sk_test_") ? "TEST" : "LIVE";
-  console.log(`Stripe mode: ${mode}\n`);
+  console.log(`Stripe mode: ${describeStripeKey(key)}\n`);
+
+  if (isLiveStripeKey(key)) {
+    console.log(
+      "This is a LIVE key. The product and price created here are the ones\n" +
+        "real customers will be charged against. Ctrl-C now if that is not\n" +
+        "what you meant.\n",
+    );
+  }
 
   const existing = await stripe.products.search({
     query: `metadata['key']:'${PRODUCT_KEY}'`,
@@ -94,14 +118,32 @@ async function main() {
       "PLAN.trialDays takes effect for new subscribers without touching Stripe.",
   );
 
-  if (mode === "TEST") {
+  if (!isLiveStripeKey(key)) {
     console.log(
       "\nThese are TEST objects. Rerun with a live key before taking real money.",
     );
   }
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
+  // A restricted key that is missing a permission fails here with a message
+  // about the API call, not about the key — which sends you looking in the
+  // wrong place. Say what to grant instead.
+  const type = (error as { type?: string } | null)?.type;
+  if (type === "StripePermissionError") {
+    console.error(
+      "Stripe refused the call because this restricted key lacks a permission.\n\n" +
+        "This script needs, under the key's permissions:\n" +
+        "  Products    Write\n" +
+        "  Prices      Write\n\n" +
+        "The app itself additionally needs:\n" +
+        "  Customers               Write\n" +
+        "  Checkout Sessions       Write\n" +
+        "  Billing Portal Sessions Write\n" +
+        "  Subscriptions           Read\n\n" +
+        "Edit the key at https://dashboard.stripe.com/test/apikeys\n",
+    );
+  }
   console.error(error);
   process.exit(1);
 });
