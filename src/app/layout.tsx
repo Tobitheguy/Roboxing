@@ -4,6 +4,8 @@ import { Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
+import { roboxingLocalization } from "@/components/auth/localization";
+
 import "./globals.css";
 
 /**
@@ -68,6 +70,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // which the gate would bounce straight back here anyway — one extra
       // round trip and a flash of a page nobody is allowed to see.
       afterSignOutUrl="/sign-in"
+      // Clerk holds an auto-generated name for this instance and prints it in
+      // the largest text on the sign-in screen. See localization.ts — this is
+      // a patch over a dashboard setting, not the fix.
+      localization={roboxingLocalization}
       appearance={{
         theme: dark,
         variables: {
