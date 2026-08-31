@@ -1,8 +1,4 @@
-import { config } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
-
-config({ path: ".env.local" });
-config({ path: ".env" });
 
 import { DEMO_COMPETITION_SLUG } from "@/db/constants";
 import { getStandingsBySlug, type StandingRow } from "./standings";

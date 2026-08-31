@@ -52,6 +52,30 @@ export function dayOffset(date: Date, from: string, to: string): -1 | 0 | 1 {
   return b > a ? 1 : -1;
 }
 
+/**
+ * A UTC instant as a `datetime-local` value in a given zone: "2026-09-20T20:00".
+ *
+ * Used to populate the event form, so an organizer edits the time on the
+ * clock at the venue — the same number they were given — rather than a UTC
+ * instant they would have to convert in their head.
+ */
+export function toDateTimeLocal(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  // Intl renders midnight as "24" in some locales/zones; the input wants "00".
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return `${get("year")}-${get("month")}-${get("day")}T${hour}:${get("minute")}`;
+}
+
 /** e.g. "8:00 PM" */
 export function formatTime(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", {
