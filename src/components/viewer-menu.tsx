@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { UserButton } from "@clerk/nextjs";
+import { CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { getViewer } from "@/lib/auth";
@@ -66,7 +67,18 @@ export async function ViewerMenu() {
       {/* Where signing out lands is set once on ClerkProvider — in Core 3 it
           is an instance option rather than a prop here, which is better: it
           holds for every route out of a session, not just this button. */}
-      <UserButton appearance={{ elements: { avatarBox: "size-8" } }} />
+      <UserButton appearance={{ elements: { avatarBox: "size-8" } }}>
+        {/* Billing belongs in the account menu, next to profile and sign-out,
+            because that is where someone looks for it. Clerk owns the profile;
+            the money is ours, so it is a link out rather than a Clerk page. */}
+        <UserButton.MenuItems>
+          <UserButton.Link
+            label="Billing"
+            labelIcon={<CreditCard className="size-4" />}
+            href="/account/billing"
+          />
+        </UserButton.MenuItems>
+      </UserButton>
     </div>
   );
 }

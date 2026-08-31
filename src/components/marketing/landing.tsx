@@ -104,7 +104,7 @@ export async function Landing() {
 
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
-              href="/sign-up"
+              href="/plans"
               className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt inline-flex h-12 w-full max-w-xs items-center justify-center rounded-md px-8 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none sm:w-auto"
             >
               Start watching
@@ -231,7 +231,7 @@ export async function Landing() {
             end of the period you paid for.
           </p>
           <Link
-            href="/sign-up"
+            href="/plans"
             className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt mt-8 inline-flex h-12 items-center justify-center rounded-md px-10 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none"
           >
             Create an account

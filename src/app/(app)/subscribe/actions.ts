@@ -4,79 +4,37 @@ import { redirect } from "next/navigation";
 
 import { getViewer } from "@/lib/auth";
 import { getAppUrl } from "@/lib/app-url";
-import { PLAN } from "@/lib/plan";
-import { isStripeAutomaticTaxEnabled, isStripeConfigured, stripe } from "@/lib/stripe";
-import {
-  ensureStripeCustomer,
-  getSubscriptionState,
-} from "@/lib/subscriptions";
+import { createCheckoutSession } from "@/lib/checkout";
+import { isStripeConfigured, stripe } from "@/lib/stripe";
+import { ensureStripeCustomer } from "@/lib/subscriptions";
 
 /**
- * Start checkout.
+ * Start checkout from a button.
  *
  * Returns an error string rather than throwing so the page can say something
  * useful. The only success path is a redirect to Stripe.
+ *
+ * The session itself is built in lib/checkout.ts, shared with the page a new
+ * account lands on after signing up — the double-billing guard has to be the
+ * same code in both places.
  */
 export async function startCheckout(): Promise<string | void> {
   const viewer = await getViewer();
-  if (!viewer) redirect("/sign-in?redirect_url=%2Fsubscribe");
+  if (!viewer) redirect("/sign-in?redirect_url=%2Fplans");
 
-  if (!isStripeConfigured()) {
-    return "Checkout is not configured yet.";
-  }
+  const result = await createCheckoutSession(viewer);
 
-  // Checked HERE, not only by hiding the button. A Server Action is a POST
-  // endpoint that anyone with the action id can call, and the ordinary way to
-  // hit this is not an attack — it is a double-click before the redirect
-  // fires, or a second tab. Either would create a second subscription against
-  // the same customer and bill them twice.
-  const { active } = await getSubscriptionState(viewer.id);
-  if (active) return "You already have an active subscription.";
-
-  const appUrl = getAppUrl();
-  const taxEnabled = isStripeAutomaticTaxEnabled();
-  let url: string | null = null;
-
-  try {
-    const customerId = await ensureStripeCustomer(viewer);
-
-    const session = await stripe().checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-      subscription_data: {
-        trial_period_days: PLAN.trialDays,
-        metadata: { userId: String(viewer.id) },
-      },
-      // Stripe appends the session id; the success page uses it only to show a
-      // confirmation. Access itself comes from the webhook, never from this
-      // redirect — a customer who closes the tab has still paid.
-      success_url: `${appUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/subscribe`,
-      // Off until there is a registered business with Stripe Tax set up and
-      // actual tax registrations. See isStripeAutomaticTaxEnabled().
-      automatic_tax: { enabled: taxEnabled },
-      // Stripe REQUIRES this whenever automatic_tax is on and an existing
-      // customer is passed: it has to be allowed to write the address it
-      // collects back to that customer, or it refuses the whole call. Sending
-      // it while tax is off would fail differently, so it is conditional too.
-      ...(taxEnabled
-        ? { customer_update: { address: "auto" as const } }
-        : {}),
-      allow_promotion_codes: true,
-    });
-
-    url = session.url;
-  } catch (error) {
-    console.error("[stripe] could not create a checkout session:", error);
+  if (!result.ok) {
+    if (result.reason === "not_configured")
+      return "Checkout is not configured yet.";
+    if (result.reason === "already_subscribed")
+      return "You already have an active subscription.";
     return "Could not start checkout. Please try again.";
   }
 
-  if (!url) return "Could not start checkout. Please try again.";
-
-  // Outside the try: redirect() signals by throwing, and catching it here
+  // Outside any try/catch: redirect() signals by throwing, and catching it
   // would turn a successful checkout into an error message.
-  redirect(url);
+  redirect(result.url);
 }
 
 /**
@@ -97,7 +55,7 @@ export async function openBillingPortal(): Promise<string | void> {
     const customerId = await ensureStripeCustomer(viewer);
     const session = await stripe().billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${getAppUrl()}/subscribe`,
+      return_url: `${getAppUrl()}/account/billing`,
     });
     url = session.url;
   } catch (error) {

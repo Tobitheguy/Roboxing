@@ -43,6 +43,9 @@ const isPublicRoute = createRouteMatcher([
   // is the shop window: it names the next event, the teams and the price, and
   // shows no standings, no results and no video.
   "/",
+  // Plan selection comes BEFORE the account exists — that is the point of it.
+  // It shows the price and the billing terms and takes no input.
+  "/plans",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/welcome(.*)",
