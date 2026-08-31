@@ -3,6 +3,8 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 
+import { STATE_COUNTRY, isKnownCountry, isKnownUsState } from "@/lib/places";
+import { isValidTimeZone } from "@/lib/timezones";
 import { db } from "@/db";
 import {
   boutResults,
@@ -287,13 +289,45 @@ const EventSchema = z.object({
     .trim()
     .min(1, "Required.")
     .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Use the date and time picker."),
-  timezone: z.string().trim().min(1, "Required.").max(64),
+  // Checked against what Intl will ACTUALLY accept, not just length. An
+  // unrecognised zone throws RangeError at render time, inside a component on
+  // the public watch page and the landing hero — so a typo in this field is
+  // not a wrong label, it is a downed page.
+  timezone: z
+    .string()
+    .trim()
+    .min(1, "Required.")
+    .max(64)
+    .refine(isValidTimeZone, "Not a recognised IANA timezone."),
+  /**
+   * State or territory. Meaningful only for the United States, and the
+   * refinement below drops it for anywhere else rather than storing a value
+   * that would then be printed beside a foreign city.
+   */
+  stateCode: optionalText(2),
   status: z.enum(["scheduled", "live", "completed", "cancelled"]),
   access: z.enum(["free", "subscription"]).default("free"),
   posterUrl: optionalText(500),
   /** Comma-separated ISO country codes; empty means unrestricted. */
   allowedCountries: optionalText(500),
-});
+})
+  .refine(
+    (v) => !v.country || isKnownCountry(v.country),
+    { path: ["country"], message: "Pick a country from the list." },
+  )
+  .refine(
+    (v) =>
+      !v.stateCode ||
+      (v.country?.toUpperCase() === STATE_COUNTRY && isKnownUsState(v.stateCode)),
+    {
+      path: ["stateCode"],
+      // Two failures at once, and both matter. A state that is not a state is
+      // rejected; so is a state on an event outside the US, because the form
+      // hides that field there and a value arriving anyway did not come from
+      // the form.
+      message: "A state can only be set on a US event, and must be a real one.",
+    },
+  );
 
 /**
  * Convert a wall-clock time in a named zone to the UTC instant it refers to.
@@ -354,6 +388,11 @@ export async function saveEvent(
         venue: input.venue ?? null,
         city: input.city ?? null,
         country: input.country?.toUpperCase() ?? null,
+        // Normalised and, for anywhere but the US, deliberately dropped.
+        stateCode:
+          input.country?.toUpperCase() === STATE_COUNTRY && input.stateCode
+            ? input.stateCode.toUpperCase()
+            : null,
         startsAt: zonedTimeToUtc(input.startsAtLocal, input.timezone),
         timezone: input.timezone,
         status: input.status,

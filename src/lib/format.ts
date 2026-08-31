@@ -4,7 +4,15 @@
  * Everything here takes a UTC instant and an IANA timezone. Nothing in this
  * file assumes the server's timezone, because the server is in whatever region
  * Vercel put it in and that is never the answer we want.
+ *
+ * Every zone passes through safeTimeZone() first. Intl throws a RangeError on
+ * an unrecognised zone, and these run inside components — so one bad row in
+ * the database would not render wrongly, it would take the page down. The form
+ * now validates on the way in; this is the guard for anything already stored,
+ * imported, or written by a future code path that forgets.
  */
+
+import { safeTimeZone } from "@/lib/timezones";
 
 /** e.g. "Sat 14 Mar" */
 export function formatDate(date: Date, timeZone: string): string {
@@ -12,7 +20,7 @@ export function formatDate(date: Date, timeZone: string): string {
     weekday: "short",
     day: "numeric",
     month: "short",
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
   }).format(date);
 }
 
@@ -23,14 +31,14 @@ export function formatDateLong(date: Date, timeZone: string): string {
     day: "numeric",
     month: "short",
     year: "numeric",
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
   }).format(date);
 }
 
 /** Calendar date in a given zone as YYYY-MM-DD. en-CA is the locale that yields it. */
 export function isoDateIn(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -61,7 +69,7 @@ export function dayOffset(date: Date, from: string, to: string): -1 | 0 | 1 {
  */
 export function toDateTimeLocal(date: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
     hour12: false,
     year: "numeric",
     month: "2-digit",
@@ -81,7 +89,7 @@ export function formatTime(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
   }).format(date);
 }
 
@@ -94,7 +102,7 @@ export function formatTime(date: Date, timeZone: string): string {
  */
 export function formatZoneLabel(date: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
+    timeZone: safeTimeZone(timeZone),
     timeZoneName: "short",
   }).formatToParts(date);
 

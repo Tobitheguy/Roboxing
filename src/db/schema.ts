@@ -211,6 +211,16 @@ export const events = pgTable(
     venue: text("venue"),
     city: text("city"),
     country: text("country"),
+    /**
+     * State or territory — US only.
+     *
+     * Nullable and left null for every other country, because it is a question
+     * with no correct answer outside the United States. "Madison Square Garden,
+     * NYC" reads as a place; "Madison Square Garden, NYC, NY" is how an
+     * American expects a venue written, and the difference matters on a site
+     * whose audience is American by design.
+     */
+    stateCode: text("state_code"),
     /** UTC instant the broadcast starts. */
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     /**

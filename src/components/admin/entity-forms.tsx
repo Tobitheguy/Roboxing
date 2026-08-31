@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { ImageField } from "@/components/admin/image-field";
 import {
@@ -19,6 +19,41 @@ import {
   saveTeam,
 } from "@/app/(app)/admin/actions";
 import type { ActionResult } from "@/lib/admin-action";
+import {
+  COUNTRIES,
+  STATE_COUNTRY,
+  US_STATES,
+} from "@/lib/places";
+import { COMMON_TIME_ZONES, supportedTimeZones } from "@/lib/timezones";
+
+/** Blank first, so nothing is selected by accident on a new record. */
+const COUNTRY_OPTIONS = [
+  { value: "", label: "—" },
+  ...COUNTRIES.map((c) => ({ value: c.code, label: `${c.name} (${c.code})` })),
+];
+
+const US_STATE_OPTIONS = [
+  { value: "", label: "—" },
+  ...US_STATES.map((s) => ({ value: s.code, label: `${s.name} (${s.code})` })),
+];
+
+/**
+ * Frequently used zones first, then every zone the runtime knows.
+ *
+ * The full list is ~420 entries, which is fine in a native select and removes
+ * the class of failure where a plausible-looking typo is accepted and only
+ * surfaces as a wrong time on the public page.
+ */
+const TIME_ZONE_OPTIONS = (() => {
+  const common = [...COMMON_TIME_ZONES];
+  const rest = supportedTimeZones()
+    .filter((zone) => !common.includes(zone as (typeof COMMON_TIME_ZONES)[number]))
+    .sort();
+  return [...common, ...rest].map((zone) => ({
+    value: zone,
+    label: zone.replace(/_/g, " "),
+  }));
+})();
 
 /**
  * One client form per entity.
@@ -193,11 +228,11 @@ export function TeamForm({
           defaultValue={team?.slug}
           errors={errors.slug}
         />
-        <TextField
+        <SelectField
           label="Country"
           name="country"
-          hint="Two-letter code, e.g. US."
-          defaultValue={team?.country}
+          defaultValue={team?.country ?? ""}
+          options={COUNTRY_OPTIONS}
           errors={errors.country}
         />
         <TextField
@@ -352,6 +387,7 @@ export function EventForm({
     venue: string | null;
     city: string | null;
     country: string | null;
+    stateCode: string | null;
     timezone: string;
     status: string;
     access: string;
@@ -366,6 +402,9 @@ export function EventForm({
     saveEvent,
     null,
   );
+  // Held in state only so the State field can appear and disappear. The value
+  // still posts from the select itself, not from here.
+  const [country, setCountry] = useState(event?.country ?? "");
   const errors = fieldErrorsOf(state);
 
   return (
@@ -397,12 +436,18 @@ export function EventForm({
           defaultValue={startsAtLocal}
           errors={errors.startsAtLocal}
         />
-        <TextField
+        {/* A select, not free text, and no UTC default. The old field defaulted
+            to UTC and accepted anything — so the first real event entered, at
+            Madison Square Garden, was saved as UTC, and the page would have
+            shown the venue time in the wrong zone. A default that is wrong for
+            every venue on earth is not a default, it is a trap. */}
+        <SelectField
           label="Venue timezone"
           name="timezone"
           required
-          hint="IANA name, e.g. Asia/Singapore."
-          defaultValue={event?.timezone ?? "UTC"}
+          hint="The zone the venue is in — this is what viewers see beside their own time."
+          defaultValue={event?.timezone}
+          options={TIME_ZONE_OPTIONS}
           errors={errors.timezone}
         />
         <TextField
@@ -417,13 +462,27 @@ export function EventForm({
           defaultValue={event?.city}
           errors={errors.city}
         />
-        <TextField
+        <SelectField
           label="Country"
           name="country"
-          hint="Two-letter code."
-          defaultValue={event?.country}
+          defaultValue={country}
+          onChange={(event_) => setCountry(event_.target.value)}
+          options={COUNTRY_OPTIONS}
           errors={errors.country}
         />
+        {/* Only for the United States. A "State" box on an event in Singapore
+            is a question with no correct answer, and leaving it on screen
+            invites someone to answer it anyway. The server refuses a state on
+            a non-US event for the same reason. */}
+        {country === STATE_COUNTRY ? (
+          <SelectField
+            label="State"
+            name="stateCode"
+            defaultValue={event?.stateCode ?? ""}
+            options={US_STATE_OPTIONS}
+            errors={errors.stateCode}
+          />
+        ) : null}
         <TextField
           label="Slug"
           name="slug"

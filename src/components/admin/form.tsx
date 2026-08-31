@@ -99,10 +99,18 @@ export function TextArea({
 export function SelectField({
   options,
   defaultValue,
+  onChange,
   ...props
 }: FieldProps & {
   options: { value: string | number; label: string }[];
   defaultValue?: string | number | null;
+  /**
+   * Optional, for the one case where another field depends on this one —
+   * the event form shows a State select only when the country is the US.
+   * The select stays uncontrolled either way, so the value still comes from
+   * the form on submit rather than from React state.
+   */
+  onChange?: React.ChangeEventHandler<HTMLSelectElement>;
 }) {
   return (
     <FieldShell {...props}>
@@ -110,6 +118,7 @@ export function SelectField({
         id={props.name}
         name={props.name}
         defaultValue={defaultValue ?? undefined}
+        onChange={onChange}
         className={inputClass}
       >
         {options.map((o) => (

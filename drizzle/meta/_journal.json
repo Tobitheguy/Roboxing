@@ -29,6 +29,13 @@
       "when": 1788137858599,
       "tag": "0003_nervous_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788153599776,
+      "tag": "0004_add_event_state_code",
+      "breakpoints": true
     }
   ]
 }
