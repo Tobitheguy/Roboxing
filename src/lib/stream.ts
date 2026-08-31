@@ -114,6 +114,26 @@ export async function getLiveInput(uid: string): Promise<LiveInput> {
   return cf<LiveInput>(`/stream/live_inputs/${uid}`);
 }
 
+/**
+ * Destroy a live input, and with it the stream key that pushed to it.
+ *
+ * This exists because a Cloudflare stream key CANNOT be rotated. The key is
+ * bound to the input for its lifetime, so the only way to invalidate one that
+ * has leaked — pasted into a chat, screenshotted, mailed to the wrong person —
+ * is to delete the input and issue a new one.
+ *
+ * Until this was added, the admin panel could create an input and never remove
+ * it, which meant a leaked key could only be dealt with by hand in the
+ * Cloudflare dashboard. That is the wrong place for an urgent job: it is a
+ * different login, a different mental model, and it is where people give up.
+ *
+ * Deleting also destroys the recordings attached to the input, which is why it
+ * is only ever reached through an explicit, confirmed action.
+ */
+export async function deleteLiveInput(uid: string): Promise<void> {
+  await cf<unknown>(`/stream/live_inputs/${uid}`, { method: "DELETE" });
+}
+
 /** Whether anything is currently being pushed to this input. */
 export async function isInputLive(uid: string): Promise<boolean> {
   const input = await getLiveInput(uid);

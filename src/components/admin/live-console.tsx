@@ -199,6 +199,39 @@ function StreamPanel({
     }
   };
 
+  const [confirmingRotate, setConfirmingRotate] = useState(false);
+
+  /**
+   * Replace the live input, invalidating the current stream key.
+   *
+   * The only remedy when a key has leaked — Cloudflare binds the key to the
+   * input for its lifetime, so there is nothing to rotate in place. Two clicks
+   * rather than one: it destroys the old input and any recording attached to
+   * it, and that is not something to do by brushing a button.
+   */
+  const rotate = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/streams", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setError(body.error ?? "Could not replace the live input.");
+        return;
+      }
+      setCredentials(body as StreamCredentials);
+      setConfirmingRotate(false);
+    } catch {
+      setError("Could not reach Cloudflare.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copy = async (label: string, value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -266,6 +299,58 @@ function StreamPanel({
               The key is shown here and never stored. Reopen this panel to fetch
               it again from Cloudflare.
             </p>
+
+            {/* A leaked key has exactly one remedy. Cloudflare binds the key to
+                the input for its lifetime, so there is nothing to rotate in
+                place — the input has to be replaced. Putting that here means it
+                is reachable at the moment it is realised, rather than being a
+                hunt through a second dashboard. */}
+            <div className="border-line border-t pt-4">
+              {confirmingRotate ? (
+                <div className="border-destructive/30 bg-destructive/10 space-y-3 rounded-md border p-3">
+                  <p className="text-ink text-sm">
+                    Replace this live input and issue a new stream key?
+                  </p>
+                  <p className="text-ink-muted text-xs leading-relaxed">
+                    The current key stops working immediately. Anything already
+                    broadcasting to it is cut off, and any recording attached to
+                    this input is deleted with it.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={loading}
+                      onClick={rotate}
+                    >
+                      {loading ? "Replacing…" : "Replace key"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={loading}
+                      onClick={() => setConfirmingRotate(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmingRotate(true)}
+                  >
+                    Key leaked? Replace it
+                  </Button>
+                  <p className="text-ink-dim mt-2 text-xs">
+                    Use this if the key has been pasted, screenshotted or shared.
+                    A Cloudflare key cannot be rotated — the input is replaced.
+                  </p>
+                </>
+              )}
+            </div>
           </>
         )}
 

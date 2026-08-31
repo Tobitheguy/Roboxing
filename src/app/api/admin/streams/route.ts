@@ -4,7 +4,12 @@ import { z } from "zod";
 import { db } from "@/db";
 import { adminAudit, events, streams } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { createLiveInput, getLiveInput, isStreamConfigured } from "@/lib/stream";
+import {
+  createLiveInput,
+  deleteLiveInput,
+  getLiveInput,
+  isStreamConfigured,
+} from "@/lib/stream";
 
 const BodySchema = z.object({
   eventId: z.number().int().positive(),
@@ -106,6 +111,128 @@ export async function POST(request: Request) {
     console.error("[admin/streams] failed:", error);
     return Response.json(
       { error: "Could not reach Cloudflare Stream." },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+
+/**
+ * Replace an event's live input, invalidating the old stream key.
+ *
+ * A Cloudflare stream key cannot be rotated — it is bound to the input for its
+ * lifetime. So "the key leaked" and "delete the input" are the same operation,
+ * and this is the only way to make a compromised key stop working.
+ *
+ * DELETE rather than another POST because it destroys something: the old input
+ * goes, and any recording attached to it goes with it. That is stated in the
+ * console before the button does anything.
+ *
+ * It creates the replacement in the same request. Leaving an event with no
+ * input after an urgent delete is the state most likely to be reached at the
+ * worst moment — during a broadcast, by someone who just realised the key was
+ * public — and asking them to click a second button then is a poor bargain.
+ *
+ * If the delete succeeds and the create fails, the row is removed anyway. A
+ * row pointing at an input that no longer exists is worse than no row: every
+ * later call would try to read it and fail, with nothing in the UI explaining
+ * why.
+ */
+export async function DELETE(request: Request) {
+  const auth = await requireAdmin();
+  if (auth instanceof Response) return auth;
+
+  if (!isStreamConfigured()) {
+    return Response.json(
+      { error: "Cloudflare Stream is not configured on this deployment." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const parsed = BodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return Response.json(
+      { error: "Expected { eventId: number }" },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { eventId } = parsed.data;
+
+  const eventRows = await db
+    .select({ id: events.id, name: events.name, slug: events.slug })
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1);
+  const event = eventRows[0];
+  if (!event) {
+    return Response.json(
+      { error: "Event not found" },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const existing = (
+    await db.select().from(streams).where(eq(streams.eventId, eventId)).limit(1)
+  )[0];
+
+  try {
+    if (existing?.cfLiveInputId) {
+      // A 404 from Cloudflare is success for our purposes: the input we wanted
+      // gone is gone. Anything else is a real failure and must not be swallowed,
+      // because "the old key still works" is the one outcome that matters here.
+      try {
+        await deleteLiveInput(existing.cfLiveInputId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/404|not.?found/i.test(message)) throw error;
+      }
+    }
+
+    if (existing) {
+      await db.delete(streams).where(eq(streams.id, existing.id));
+    }
+
+    const input = await createLiveInput({
+      name: `${event.name} (${event.slug})`,
+      requireSignedURLs: true,
+    });
+
+    await db.insert(streams).values({
+      eventId,
+      cfLiveInputId: input.uid,
+      cfRtmpUrl: input.rtmps.url,
+      cfStreamKeyRef: input.uid,
+      status: "idle",
+    });
+
+    await db.insert(adminAudit).values({
+      adminEmail: auth.email,
+      action: "stream.rotate",
+      entity: "event",
+      entityId: String(eventId),
+      payloadJson: {
+        removed: existing?.cfLiveInputId ?? null,
+        created: input.uid,
+      },
+    });
+
+    return Response.json(
+      {
+        liveInputId: input.uid,
+        rtmpUrl: input.rtmps.url,
+        streamKey: input.rtmps.streamKey,
+        replaced: existing?.cfLiveInputId ?? null,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error("[admin/streams] rotate failed:", error);
+    return Response.json(
+      {
+        error:
+          "Could not replace the live input. The old key may still be valid — " +
+          "check Cloudflare Stream before broadcasting.",
+      },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }
