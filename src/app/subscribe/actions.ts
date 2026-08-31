@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { getAppUrl } from "@/lib/app-url";
 import { PLAN } from "@/lib/plan";
-import { isStripeConfigured, stripe } from "@/lib/stripe";
+import { isStripeAutomaticTaxEnabled, isStripeConfigured, stripe } from "@/lib/stripe";
 import {
   ensureStripeCustomer,
   getSubscriptionState,
@@ -34,6 +34,7 @@ export async function startCheckout(): Promise<string | void> {
   if (active) return "You already have an active subscription.";
 
   const appUrl = getAppUrl();
+  const taxEnabled = isStripeAutomaticTaxEnabled();
   let url: string | null = null;
 
   try {
@@ -52,9 +53,16 @@ export async function startCheckout(): Promise<string | void> {
       // redirect — a customer who closes the tab has still paid.
       success_url: `${appUrl}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/subscribe`,
-      // Lets Stripe collect the tax it is obliged to, based on the customer's
-      // location, rather than us guessing at VAT rules per country.
-      automatic_tax: { enabled: true },
+      // Off until there is a registered business with Stripe Tax set up and
+      // actual tax registrations. See isStripeAutomaticTaxEnabled().
+      automatic_tax: { enabled: taxEnabled },
+      // Stripe REQUIRES this whenever automatic_tax is on and an existing
+      // customer is passed: it has to be allowed to write the address it
+      // collects back to that customer, or it refuses the whole call. Sending
+      // it while tax is off would fail differently, so it is conditional too.
+      ...(taxEnabled
+        ? { customer_update: { address: "auto" as const } }
+        : {}),
       allow_promotion_codes: true,
     });
 

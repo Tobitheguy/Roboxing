@@ -49,6 +49,23 @@ export function isStripeTestMode(): boolean {
   return isTestStripeKey(process.env.STRIPE_SECRET_KEY);
 }
 
+/**
+ * Whether to let Stripe calculate and add tax at checkout.
+ *
+ * Off by default, and that is the correct default rather than a shortcut.
+ * Stripe Tax has to be switched on in the dashboard AND backed by real tax
+ * registrations before it computes anything meaningful; called without that
+ * setup it fails the checkout outright, so the first thing a customer would
+ * meet is an error. And a business with no registrations has no tax to
+ * collect — adding a line that says otherwise would be worse than omitting it.
+ *
+ * Flip STRIPE_AUTOMATIC_TAX=true once the company is registered and Stripe Tax
+ * is configured. Nothing else needs to change.
+ */
+export function isStripeAutomaticTaxEnabled(): boolean {
+  return process.env.STRIPE_AUTOMATIC_TAX === "true";
+}
+
 /** Guards against deploying a key of the wrong shape entirely. */
 export function isStripeKeyShapeValid(): boolean {
   return isValidStripeKeyShape(process.env.STRIPE_SECRET_KEY);
