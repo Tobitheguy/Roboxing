@@ -66,10 +66,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // a white sign-in modal on a near-black broadcast site reads as a
     // third-party interruption, which is exactly what a payment flow must not.
     <ClerkProvider
-      // Signing out lands on the sign-in screen directly. The default is "/",
-      // which the gate would bounce straight back here anyway — one extra
-      // round trip and a flash of a page nobody is allowed to see.
-      afterSignOutUrl="/sign-in"
+      // Signing out lands on the landing page, which is what "home" means now.
+      //
+      // This said /sign-in, and the reasoning was sound at the time: every
+      // route required an account, so "/" would have bounced straight back to
+      // the sign-in form and the direct link avoided a round trip. Once "/"
+      // became a public landing page that reasoning inverted — signing out now
+      // drops someone onto a login form for a product they have just left,
+      // instead of the page that explains why they might come back.
+      afterSignOutUrl="/"
       // Clerk holds an auto-generated name for this instance and prints it in
       // the largest text on the sign-in screen. See localization.ts — this is
       // a patch over a dashboard setting, not the fix.
