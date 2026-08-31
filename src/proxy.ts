@@ -38,6 +38,11 @@ import { NextResponse } from "next/server";
  * having already enrolled.
  */
 const isPublicRoute = createRouteMatcher([
+  // The landing page, and ONLY the landing page — this pattern is an exact
+  // match, so `/schedule` and everything else still requires an account. It
+  // is the shop window: it names the next event, the teams and the price, and
+  // shows no standings, no results and no video.
+  "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/welcome(.*)",

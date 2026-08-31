@@ -3,21 +3,30 @@ import type { MetadataRoute } from "next";
 import { getAppUrl } from "@/lib/app-url";
 
 /**
- * Nothing here is indexable, so say so.
+ * One page is indexable: the landing page. Everything else is a redirect to a
+ * sign-in form, and pointing a crawler at those wastes its budget and fills
+ * Search Console with "Page with redirect" for pages working as intended.
  *
- * Every route now requires an account, which means a crawler sees a redirect
- * to a sign-in page and nothing else. Letting it discover that by walking the
- * whole site wastes its crawl budget and fills the Search Console report with
- * "Page with redirect" for pages that are working exactly as intended.
+ * `allow` before `disallow` is not decoration — the order does not matter to
+ * a crawler, but the SPECIFICITY does: "/$" anchors to the root exactly, so
+ * "/schedule" is not covered by it and falls through to the disallow.
  *
- * This file is a direct consequence of closing the site. If public pages come
- * back — a schedule, standings, team profiles — this should shrink to allow
- * them, because those are the pages that would bring anyone here in the first
- * place.
+ * This mirrors what Netflix does, which is worth knowing because it looks
+ * wrong at first glance: their robots.txt opens with `Disallow: /` for `*`
+ * and then names Googlebot, Bingbot, Applebot, GPTBot and a dozen others to
+ * let them in. They are not hiding — they are choosing which crawlers get
+ * through. Roboxing has one page worth crawling, so it says so directly
+ * instead.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", disallow: "/" }],
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/$",
+        disallow: "/",
+      },
+    ],
     host: getAppUrl(),
   };
 }

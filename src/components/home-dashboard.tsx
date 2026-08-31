@@ -23,7 +23,15 @@ import {
 } from "@/lib/queries";
 import { getStandings } from "@/lib/standings";
 
-export default async function HomePage() {
+/**
+ * The signed-in home: what is happening now, what happened last, where the
+ * season stands.
+ *
+ * Lives in components/ rather than as the `/` page because `/` now has two
+ * faces — this one for members, and the landing page for everyone else. The
+ * route decides which; this file only knows how to be the member view.
+ */
+export async function HomeDashboard() {
   // getLatestResults does not depend on the competition, so it belongs in the
   // first batch — Neon's HTTP driver pays a full round trip per query with no
   // server-side batching, so an avoidable second phase is an avoidable delay.
