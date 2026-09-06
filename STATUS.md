@@ -1,5 +1,21 @@
 # Where Roboxing stands
 
+> **Steps 4, 5 and 6 were closed on 2026-09-06 by decision, not by passing
+> their gates.** The build is finished; the proof is not. No OBS signal has
+> ever reached the player, the run-of-show has never been walked, and no
+> rehearsal took place. That is recorded here rather than in a green tick,
+> because the first real broadcast will otherwise be the first time anyone
+> finds out whether the chain holds — and event day is the worst moment to
+> learn it.
+>
+> The session that would settle it is about 30 minutes and needs nothing that
+> does not already exist: OBS colour bars are sufficient content. No rights
+> deal, no real event. The checklist is at the bottom of this file.
+>
+> Also noted 2026-09-06: the Vercel Pro subscription lapsed. The site still
+> serves. Hobby is **non-commercial only**, so Pro is needed again before the
+> first paying subscriber, not before the next deploy.
+
 Written to resume cleanly after a break. `DECISIONS.md` explains *why* things
 are the way they are; this file says *what is done, what is not, and what is
 waiting on whom*.
@@ -29,7 +45,7 @@ public. Two clicks all the same.
 Scaffold, design tokens, database, and the public content pages. All deployed
 and verified.
 
-## Step 4 — Cloudflare Stream + player: NOT done
+## Step 4 — Cloudflare Stream + player: built, closed unverified
 
 Built and deployed: the hls.js player with a deliberate native-HLS branch for
 Safari, token refresh on fatal network error, live-edge drift detection,
@@ -51,7 +67,7 @@ Never done, and all of it needs a person at a keyboard:
 - Glass-to-glass latency never measured. The plan promises under 30 seconds
   and that number is currently a hope.
 
-## Step 5 — Admin panel: mostly done
+## Step 5 — Admin panel: built, security gate proven, run-of-show unwalked
 
 Built: CRUD for competitions, teams, robots, events and bouts; CSV import with
 a dry-run preview; the live console; Zod validation; audit logging;
@@ -71,7 +87,7 @@ Not done:
 - No image has ever been uploaded. R2 credentials are set, but a cross-origin
   PUT will likely need a CORS rule on the bucket first — see below.
 
-## Step 6 — Event-day rehearsal: not started
+## Step 6 — Event-day rehearsal: not performed
 
 Needs a real broadcast, so it follows step 4.
 
@@ -107,9 +123,10 @@ changes made there do nothing.
 - Stripe sandbox: a customer "Roboxing webhook test" with a trialing
   subscription, and entitlement row #1 in the database. Both created to prove
   the webhook chain; safe to delete.
-- Event `us2` ("Test event", Madison Square Garden) has **no bouts**, status
-  `completed`, access `subscription`. The run-of-show needs at least two bouts
-  and status `scheduled`.
+- Event `us2` ("Test event", Madison Square Garden) is now **ready for a
+  live test**: status `scheduled`, access `free`, with two bouts seeded —
+  TITAN-07 vs RONIN-2 and TITAN-11 vs RONIN-8. The robots are from different
+  teams on purpose, so the standings visibly move when a result is entered.
 - Its stored instant is `2026-09-06T22:15Z`. The timezone was corrected from
   UTC to `America/New_York`, which moved the *label* but not the instant — it
   now reads 6:15 PM EDT. If 22:15 was meant as New York local time, the stored
