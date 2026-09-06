@@ -1,5 +1,11 @@
 import "server-only";
 
+import {
+  classifyLiveInputStatus,
+  readLiveInputStatus,
+  type StreamSignal,
+} from "./stream-status";
+
 /**
  * Cloudflare Stream Live client.
  *
@@ -74,7 +80,13 @@ export type LiveInput = {
   uid: string;
   rtmps: { url: string; streamKey: string };
   srt?: { url: string; streamId: string; passphrase: string };
-  status: { current?: { state?: string } } | null;
+  /**
+   * Deliberately `unknown`. Cloudflare's docs describe two different shapes for
+   * this field, so declaring one of them here would be a claim we cannot back —
+   * and the previous declaration made exactly that claim. readLiveInputStatus()
+   * accepts every documented shape instead.
+   */
+  status: unknown;
   meta?: Record<string, unknown>;
   created: string;
 };
@@ -134,10 +146,25 @@ export async function deleteLiveInput(uid: string): Promise<void> {
   await cf<unknown>(`/stream/live_inputs/${uid}`, { method: "DELETE" });
 }
 
-/** Whether anything is currently being pushed to this input. */
-export async function isInputLive(uid: string): Promise<boolean> {
+/**
+ * What Cloudflare is hearing on this input right now.
+ *
+ * Returns the raw state alongside the verdict. The state string is what makes
+ * a wrong verdict diagnosable: the previous version returned a bare boolean,
+ * so when it said "no signal" during a live broadcast there was nothing to
+ * look at and no way to tell a disconnected encoder from a misread response.
+ *
+ * The reading itself is in stream-status.ts, where it can be tested.
+ */
+export async function getInputSignal(
+  uid: string,
+): Promise<{ signal: StreamSignal; state: string | null }> {
   const input = await getLiveInput(uid);
-  return input.status?.current?.state === "connected";
+  const reading = readLiveInputStatus(input.status);
+  return {
+    signal: classifyLiveInputStatus(reading),
+    state: reading.kind === "state" ? reading.state : null,
+  };
 }
 
 export type StreamVideo = {

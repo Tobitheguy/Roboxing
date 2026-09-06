@@ -7,8 +7,8 @@ import { requireAdmin } from "@/lib/auth";
 import {
   createLiveInput,
   deleteLiveInput,
+  getInputSignal,
   getLiveInput,
-  isInputLive,
   isStreamConfigured,
 } from "@/lib/stream";
 
@@ -267,32 +267,29 @@ export async function GET(request: Request) {
     await db.select().from(streams).where(eq(streams.eventId, eventId)).limit(1)
   )[0];
 
-  if (!existing?.cfLiveInputId) {
+  if (!existing?.cfLiveInputId || !isStreamConfigured()) {
     return Response.json(
-      { configured: false, receiving: false },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  }
-
-  if (!isStreamConfigured()) {
-    return Response.json(
-      { configured: false, receiving: false },
+      { configured: false, signal: "not-receiving", state: null },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
 
   try {
-    const receiving = await isInputLive(existing.cfLiveInputId);
+    const { signal, state } = await getInputSignal(existing.cfLiveInputId);
     return Response.json(
-      { configured: true, receiving },
+      // `state` is Cloudflare's own word for what it is seeing, passed through
+      // untouched. It is what the console shows next to the light, and the
+      // reason a wrong verdict is now readable off the screen instead of
+      // requiring someone to go and read this file.
+      { configured: true, signal, state },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     console.error("[admin/streams] status check failed:", error);
-    // `unknown` rather than `false`. Reporting "not receiving" when we simply
-    // could not ask would send someone to debug OBS while it was working.
+    // `unknown` rather than `not-receiving`. Reporting "no signal" when we
+    // simply could not ask would send someone to debug OBS while it was working.
     return Response.json(
-      { configured: true, receiving: null },
+      { configured: true, signal: "unknown", state: null },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
