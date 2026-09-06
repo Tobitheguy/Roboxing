@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Copy, Radio, RotateCcw, Square } from "lucide-react";
 
 import { Badge, MethodBadge, type BoutMethod } from "@/components/badge";
@@ -202,6 +202,45 @@ function StreamPanel({
   const [confirmingRotate, setConfirmingRotate] = useState(false);
 
   /**
+   * Whether Cloudflare is receiving a signal right now.
+   *
+   * `null` means "could not ask" and is shown differently from "not
+   * receiving" — telling someone their encoder is down when the status call
+   * merely failed would send them to debug the one thing that was working.
+   */
+  const [receiving, setReceiving] = useState<boolean | null | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const response = await fetch(
+          `/api/admin/streams?eventId=${eventId}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) return;
+        const body = await response.json();
+        if (!cancelled) setReceiving(body.receiving);
+      } catch {
+        // A failed poll is not news. The previous answer stays on screen.
+      }
+    };
+
+    void check();
+    // Five seconds: fast enough that plugging in OBS feels acknowledged,
+    // slow enough that leaving the console open all afternoon is not a
+    // thousand calls to Cloudflare.
+    const timer = window.setInterval(check, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [eventId]);
+
+  /**
    * Replace the live input, invalidating the current stream key.
    *
    * The only remedy when a key has leaked — Cloudflare binds the key to the
@@ -244,7 +283,38 @@ function StreamPanel({
 
   return (
     <Card>
-      <CardHeader title="Stream credentials" />
+      <CardHeader
+        title="Stream credentials"
+        action={
+          // The one thing the console could not say before: is Cloudflare
+          // actually hearing the encoder. Without it a black player is two
+          // different failures wearing the same face.
+          receiving === undefined ? null : (
+            <span className="flex items-center gap-2 text-xs">
+              <span
+                aria-hidden
+                className={cn(
+                  "size-2 rounded-full",
+                  receiving === true && "bg-live animate-pulse",
+                  receiving === false && "bg-ink-dim",
+                  receiving === null && "bg-drift",
+                )}
+              />
+              <span
+                className={cn(
+                  receiving === true ? "text-live" : "text-ink-muted",
+                )}
+              >
+                {receiving === true
+                  ? "Cloudflare is receiving"
+                  : receiving === false
+                    ? "No signal yet"
+                    : "Status unavailable"}
+              </span>
+            </span>
+          )
+        }
+      />
       <CardBody className="space-y-4">
         {!credentials ? (
           <>

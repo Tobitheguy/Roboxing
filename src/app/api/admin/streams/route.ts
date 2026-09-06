@@ -8,6 +8,7 @@ import {
   createLiveInput,
   deleteLiveInput,
   getLiveInput,
+  isInputLive,
   isStreamConfigured,
 } from "@/lib/stream";
 
@@ -234,6 +235,65 @@ export async function DELETE(request: Request) {
           "check Cloudflare Stream before broadcasting.",
       },
       { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+
+/**
+ * Is Cloudflare actually receiving a signal for this event right now?
+ *
+ * Without this the console can hand out RTMP credentials and then say nothing
+ * at all about whether they worked. A black player is then two failures
+ * wearing the same face: the broadcaster never connected, or the connection is
+ * fine and playback is broken. Those need opposite fixes, and guessing between
+ * them on event day is the worst possible time.
+ *
+ * Polled by the console, so it is deliberately cheap: one Cloudflare call, no
+ * database write, and it never changes state.
+ */
+export async function GET(request: Request) {
+  const auth = await requireAdmin();
+  if (auth instanceof Response) return auth;
+
+  const eventId = Number(new URL(request.url).searchParams.get("eventId"));
+  if (!Number.isInteger(eventId) || eventId <= 0) {
+    return Response.json(
+      { error: "Expected ?eventId=" },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const existing = (
+    await db.select().from(streams).where(eq(streams.eventId, eventId)).limit(1)
+  )[0];
+
+  if (!existing?.cfLiveInputId) {
+    return Response.json(
+      { configured: false, receiving: false },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  if (!isStreamConfigured()) {
+    return Response.json(
+      { configured: false, receiving: false },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  try {
+    const receiving = await isInputLive(existing.cfLiveInputId);
+    return Response.json(
+      { configured: true, receiving },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error("[admin/streams] status check failed:", error);
+    // `unknown` rather than `false`. Reporting "not receiving" when we simply
+    // could not ask would send someone to debug OBS while it was working.
+    return Response.json(
+      { configured: true, receiving: null },
+      { headers: { "Cache-Control": "no-store" } },
     );
   }
 }
