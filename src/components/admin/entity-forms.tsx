@@ -252,7 +252,7 @@ export function TeamForm({
       <ImageField
         label="Logo"
         name="logoUrl"
-        hint="Upload an image, or paste a URL."
+        hint="Shown on the public page."
         defaultValue={team?.logoUrl}
         errors={errors.logoUrl}
       />
@@ -354,7 +354,7 @@ export function RobotForm({
         <ImageField
           label="Photo"
           name="photoUrl"
-          hint="Upload an image, or paste a URL."
+          hint="Shown on the public page."
           defaultValue={robot?.photoUrl}
           errors={errors.photoUrl}
         />
@@ -525,7 +525,7 @@ export function EventForm({
       <ImageField
         label="Poster"
         name="posterUrl"
-        hint="Upload an image, or paste a URL."
+        hint="Shown on the public page."
         defaultValue={event?.posterUrl}
         errors={errors.posterUrl}
       />
