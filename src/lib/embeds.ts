@@ -182,3 +182,75 @@ export function toParagraphs(body: string | null | undefined): string[] {
     .map((p) => p.trim())
     .filter(Boolean);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Inline links                                                                */
+/* -------------------------------------------------------------------------- */
+
+/** One run of a paragraph: either plain words, or words that link out. */
+export type InlineNode =
+  | { kind: "text"; text: string }
+  | { kind: "link"; text: string; href: string };
+
+/**
+ * The only markup a post body understands: `[words](https://example.com)`.
+ *
+ * Deliberately not markdown, and deliberately not HTML. The body column has
+ * no HTML path by design — see the note on `posts.body` — and adding one to
+ * get a hyperlink would trade a real XSS surface for a convenience. This
+ * parser instead produces DATA: a list of text and link runs that the
+ * renderer turns into React elements, so every character still goes through
+ * React's escaping and an `<a>` is the only tag that can ever appear.
+ *
+ * The href is validated the same way `resolveEmbed` validates an embed:
+ * parseable, and http(s) only. `[click](javascript:alert(1))` therefore
+ * cannot produce a link — it degrades to the label as plain text, which
+ * keeps the sentence readable instead of silently deleting words.
+ */
+const INLINE_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+
+function safeHref(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  return url.toString();
+}
+
+/** Split one paragraph into its text and link runs. */
+export function toInlineNodes(paragraph: string): InlineNode[] {
+  const nodes: InlineNode[] = [];
+  let cursor = 0;
+
+  // Fresh lastIndex per call: the regex is module-level and /g is stateful,
+  // so a shared one would skip matches on every second paragraph.
+  INLINE_LINK.lastIndex = 0;
+  for (
+    let match = INLINE_LINK.exec(paragraph);
+    match !== null;
+    match = INLINE_LINK.exec(paragraph)
+  ) {
+    const [whole, label, rawHref] = match;
+    if (match.index > cursor) {
+      nodes.push({ kind: "text", text: paragraph.slice(cursor, match.index) });
+    }
+    const href = safeHref(rawHref);
+    nodes.push(href ? { kind: "link", text: label, href } : { kind: "text", text: label });
+    cursor = match.index + whole.length;
+  }
+
+  if (cursor < paragraph.length) {
+    nodes.push({ kind: "text", text: paragraph.slice(cursor) });
+  }
+  return nodes;
+}
+
+/** `toParagraphs`, with each paragraph parsed for inline links. */
+export function toRichParagraphs(
+  body: string | null | undefined,
+): InlineNode[][] {
+  return toParagraphs(body).map(toInlineNodes);
+}

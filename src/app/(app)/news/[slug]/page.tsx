@@ -7,8 +7,9 @@ import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
 import { PageShell } from "@/components/page-shell";
 import { PostEmbed } from "@/components/post-embed";
+import { RichText } from "@/components/rich-text";
 import { getAppUrl } from "@/lib/app-url";
-import { toParagraphs, youtubeThumbnailUrl } from "@/lib/embeds";
+import { youtubeThumbnailUrl } from "@/lib/embeds";
 import { formatDateLong } from "@/lib/format";
 import { getPostBySlug } from "@/lib/queries";
 
@@ -56,7 +57,6 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
   if (!row) notFound();
 
   const { post, eventSlug, eventName } = row;
-  const paragraphs = toParagraphs(post.body);
 
   return (
     <PageShell>
@@ -92,17 +92,9 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
           </div>
         ) : null}
 
-        {paragraphs.length > 0 ? (
-          <div className="mt-8 space-y-4">
-            {paragraphs.map((paragraph, i) => (
-              // Plain text children, escaped by React. There is no HTML path
-              // into this page — see the note on `posts.body`.
-              <p key={i} className="text-ink leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        ) : null}
+        {/* Text and `[label](url)` links only — still no HTML path into a
+            body. See the parser note in `lib/embeds`. */}
+        <RichText body={post.body} className="mt-8 space-y-4" />
 
         {eventSlug && eventName ? (
           <div className="border-line mt-10 border-t pt-6">

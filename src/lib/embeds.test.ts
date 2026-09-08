@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveEmbed, toParagraphs, youtubeThumbnailUrl } from "./embeds";
+import {
+  resolveEmbed,
+  toInlineNodes,
+  toParagraphs,
+  toRichParagraphs,
+  youtubeThumbnailUrl,
+} from "./embeds";
 
 describe("resolveEmbed — refusing to iframe the wrong thing", () => {
   it("returns null for a non-http scheme", () => {
@@ -178,5 +184,79 @@ describe("toParagraphs", () => {
   it("is empty for nothing", () => {
     expect(toParagraphs(null)).toEqual([]);
     expect(toParagraphs("   \n\n  ")).toEqual([]);
+  });
+});
+
+describe("toInlineNodes", () => {
+  it("leaves a paragraph without links as a single text run", () => {
+    expect(toInlineNodes("No links here.")).toEqual([
+      { kind: "text", text: "No links here." },
+    ]);
+  });
+
+  it("splits text around a link and keeps both sides", () => {
+    expect(
+      toInlineNodes("Unitree published [a video](https://example.com/v) today."),
+    ).toEqual([
+      { kind: "text", text: "Unitree published " },
+      { kind: "link", text: "a video", href: "https://example.com/v" },
+      { kind: "text", text: " today." },
+    ]);
+  });
+
+  it("handles several links in one paragraph", () => {
+    const nodes = toInlineNodes(
+      "[one](https://a.example) and [two](https://b.example)",
+    );
+    expect(nodes.filter((n) => n.kind === "link")).toHaveLength(2);
+    expect(nodes).toContainEqual({ kind: "text", text: " and " });
+  });
+
+  it("handles a link at the very start and the very end", () => {
+    expect(toInlineNodes("[only](https://a.example)")).toEqual([
+      { kind: "link", text: "only", href: "https://a.example/" },
+    ]);
+  });
+
+  /**
+   * The reason this parser exists rather than a markdown dependency. A body
+   * is author-controlled today, but the whole point of the no-HTML rule is
+   * that it holds even when the input is not trusted.
+   */
+  it("refuses a javascript: href and degrades to plain text", () => {
+    // Asserted as a property, not an exact run list: the URL ends at the
+    // first ")", so the payload's own trailing paren survives as text. What
+    // must hold is that no link is produced and the label is still readable.
+    const nodes = toInlineNodes("[click](javascript:alert(1))");
+    expect(nodes.every((n) => n.kind === "text")).toBe(true);
+    expect(nodes.map((n) => n.text).join("")).toContain("click");
+  });
+
+  it("refuses data: and other non-http schemes", () => {
+    for (const href of [
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:msgbox(1)",
+      "file:///etc/passwd",
+    ]) {
+      const nodes = toInlineNodes(`[x](${href})`);
+      expect(nodes.every((n) => n.kind === "text")).toBe(true);
+    }
+  });
+
+  it("leaves malformed syntax alone rather than half-parsing it", () => {
+    expect(toInlineNodes("[unclosed](https://a.example")).toEqual([
+      { kind: "text", text: "[unclosed](https://a.example" },
+    ]);
+    expect(toInlineNodes("brackets [but no url] here")).toEqual([
+      { kind: "text", text: "brackets [but no url] here" },
+    ]);
+  });
+
+  it("does not skip a link in every second paragraph", () => {
+    // Regression: the pattern is module-level with /g, so a shared lastIndex
+    // would leave alternating paragraphs unparsed.
+    const body = "[a](https://a.example)\n\n[b](https://b.example)";
+    const rich = toRichParagraphs(body);
+    expect(rich.map((p) => p[0].kind)).toEqual(["link", "link"]);
   });
 });

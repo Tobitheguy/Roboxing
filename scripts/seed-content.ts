@@ -114,11 +114,14 @@ const POSTS = [
     title: "No pilot: Unitree just showed the first autonomous robot fight",
     summary:
       "Every fight this sport has ever staged had a human in the loop. Unitree's UnifoLM-X2-1.0 world model drops the human — and the watcher caught the story in Chinese media before English outlets had it.",
-    embedUrl: null,
+    // Unitree's own upload, verified through YouTube's oEmbed endpoint as
+    // coming from the @unitreerobotics channel — the claim in this article is
+    // the company's, so the source has to be the company's.
+    embedUrl: "https://www.youtube.com/watch?v=qkIJELDgULA",
     eventSlug: null,
     body: [
-      "Strip away the armour and the gold belts, and every fight this sport has staged so far shares one fact: a human was driving. VR pilots at REK, operators with controllers at Iron Fist King, hybrid human-machine control at URKL, professional Street Fighter players at CyberHero. The robots were avatars.",
-      "On 7 September, Unitree published a video that removes that fact. UnifoLM-X2-1.0 is what the company calls a real-time world model: the robot watches the situation in front of it, predicts how the next moments of physical contact will unfold, plans a response, executes it, and repeats — no teleoperation, no scripted sequences. Unitree calls it the first fully autonomous humanoid robot combat, and no earlier demonstration we can find contradicts the claim.",
+      "Strip away the armour and the gold belts, and every fight this sport has staged so far shares one fact: a human was driving. VR pilots at [REK](https://www.youtube.com/watch?v=PR7yNhfHAKg), operators with controllers at Iron Fist King, hybrid human-machine control at URKL, professional Street Fighter players at CyberHero. The robots were avatars.",
+      "On 7 September, Unitree published [a video](https://www.youtube.com/watch?v=qkIJELDgULA) that removes that fact. [UnifoLM-X2-1.0](https://x.com/UnitreeRobotics/status/2096932273602048258) is what the company calls a real-time world model: the robot watches the situation in front of it, predicts how the next moments of physical contact will unfold, plans a response, executes it, and repeats — no teleoperation, no scripted sequences. Unitree calls it the first fully autonomous humanoid robot combat, and no earlier demonstration we can find contradicts the claim.",
       "The caveats matter and we will keep repeating them: this is a company demo video, not a sanctioned bout under any league's rules, and a demo is exactly the setting where a system looks its best. Nothing about it appears in our results, and nothing should.",
       "But if it holds up outside the demo, it changes what this sport is. A league of piloted robots is an operator competition — esports with a physical avatar, as CyberHero understands perfectly. A league of autonomous robots is something that has never existed: machine versus machine, where the thing being tested is the intelligence itself. URKL already scores decision-making and perception alongside power and balance; autonomy is where that rubric stops being a metaphor.",
       "One more thing worth saying plainly: this story broke across Chinese tech media a day before English outlets caught up, and our morning sweep of Chinese-language sources flagged it at dawn. That pipeline exists because the last time a story lived only in Chinese, it took this site to put the result on the record in English. It will not be the last time.",
