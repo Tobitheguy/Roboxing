@@ -30,11 +30,20 @@ export const metadata: Metadata = {
  * these pages the day the leagues publish full cards.
  */
 export default async function MachinesPage() {
-  const rows = await db
+  const allRows = await db
     .select({ robot: robots, teamName: teams.name, teamSlug: teams.slug })
     .from(robots)
     .innerJoin(teams, eq(robots.teamId, teams.id))
     .orderBy(asc(robots.name));
+
+  // This index promises "these are the models" — so it lists platforms, not
+  // fighters. Matador and White Eagle are league-standard T800s in team
+  // colours; they live on as pages reachable from fight cards, team pages
+  // and the T800's "In the cage as" list, but showing them here would list
+  // the same machine three times.
+  const rows = allRows.filter(
+    ({ robot }) => !getMachineMedia(robot.slug)?.platformSlug,
+  );
 
   return (
     <PageShell>

@@ -200,7 +200,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
       ) : null}
 
       {/* The machine in action — fight photography. */}
-      {media ? (
+      {media && media.gallery.length > 0 ? (
         <div className="mb-8 grid gap-4 sm:grid-cols-2">
           {media.gallery.map((image) => (
             <MachineFigure key={image.src + image.caption} image={image} />
@@ -235,7 +235,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         <Card className="mb-6">
           <CardHeader title="About this machine" />
           <CardBody>
-            <div className="max-w-2xl space-y-4">
+            <div className="space-y-4">
               {media.reading.map((paragraph) => (
                 <p key={paragraph.slice(0, 40)} className="text-ink-muted text-sm leading-relaxed">
                   {paragraph}

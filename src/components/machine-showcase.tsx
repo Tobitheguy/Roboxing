@@ -119,7 +119,8 @@ export function AnatomyFigure({ view }: { view: AnatomyView }) {
         ))}
       </div>
       <figcaption>
-        <ol className="mt-3 space-y-1.5">
+        {view.points.length > 0 ? (
+          <ol className="mt-3 space-y-1.5">
           {view.points.map((point, index) => (
             <li key={point.label} className="flex gap-2 text-xs">
               <span className="bg-ink font-display flex size-4 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white">
@@ -133,7 +134,8 @@ export function AnatomyFigure({ view }: { view: AnatomyView }) {
               </span>
             </li>
           ))}
-        </ol>
+          </ol>
+        ) : null}
         <p className="text-ink-dim mt-2 text-xs">Photo: {view.image.credit}.</p>
       </figcaption>
     </figure>

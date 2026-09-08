@@ -161,20 +161,22 @@ const T800_SHOWCASE: Showcase = {
     },
     {
       title: "Back",
+      // Cropped to exactly the front view's aspect ratio so the two figures
+      // land at the same rendered height side by side.
       image: {
         src: "/machines/t800-back.jpg",
         alt: "EngineAI T800 upper body from behind, showing the removable battery pack",
         caption: "",
         credit: "EngineAI",
-        width: 1920,
+        width: 1814,
         height: 1080,
       },
       points: [
-        { x: 29, y: 16, label: "Cooling intake", detail: "active airflow for the drivetrain" },
-        { x: 61, y: 45, label: "Removable fast-charging battery", detail: "72 V quick-release pack" },
-        { x: 36, y: 55, label: "Status light strip" },
-        { x: 13, y: 38, label: "7-DOF arms", detail: "shoulder, elbow and wrist articulation" },
-        { x: 47, y: 82, label: "Magnesium-aluminium alloy body", detail: "aviation-grade panelling" },
+        { x: 31, y: 16, label: "Cooling intake", detail: "active airflow for the drivetrain" },
+        { x: 64.5, y: 45, label: "Removable fast-charging battery", detail: "72 V quick-release pack" },
+        { x: 38, y: 55, label: "Status light strip" },
+        { x: 14, y: 38, label: "7-DOF arms", detail: "shoulder, elbow and wrist articulation" },
+        { x: 50, y: 82, label: "Magnesium-aluminium alloy body", detail: "aviation-grade panelling" },
       ],
     },
   ],
@@ -227,15 +229,14 @@ const G1_SHOWCASE: Showcase = {
   tagline:
     "Child-sized, cheap enough to crash and agile enough to headline — the most widely used humanoid in combat events anywhere, from Hangzhou to San Francisco.",
   hero: {
-    src: "/machines/g1-front.jpg",
-    alt: "Unitree G1 humanoid robot standing, seen from the front",
+    src: "/machines/g1-hero.jpg",
+    alt: "Unitree G1 landing a kick in the ring at Iron Fist King: Awakening, Hangzhou",
     caption: "",
-    credit: "Unitree Robotics",
-    width: 800,
-    height: 800,
-    fit: "contain",
+    credit: "Unitree Robotics / Iron Fist King broadcast",
+    width: 1280,
+    height: 720,
   },
-  heroTone: "light",
+  heroTone: "dark",
   stats: [
     { label: "Height", value: "130 cm" },
     { label: "Weight", value: "≈35 kg" },
@@ -263,8 +264,62 @@ const G1_SHOWCASE: Showcase = {
         { x: 41, y: 91, label: "Compact feet", detail: "2 m/s walking, stable on one leg mid-kick" },
       ],
     },
+    {
+      // Same 1:1 frame as the front view, so the pair sits level — the
+      // annotated figure and the move it exists to throw.
+      title: "In action",
+      image: {
+        src: "/machines/g1-kick.jpg",
+        alt: "Unitree G1 mid high-kick, showing the side and back of the machine",
+        caption: "",
+        credit: "Unitree Robotics",
+        width: 800,
+        height: 800,
+      },
+      points: [],
+    },
   ],
-  features: [],
+  // The T800's tiles show engineering close-ups; the G1 has something the
+  // T800 does not — a combat record across three formats. That is its
+  // feature set.
+  features: [
+    {
+      image: {
+        src: "/machines/g1-ifk.jpg",
+        alt: "Two G1s exchanging kicks in the Iron Fist King ring with a referee behind them",
+        caption: "",
+        credit: "Iron Fist King broadcast",
+        width: 980,
+        height: 720,
+      },
+      title: "Iron Fist King · Hangzhou",
+      text: "May 2025 — the first robot boxing tournament ever held. Four G1s, human operators, and the night this sport started.",
+    },
+    {
+      image: {
+        src: "/machines/g1-whrg.jpg",
+        alt: "G1s in red and black protective gear fighting in the WHRG kickboxing bracket",
+        caption: "",
+        credit: "World Humanoid Robot Games broadcast",
+        width: 980,
+        height: 720,
+      },
+      title: "WHRG kickboxing · Beijing",
+      text: "August 2026 — the kickboxing bracket of the World Humanoid Robot Games, fought in full contact gear with team numbers on the vest.",
+    },
+    {
+      image: {
+        src: "/machines/g1-rek.jpg",
+        alt: "Two modified G1s in boxing gloves squaring up at REK in San Francisco",
+        caption: "",
+        credit: "REK",
+        width: 520,
+        height: 320,
+      },
+      title: "REK · San Francisco",
+      text: "The first robot fighting on US soil — modified G1s under VR control, piloted by professional MMA fighters.",
+    },
+  ],
 };
 
 export const MACHINE_MEDIA: Record<string, MachineMedia> = {
@@ -291,19 +346,9 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
       height: 800,
       fit: "contain",
     },
-    // The front view lives in the showcase hero and anatomy — the gallery
-    // keeps only the action shot.
-    gallery: [
-      {
-        src: "/machines/g1-kick.jpg",
-        alt: "Unitree G1 mid high-kick, showing the side and back of the machine",
-        caption: "Mid high-kick — the move that filled arenas before full-size machines existed.",
-        credit: "Unitree Robotics",
-        width: 800,
-        height: 800,
-        fit: "contain",
-      },
-    ],
+    // Both studio shots live in the showcase (anatomy pair) — nothing left
+    // for a separate gallery.
+    gallery: [],
     showcase: G1_SHOWCASE,
     reading: [
       "The G1 is the machine that fought the first robot boxing match in history — Iron Fist King: Awakening, Hangzhou, May 2025 — and it is still the most widely used humanoid in combat events anywhere. At 1.3 metres and roughly 35 kilograms it is child-sized next to a T800, which is exactly why it got there first: it is cheap enough to field in numbers, light enough to crash without consequence, and agile enough to be genuinely fun to watch.",
