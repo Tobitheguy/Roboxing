@@ -18,6 +18,13 @@ export type MachineImage = {
   credit: string;
   width: number;
   height: number;
+  /**
+   * "contain" for studio shots whose framing must survive intact — a square
+   * product photo cropped to 16:9 loses the head and feet, which on a page
+   * about the physical machine is the one thing that cannot happen. Cover
+   * remains the default because fight photography crops fine.
+   */
+  fit?: "cover" | "contain";
 };
 
 export type MachineMedia = {
@@ -86,6 +93,7 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
       credit: "Unitree Robotics",
       width: 800,
       height: 800,
+      fit: "contain",
     },
     gallery: [
       {
@@ -95,6 +103,7 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
         credit: "Unitree Robotics",
         width: 800,
         height: 800,
+        fit: "contain",
       },
       {
         src: "/machines/g1-kick.jpg",
@@ -103,6 +112,7 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
         credit: "Unitree Robotics",
         width: 800,
         height: 800,
+        fit: "contain",
       },
     ],
     reading: [

@@ -67,14 +67,20 @@ export default async function MachinesPage() {
                 {cardImage ? (
                   <Link
                     href={`/robots/${robot.slug}`}
-                    className="border-line bg-surface-2 relative block aspect-[16/9] border-b"
+                    className={`border-line relative block aspect-[16/9] border-b ${
+                      cardImage.fit === "contain" ? "bg-white" : "bg-surface-2"
+                    }`}
                   >
                     <Image
                       src={cardImage.src}
                       alt={cardImage.alt}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
-                      className="object-cover"
+                      className={
+                        cardImage.fit === "contain"
+                          ? "object-contain"
+                          : "object-cover"
+                      }
                     />
                   </Link>
                 ) : null}

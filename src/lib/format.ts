@@ -210,6 +210,13 @@ export function formatDaysUntil(target: Date, now: Date): string | null {
 
 /** Sentence-case a snake_case or kebab-case token for display. */
 export function humanize(value: string): string {
-  const spaced = value.replace(/[_-]+/g, " ").trim();
+  const spaced = value
+    .replace(/[_-]+/g, " ")
+    // Split camelCase too — spec keys arrive as jsonb identifiers like
+    // "peakJointTorqueNm", and an eyebrow label reading PEAKJOINTTORQUENM
+    // is not a label. Consecutive capitals (an acronym) stay together.
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .trim();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

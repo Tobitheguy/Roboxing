@@ -39,13 +39,17 @@ export async function generateMetadata(
 function MachineFigure({ image }: { image: MachineImage }) {
   return (
     <figure className="min-w-0">
-      <div className="border-line bg-surface-2 relative aspect-[16/10] overflow-hidden border">
+      <div
+        className={`border-line relative aspect-[16/10] overflow-hidden border ${
+          image.fit === "contain" ? "bg-white" : "bg-surface-2"
+        }`}
+      >
         <Image
           src={image.src}
           alt={image.alt}
           fill
           sizes="(min-width: 640px) 50vw, 100vw"
-          className="object-cover"
+          className={image.fit === "contain" ? "object-contain" : "object-cover"}
         />
       </div>
       <figcaption className="text-ink-muted mt-2 text-xs">
