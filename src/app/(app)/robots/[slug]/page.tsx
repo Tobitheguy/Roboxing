@@ -13,6 +13,12 @@ import { PageShell } from "@/components/page-shell";
 import { RobotAvatar } from "@/components/robot-avatar";
 import { StatRow, StatTile } from "@/components/stat-tile";
 import { formatHeight, formatWeight, humanize } from "@/lib/format";
+import {
+  AnatomyFigure,
+  FeatureGrid,
+  MachineHero,
+  PlatformBanner,
+} from "@/components/machine-showcase";
 import { getMachineMedia, type MachineImage } from "@/lib/machine-media";
 import { computeRobotRecord, formatRecord } from "@/lib/records";
 import { getBoutsForRobot, getRobotBySlug } from "@/lib/queries";
@@ -100,47 +106,100 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
     robot.model,
   ].filter(Boolean);
 
+  const showcase = media?.showcase;
+  const platform =
+    media?.platformSlug != null
+      ? { slug: media.platformSlug, media: getMachineMedia(media.platformSlug) }
+      : null;
+
   return (
     <PageShell>
       <BackLink href="/robots" label="All machines" />
-      <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
-        {/* The monogram tile earns its place only when there is no
-            photography — with the gallery directly below, it would just be
-            a grey square repeating the name. */}
-        {!media ? (
-          <RobotAvatar
-            name={robot.name}
-            photoUrl={robot.photoUrl}
-            size="xl"
-            decorative
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <p className="eyebrow mb-2">
-            <Link href={`/teams/${teamSlug}`} className="hover:text-volt transition-colors">
-              {teamName}
-            </Link>
-          </p>
-          <h1 className="font-display text-hero text-ink uppercase">
-            {robot.name}
-          </h1>
-          {specLines.length > 0 ? (
-            <p className="text-ink-muted tabular mt-3 text-sm">
-              {specLines.join(" · ")}
-            </p>
-          ) : null}
-          {robot.weightClass ? (
-            <div className="mt-3">
-              <Badge>{robot.weightClass}</Badge>
-            </div>
-          ) : null}
-          {robot.bio ? (
-            <p className="text-ink-muted mt-4 max-w-2xl text-sm">{robot.bio}</p>
-          ) : null}
-        </div>
-      </div>
 
-      {/* The machine itself, front and back where photography exists. */}
+      {showcase ? (
+        <MachineHero
+          eyebrow={showcase.eyebrow}
+          name={robot.name}
+          tagline={showcase.tagline}
+          stats={showcase.stats}
+          image={showcase.hero}
+          tone={showcase.heroTone}
+        />
+      ) : (
+        <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
+          {/* The monogram tile earns its place only when there is no
+              photography — with the gallery directly below, it would just be
+              a grey square repeating the name. */}
+          {!media ? (
+            <RobotAvatar
+              name={robot.name}
+              photoUrl={robot.photoUrl}
+              size="xl"
+              decorative
+            />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            {/* White Eagle's team is called White Eagle — repeating the name
+                as its own eyebrow reads like a stutter. */}
+            {teamName !== robot.name ? (
+              <p className="eyebrow mb-2">
+                <Link href={`/teams/${teamSlug}`} className="hover:text-volt transition-colors">
+                  {teamName}
+                </Link>
+              </p>
+            ) : null}
+            <h1 className="font-display text-hero text-ink uppercase">
+              {robot.name}
+            </h1>
+            {specLines.length > 0 ? (
+              <p className="text-ink-muted tabular mt-3 text-sm">
+                {specLines.join(" · ")}
+              </p>
+            ) : null}
+            {robot.weightClass ? (
+              <div className="mt-3">
+                <Badge>{robot.weightClass}</Badge>
+              </div>
+            ) : null}
+            {robot.bio ? (
+              <p className="text-ink-muted mt-4 max-w-2xl text-sm">{robot.bio}</p>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Fighter machines are league-standard hardware in team colours —
+          point straight at the platform page that explains the metal. */}
+      {platform?.media && media?.platformName ? (
+        <PlatformBanner
+          slug={platform.slug}
+          name={media.platformName}
+          note="League-standard platform — full specs, anatomy and design on the hardware page"
+          image={platform.media.card}
+        />
+      ) : null}
+
+      {/* Annotated anatomy — the platform, part by part. */}
+      {showcase && showcase.anatomy.length > 0 ? (
+        <section className="mb-8">
+          {/* A single view at full page width is a wall of robot — cap it. */}
+          <div
+            className={`grid gap-6 ${
+              showcase.anatomy.length > 1 ? "sm:grid-cols-2" : "max-w-xl"
+            }`}
+          >
+            {showcase.anatomy.map((view) => (
+              <AnatomyFigure key={view.title} view={view} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {showcase && showcase.features.length > 0 ? (
+        <FeatureGrid features={showcase.features} />
+      ) : null}
+
+      {/* The machine in action — fight photography. */}
       {media ? (
         <div className="mb-8 grid gap-4 sm:grid-cols-2">
           {media.gallery.map((image) => (
@@ -161,7 +220,9 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         <StatTile label="Upcoming" value={upcoming.length} />
       </StatRow>
 
-      {robot.specsJson ? (
+      {/* The hero stat strip already carries the headline numbers on
+          showcase pages — repeating them in a second card says nothing new. */}
+      {robot.specsJson && !showcase ? (
         <Card className="mb-6">
           <CardHeader title="Specification" />
           <CardBody>
@@ -182,6 +243,33 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
               ))}
             </div>
           </CardBody>
+        </Card>
+      ) : null}
+
+      {/* The named machines fielded on this platform — the seam between the
+          hardware page and the fighter pages, from the other side. */}
+      {showcase?.variants && showcase.variants.length > 0 ? (
+        <Card className="mb-6">
+          <CardHeader title="In the cage as" />
+          <CardBodyFlush>
+            <ul className="divide-line divide-y">
+              {showcase.variants.map((variant) => (
+                <li key={variant.slug}>
+                  <Link
+                    href={`/robots/${variant.slug}`}
+                    className="hover:bg-surface-2 flex items-center justify-between gap-4 px-5 py-3 transition-colors"
+                  >
+                    <span className="font-display text-ink text-sm font-semibold uppercase">
+                      {variant.name}
+                    </span>
+                    <span className="text-ink-muted min-w-0 truncate text-xs">
+                      {variant.note}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardBodyFlush>
         </Card>
       ) : null}
 

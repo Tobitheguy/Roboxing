@@ -27,6 +27,40 @@ export type MachineImage = {
   fit?: "cover" | "contain";
 };
 
+export type Stat = { label: string; value: string };
+
+export type AnatomyPoint = {
+  /** Percentage coordinates on the view image, 0–100. */
+  x: number;
+  y: number;
+  label: string;
+  detail?: string;
+};
+
+export type AnatomyView = {
+  image: MachineImage;
+  title: string;
+  points: AnatomyPoint[];
+};
+
+export type Feature = {
+  image: MachineImage;
+  title: string;
+  text: string;
+};
+
+export type Showcase = {
+  eyebrow: string;
+  tagline: string;
+  hero: MachineImage;
+  heroTone?: "dark" | "light";
+  stats: Stat[];
+  anatomy: AnatomyView[];
+  features: Feature[];
+  /** Named machines fielded on this platform, linking fighter pages back. */
+  variants?: { slug: string; name: string; note: string }[];
+};
+
 export type MachineMedia = {
   /** Shown on the index card and anywhere a thumbnail is wanted. */
   card: MachineImage;
@@ -34,6 +68,15 @@ export type MachineMedia = {
   gallery: MachineImage[];
   /** Long-form paragraphs for reading up on the platform. Plain text only. */
   reading: string[];
+  /** Platform pages (T800, G1) get the full presentation treatment. */
+  showcase?: Showcase;
+  /**
+   * Fighter machines (White Eagle, Matador) are league-standard hardware in
+   * team colours — this points their page at the platform that explains the
+   * metal, instead of duplicating it.
+   */
+  platformSlug?: string;
+  platformName?: string;
 };
 
 const T800_DUO: MachineImage = {
@@ -74,10 +117,163 @@ const URKL_WHITE_EAGLE_BACK: MachineImage = {
   height: 852,
 };
 
+const T800_SHOWCASE: Showcase = {
+  eyebrow: "EngineAI · standard platform of URKL and CyberHero",
+  tagline:
+    "The only fighting machine built at the size of an adult human. Every URKL and CyberHero bout is two of these — identical hardware, different software, different armour.",
+  hero: {
+    src: "/machines/t800-hero.jpg",
+    alt: "EngineAI T800 in guard stance, lit against a black background",
+    caption: "",
+    credit: "EngineAI",
+    width: 750,
+    height: 1334,
+  },
+  heroTone: "dark",
+  stats: [
+    { label: "Height", value: "173 cm" },
+    { label: "Weight", value: "75 kg" },
+    { label: "Body joints", value: "29 DOF" },
+    { label: "Peak torque", value: "450 N·m" },
+    { label: "Top speed", value: "3 m/s" },
+    { label: "Battery", value: "72 V quick-release" },
+  ],
+  anatomy: [
+    {
+      title: "Front",
+      image: {
+        src: "/machines/t800-front.jpg",
+        alt: "EngineAI T800 running toward the camera, full body from the front",
+        caption: "",
+        credit: "EngineAI",
+        width: 1400,
+        height: 833,
+      },
+      points: [
+        { x: 73, y: 10, label: "Impact-resistant helmet", detail: "automotive-grade light strip, 2-DOF neck" },
+        { x: 72.5, y: 17, label: "Visual perception sensors", detail: "AI camera array behind the visor" },
+        { x: 73.5, y: 33, label: "Chest sensor core", detail: "second perception module and microphone" },
+        { x: 57, y: 17, label: "7-DOF hands", detail: "five-fingered, fully articulated" },
+        { x: 72.5, y: 45, label: "1-DOF waist", detail: "the pivot behind spinning techniques" },
+        { x: 67, y: 60, label: "6-DOF legs", detail: "active-cooled joints, 450 N·m peak" },
+        { x: 64, y: 88, label: "Bionic noise-reducing feet" },
+      ],
+    },
+    {
+      title: "Back",
+      image: {
+        src: "/machines/t800-back.jpg",
+        alt: "EngineAI T800 upper body from behind, showing the removable battery pack",
+        caption: "",
+        credit: "EngineAI",
+        width: 1920,
+        height: 1080,
+      },
+      points: [
+        { x: 29, y: 16, label: "Cooling intake", detail: "active airflow for the drivetrain" },
+        { x: 61, y: 45, label: "Removable fast-charging battery", detail: "72 V quick-release pack" },
+        { x: 36, y: 55, label: "Status light strip" },
+        { x: 13, y: 38, label: "7-DOF arms", detail: "shoulder, elbow and wrist articulation" },
+        { x: 47, y: 82, label: "Magnesium-aluminium alloy body", detail: "aviation-grade panelling" },
+      ],
+    },
+  ],
+  features: [
+    {
+      image: {
+        src: "/machines/t800-hand.jpg",
+        alt: "Close-up of the T800's five-fingered dexterous hand",
+        caption: "",
+        credit: "EngineAI",
+        width: 1920,
+        height: 1080,
+      },
+      title: "Hands that close into fists",
+      text: "Seven degrees of freedom per hand — five fingers that grip, block and punch. In fight trim they wear padded gloves.",
+    },
+    {
+      image: {
+        src: "/machines/t800-joint.jpg",
+        alt: "Transparent render of the T800's joint actuator internals",
+        caption: "",
+        credit: "EngineAI",
+        width: 1920,
+        height: 1080,
+      },
+      title: "450 N·m in every strike",
+      text: "The joint actuators peak at 450 newton-metres — the torque budget behind flying kicks, 360° aerials and fast recovery off the floor.",
+    },
+    {
+      image: {
+        src: "/machines/t800-head.jpg",
+        alt: "The T800's helmet and visor with the AI camera array visible",
+        caption: "",
+        credit: "EngineAI",
+        width: 1920,
+        height: 1080,
+      },
+      title: "Eyes behind the visor",
+      text: "A depth-camera array reads the opponent while the operator calls intent — the machine itself owns balance, footwork and execution.",
+    },
+  ],
+  variants: [
+    { slug: "white-eagle-t800", name: "White Eagle", note: "white armour · the flying kick" },
+    { slug: "matador-t800", name: "Matador", note: "dark armour · won URKL's opening bout headless" },
+  ],
+};
+
+const G1_SHOWCASE: Showcase = {
+  eyebrow: "Unitree Robotics · the machine that fought first",
+  tagline:
+    "Child-sized, cheap enough to crash and agile enough to headline — the most widely used humanoid in combat events anywhere, from Hangzhou to San Francisco.",
+  hero: {
+    src: "/machines/g1-front.jpg",
+    alt: "Unitree G1 humanoid robot standing, seen from the front",
+    caption: "",
+    credit: "Unitree Robotics",
+    width: 800,
+    height: 800,
+    fit: "contain",
+  },
+  heroTone: "light",
+  stats: [
+    { label: "Height", value: "130 cm" },
+    { label: "Weight", value: "≈35 kg" },
+    { label: "Joints", value: "23–43 DOF" },
+    { label: "Knee torque", value: "90 N·m" },
+    { label: "First bout", value: "May 2025" },
+    { label: "Base price", value: "≈$13,500" },
+  ],
+  anatomy: [
+    {
+      title: "Front",
+      image: {
+        src: "/machines/g1-front.jpg",
+        alt: "Unitree G1 humanoid robot standing, seen from the front",
+        caption: "",
+        credit: "Unitree Robotics",
+        width: 800,
+        height: 800,
+      },
+      points: [
+        { x: 52, y: 11, label: "Illuminated face strip", detail: "depth-sensing head module" },
+        { x: 51, y: 30, label: "Torso battery and compute", detail: "trained by imitation and reinforcement learning" },
+        { x: 56, y: 49, label: "Gloved hands", detail: "padded for fight trim; dexterous options up to 43 DOF total" },
+        { x: 45, y: 66, label: "90 N·m knees", detail: "enough for hooks, side kicks and getting back up" },
+        { x: 41, y: 91, label: "Compact feet", detail: "2 m/s walking, stable on one leg mid-kick" },
+      ],
+    },
+  ],
+  features: [],
+};
+
 export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   "engineai-t800": {
     card: T800_DUO,
-    gallery: [T800_DUO, URKL_FLYING_KICK],
+    // The showcase carries the studio views — the gallery is the machine at
+    // work, in the cage.
+    gallery: [URKL_FLYING_KICK, URKL_WHITE_EAGLE_BACK],
+    showcase: T800_SHOWCASE,
     reading: [
       "The T800 is the reason most of this sport looks the way it does. EngineAI unveiled it in February 2026 as a full-size fighting platform — 1.73 metres and 75 kilograms with battery, which makes it the only machine in combat use that is genuinely the size of an adult human. URKL and CyberHero both run entire cards on it, in identical trim, so every difference you see in the cage is software, operator and armour colour, never hardware.",
       "The body carries 29 articulated joints with 450 newton-metres of peak joint torque — enough for uppercuts, spinning kicks, 360-degree aerial rotations and, critically, getting back up at speed after a knockdown. The shell is aviation-grade aluminium panelling. An active cooling system in the leg joints keeps it in high-intensity operation for hours rather than minutes, on a quick-release 72-volt battery.",
@@ -95,16 +291,9 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
       height: 800,
       fit: "contain",
     },
+    // The front view lives in the showcase hero and anatomy — the gallery
+    // keeps only the action shot.
     gallery: [
-      {
-        src: "/machines/g1-front.jpg",
-        alt: "Unitree G1 humanoid robot standing, seen from the front",
-        caption: "From the front: the G1's illuminated face strip and gloved hands in fight trim.",
-        credit: "Unitree Robotics",
-        width: 800,
-        height: 800,
-        fit: "contain",
-      },
       {
         src: "/machines/g1-kick.jpg",
         alt: "Unitree G1 mid high-kick, showing the side and back of the machine",
@@ -115,6 +304,7 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
         fit: "contain",
       },
     ],
+    showcase: G1_SHOWCASE,
     reading: [
       "The G1 is the machine that fought the first robot boxing match in history — Iron Fist King: Awakening, Hangzhou, May 2025 — and it is still the most widely used humanoid in combat events anywhere. At 1.3 metres and roughly 35 kilograms it is child-sized next to a T800, which is exactly why it got there first: it is cheap enough to field in numbers, light enough to crash without consequence, and agile enough to be genuinely fun to watch.",
       "The standard machine runs 23 degrees of freedom, expandable to 43 with the dexterous-hand options, with up to 90 newton-metres of knee joint torque. That is enough for hooks, side kicks, spinning strikes and — the capability audiences actually came for — getting back up off the floor unassisted. Its control stack is trained by imitation and reinforcement learning.",
@@ -124,6 +314,8 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   },
   "white-eagle-t800": {
     card: URKL_FLYING_KICK,
+    platformSlug: "engineai-t800",
+    platformName: "EngineAI T800",
     gallery: [
       URKL_FLYING_KICK,
       URKL_WHITE_EAGLE_BACK,
@@ -137,6 +329,8 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   },
   "matador-t800": {
     card: URKL_MATADOR_FRONT,
+    platformSlug: "engineai-t800",
+    platformName: "EngineAI T800",
     gallery: [
       URKL_MATADOR_FRONT,
       {
