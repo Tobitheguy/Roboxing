@@ -1,5 +1,19 @@
 # Where Roboxing stands
 
+> **LAUNCHED 2026-09-08, the evening before CyberHero x Riyadh.**
+> Production is https://roboxing.vercel.app — verified live: home 200, all
+> seven posts serving, robots.txt open to crawlers, the Matador result on
+> /results, and the signals cron registered (05:30 UTC daily) with
+> CRON_SECRET set and the unauthenticated route confirmed 401. Commits
+> `87f5ff7` (the rebuild, 117 files) and `bb22d68` (the Unitree
+> autonomous-combat story — the watcher's first catch, published same-day).
+>
+> Still open, in order: buy roboxing.tv ($35, .com is taken; .net $13.50 as
+> cheap protection), finish the Resend browser step + DNS after the domain
+> buy, provide an Anthropic key for watcher stages 2–3 and newsletter
+> intros, create the social accounts, reactivate Vercel Pro before any
+> commercial use, delete the orphaned Cloudflare input ff17908f by hand.
+
 > **2026-09-07: the product changed shape.** Roboxing is no longer being built
 > as a rights holder's subscription streaming product. It is being built as the
 > English-language system of record for humanoid robot fighting — schedule,
