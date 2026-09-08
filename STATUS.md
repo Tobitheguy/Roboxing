@@ -337,9 +337,11 @@
 > does not already exist: OBS colour bars are sufficient content. No rights
 > deal, no real event. The checklist is at the bottom of this file.
 >
-> Also noted 2026-09-06: the Vercel Pro subscription lapsed. The site still
-> serves. Hobby is **non-commercial only**, so Pro is needed again before the
-> first paying subscriber, not before the next deploy.
+> ~~Also noted 2026-09-06: the Vercel Pro subscription lapsed.~~ **Wrong, or
+> healed itself: verified in the dashboard on 2026-09-08 — the Roboxing team
+> is on Pro, Active, current period 6 Sep – 6 Oct 2026** ($0.59 of the $20
+> included credit used). Commercial use is covered. The lapse note either
+> described a payment blip or was mistaken; either way, distrust it.
 
 Written to resume cleanly after a break. `DECISIONS.md` explains *why* things
 are the way they are; this file says *what is done, what is not, and what is
