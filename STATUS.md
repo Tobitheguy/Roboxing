@@ -11,8 +11,8 @@
 > Still open, in order: buy roboxing.tv ($35, .com is taken; .net $13.50 as
 > cheap protection), finish the Resend browser step + DNS after the domain
 > buy, provide an Anthropic key for watcher stages 2–3 and newsletter
-> intros, create the social accounts, reactivate Vercel Pro before any
-> commercial use, delete the orphaned Cloudflare input ff17908f by hand.
+> intros, create the social accounts, delete the orphaned Cloudflare
+> input ff17908f by hand. (Vercel Pro: verified Active on 2026-09-08.)
 
 > **2026-09-07: the product changed shape.** Roboxing is no longer being built
 > as a rights holder's subscription streaming product. It is being built as the
