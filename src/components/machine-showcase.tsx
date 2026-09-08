@@ -94,52 +94,109 @@ export function MachineHero({
   );
 }
 
-export function AnatomyFigure({ view }: { view: AnatomyView }) {
+export function AnatomyFigure({
+  view,
+  aspect,
+}: {
+  view: AnatomyView;
+  /**
+   * Shared aspect ratio for every view in a set, as a CSS `aspect-ratio`
+   * value. Letting each figure use its own image ratio is what made the
+   * T800's back view sit a few pixels shorter than its front: source frames
+   * are never cropped to exactly the same shape. One ratio for the set,
+   * object-cover to fill it, and the pair lines up by construction.
+   */
+  aspect: string;
+}) {
   return (
     <figure className="min-w-0">
       <p className="eyebrow mb-2">{view.title}</p>
-      <div className="border-line relative overflow-hidden border bg-white">
-        <Image
-          src={view.image.src}
-          alt={view.image.alt}
-          width={view.image.width}
-          height={view.image.height}
-          sizes="(min-width: 640px) 50vw, 100vw"
-          className="h-auto w-full"
-        />
+      {/* Not overflow-hidden: the tooltips have to escape this box. The
+          image gets its own clipping wrapper inside. */}
+      <div className="relative">
+        <div
+          className="border-line relative overflow-hidden border bg-white"
+          style={{ aspectRatio: aspect }}
+        >
+          <Image
+            src={view.image.src}
+            alt={view.image.alt}
+            fill
+            sizes="(min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        </div>
         {view.points.map((point, index) => (
+          // z-30 while active: every marker shares the z-10 layer, so without
+          // it a neighbouring chip paints on top of the open tooltip's text.
           <span
             key={point.label}
-            className="bg-ink font-display absolute flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-[0.65rem] font-bold text-white shadow-[0_0_0_2px_white]"
+            className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 focus-within:z-30 hover:z-30"
             style={{ left: `${point.x}%`, top: `${point.y}%` }}
-            aria-hidden
           >
-            {index + 1}
+            {/* A button, not a bare span: hover is not available on a
+                touchscreen, and focus-within gives tap and keyboard the same
+                tooltip without any client-side JavaScript. */}
+            <button
+              type="button"
+              className="bg-ink font-display focus-visible:ring-ink flex size-5 cursor-help items-center justify-center rounded-full text-[0.65rem] font-bold text-white shadow-[0_0_0_2px_white] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+            >
+              {index + 1}
+              <span className="sr-only">
+                : {point.label}
+                {point.detail ? `. ${point.detail}` : ""}
+              </span>
+            </button>
+            <span
+              className={`bg-ink pointer-events-none absolute z-20 block w-52 scale-95 rounded p-2.5 text-white opacity-0 shadow-lg transition duration-100 group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100 ${tooltipPosition(
+                point.x,
+                point.y,
+              )}`}
+              aria-hidden
+            >
+              <span className="font-display block text-xs font-bold uppercase">
+                {point.label}
+              </span>
+              {point.detail ? (
+                <span className="mt-1 block text-xs leading-snug text-white/70">
+                  {point.detail}
+                </span>
+              ) : null}
+            </span>
           </span>
         ))}
       </div>
-      <figcaption>
+      <figcaption className="text-ink-dim mt-2 text-xs">
         {view.points.length > 0 ? (
-          <ol className="mt-3 space-y-1.5">
-          {view.points.map((point, index) => (
-            <li key={point.label} className="flex gap-2 text-xs">
-              <span className="bg-ink font-display flex size-4 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-bold text-white">
-                {index + 1}
-              </span>
-              <span className="text-ink min-w-0">
-                <span className="font-semibold">{point.label}</span>
-                {point.detail ? (
-                  <span className="text-ink-muted"> — {point.detail}</span>
-                ) : null}
-              </span>
-            </li>
-          ))}
-          </ol>
+          <span className="text-ink-muted">
+            Hover the markers for detail.{" "}
+          </span>
         ) : null}
-        <p className="text-ink-dim mt-2 text-xs">Photo: {view.image.credit}.</p>
+        Photo: {view.image.credit}.
       </figcaption>
     </figure>
   );
+}
+
+/**
+ * Keeps a tooltip inside the figure.
+ *
+ * A marker near an edge cannot centre its tooltip on itself without half of
+ * it hanging off the page, and one near the top would open upward over the
+ * heading — so the box flips to whichever side has room. Full class strings,
+ * not interpolated fragments: Tailwind scans source text, and a class built
+ * at runtime never makes it into the stylesheet.
+ */
+function tooltipPosition(x: number, y: number): string {
+  const vertical =
+    y < 25 ? "top-full mt-2 origin-top" : "bottom-full mb-2 origin-bottom";
+  const horizontal =
+    x > 70
+      ? "right-0 translate-x-[0.625rem]"
+      : x < 30
+        ? "left-0 -translate-x-[0.625rem]"
+        : "left-1/2 -translate-x-1/2";
+  return `${vertical} ${horizontal}`;
 }
 
 export function FeatureGrid({ features }: { features: Feature[] }) {

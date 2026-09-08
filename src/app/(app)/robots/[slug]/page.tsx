@@ -19,7 +19,11 @@ import {
   MachineHero,
   PlatformBanner,
 } from "@/components/machine-showcase";
-import { getMachineMedia, type MachineImage } from "@/lib/machine-media";
+import {
+  getMachineMedia,
+  type MachineImage,
+  type Showcase,
+} from "@/lib/machine-media";
 import { computeRobotRecord, formatRecord } from "@/lib/records";
 import { getBoutsForRobot, getRobotBySlug } from "@/lib/queries";
 
@@ -66,6 +70,18 @@ function MachineFigure({ image }: { image: MachineImage }) {
   );
 }
 
+/**
+ * The one aspect ratio every anatomy view in a set is rendered at.
+ *
+ * Taken from the first view rather than averaged: that view's framing is the
+ * one the marker coordinates were placed against, so it is the shape least
+ * disturbed by the crop.
+ */
+function anatomyAspect(showcase: Showcase): string {
+  const first = showcase.anatomy[0]?.image;
+  return first ? `${first.width} / ${first.height}` : "16 / 10";
+}
+
 /** Renders a jsonb spec blob as a key/value strip, if it is a flat object. */
 function SpecsStrip({ specs }: { specs: unknown }) {
   if (!specs || typeof specs !== "object" || Array.isArray(specs)) return null;
@@ -95,7 +111,35 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
 
   const { robot, teamName, teamSlug } = row;
   const media = getMachineMedia(robot.slug);
-  const history = await getBoutsForRobot(robot.id);
+  const showcase = media?.showcase;
+  const platform =
+    media?.platformSlug != null
+      ? { slug: media.platformSlug, media: getMachineMedia(media.platformSlug) }
+      : null;
+
+  // A platform's fight history is the history of the machines fielded on it.
+  // The White Eagle vs Matador bout is stored against the two variant robots,
+  // so the T800's own id appears in no bout row — merge the variants' bouts
+  // in, deduped (one bout lists two variants) and re-sorted newest first.
+  const ownHistory = await getBoutsForRobot(robot.id);
+  const variantRows = showcase?.variants
+    ? (await Promise.all(showcase.variants.map((v) => getRobotBySlug(v.slug)))).filter(
+        (r) => r != null,
+      )
+    : [];
+  const variantHistories = await Promise.all(
+    variantRows.map((r) => getBoutsForRobot(r.robot.id)),
+  );
+  const history = [...ownHistory];
+  for (const boutList of variantHistories)
+    for (const bout of boutList)
+      if (!history.some((b) => b.id === bout.id)) history.push(bout);
+  history.sort(
+    (a, b) =>
+      b.event.startsAt.getTime() - a.event.startsAt.getTime() ||
+      b.orderIndex - a.orderIndex,
+  );
+
   const record = computeRobotRecord(robot.id, history);
   const upcoming = history.filter((b) => !b.result);
   const resolved = history.filter((b) => b.result);
@@ -106,15 +150,16 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
     robot.model,
   ].filter(Boolean);
 
-  const showcase = media?.showcase;
-  const platform =
-    media?.platformSlug != null
-      ? { slug: media.platformSlug, media: getMachineMedia(media.platformSlug) }
-      : null;
-
   return (
     <PageShell>
-      <BackLink href="/robots" label="All machines" />
+      {/* Fighter pages are reached from their platform page (the index no
+          longer lists them) — back should retrace that step, not jump to
+          the index. */}
+      {platform && media?.platformName ? (
+        <BackLink href={`/robots/${platform.slug}`} label={media.platformName} />
+      ) : (
+        <BackLink href="/robots" label="All machines" />
+      )}
 
       {showcase ? (
         <MachineHero
@@ -189,7 +234,11 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
             }`}
           >
             {showcase.anatomy.map((view) => (
-              <AnatomyFigure key={view.title} view={view} />
+              <AnatomyFigure
+                key={view.title}
+                view={view}
+                aspect={anatomyAspect(showcase)}
+              />
             ))}
           </div>
         </section>
@@ -208,6 +257,10 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         </div>
       ) : null}
 
+      {/* A platform has no record of its own — when both corners run the
+          same hardware, the machine wins and loses every bout at once. The
+          fighters keep their tiles; the platform's numbers live in the hero. */}
+      {showcase ? null : (
       <StatRow className="mb-8">
         <StatTile
           label="Record"
@@ -219,6 +272,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         <StatTile label="Wins by KO" value={record.ko} />
         <StatTile label="Upcoming" value={upcoming.length} />
       </StatRow>
+      )}
 
       {/* The hero stat strip already carries the headline numbers on
           showcase pages — repeating them in a second card says nothing new. */}
