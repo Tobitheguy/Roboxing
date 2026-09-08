@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Swords } from "lucide-react";
@@ -12,6 +13,7 @@ import { PageShell } from "@/components/page-shell";
 import { RobotAvatar } from "@/components/robot-avatar";
 import { StatRow, StatTile } from "@/components/stat-tile";
 import { formatHeight, formatWeight, humanize } from "@/lib/format";
+import { getMachineMedia, type MachineImage } from "@/lib/machine-media";
 import { computeRobotRecord, formatRecord } from "@/lib/records";
 import { getBoutsForRobot, getRobotBySlug } from "@/lib/queries";
 
@@ -26,6 +28,32 @@ export async function generateMetadata(
       ? `${row.robot.name} — ${row.teamName}. Record, specifications, and full fight history.`
       : undefined,
   };
+}
+
+/**
+ * One photograph with its caption and credit. The credit is not optional
+ * decoration — this site uses manufacturer and league photography
+ * editorially, and naming the source on every image is what keeps that
+ * honest.
+ */
+function MachineFigure({ image }: { image: MachineImage }) {
+  return (
+    <figure className="min-w-0">
+      <div className="border-line bg-surface-2 relative aspect-[16/10] overflow-hidden border">
+        <Image
+          src={image.src}
+          alt={image.alt}
+          fill
+          sizes="(min-width: 640px) 50vw, 100vw"
+          className="object-cover"
+        />
+      </div>
+      <figcaption className="text-ink-muted mt-2 text-xs">
+        {image.caption}{" "}
+        <span className="text-ink-dim">Photo: {image.credit}.</span>
+      </figcaption>
+    </figure>
+  );
 }
 
 /** Renders a jsonb spec blob as a key/value strip, if it is a flat object. */
@@ -56,6 +84,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
   if (!row) notFound();
 
   const { robot, teamName, teamSlug } = row;
+  const media = getMachineMedia(robot.slug);
   const history = await getBoutsForRobot(robot.id);
   const record = computeRobotRecord(robot.id, history);
   const upcoming = history.filter((b) => !b.result);
@@ -71,12 +100,17 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
     <PageShell>
       <BackLink href="/robots" label="All machines" />
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
-        <RobotAvatar
-          name={robot.name}
-          photoUrl={robot.photoUrl}
-          size="xl"
-          decorative
-        />
+        {/* The monogram tile earns its place only when there is no
+            photography — with the gallery directly below, it would just be
+            a grey square repeating the name. */}
+        {!media ? (
+          <RobotAvatar
+            name={robot.name}
+            photoUrl={robot.photoUrl}
+            size="xl"
+            decorative
+          />
+        ) : null}
         <div className="min-w-0 flex-1">
           <p className="eyebrow mb-2">
             <Link href={`/teams/${teamSlug}`} className="hover:text-volt transition-colors">
@@ -102,6 +136,15 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         </div>
       </div>
 
+      {/* The machine itself, front and back where photography exists. */}
+      {media ? (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2">
+          {media.gallery.map((image) => (
+            <MachineFigure key={image.src + image.caption} image={image} />
+          ))}
+        </div>
+      ) : null}
+
       <StatRow className="mb-8">
         <StatTile
           label="Record"
@@ -119,6 +162,21 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
           <CardHeader title="Specification" />
           <CardBody>
             <SpecsStrip specs={robot.specsJson} />
+          </CardBody>
+        </Card>
+      ) : null}
+
+      {media && media.reading.length > 0 ? (
+        <Card className="mb-6">
+          <CardHeader title="About this machine" />
+          <CardBody>
+            <div className="max-w-2xl space-y-4">
+              {media.reading.map((paragraph) => (
+                <p key={paragraph.slice(0, 40)} className="text-ink-muted text-sm leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
           </CardBody>
         </Card>
       ) : null}
