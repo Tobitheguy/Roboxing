@@ -43,7 +43,7 @@ async function LiveNowPill({ variant }: { variant: "mobile" | "desktop" }) {
 
   return (
     <LivePill
-      href={`/watch/${live.eventSlug}`}
+      href={`/events/${live.eventSlug}`}
       label={`Live · ${live.eventName}`}
       className={variant === "mobile" ? "md:hidden" : undefined}
     />

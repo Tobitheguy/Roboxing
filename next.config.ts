@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
     // and Stream thumbnail on the internet. On a public repo that config is
     // readable by anyone, and Vercel bills image optimization by bandwidth.
     remotePatterns: [
+      // YouTube's thumbnail CDN, for post-card posters. Static because it is
+      // not our infrastructure and never changes per environment; narrow
+      // because /vi/{id}/... is the only path we build (see embeds.ts) and
+      // i.ytimg.com serves nothing user-controlled beyond video posters.
+      { protocol: "https" as const, hostname: "i.ytimg.com" },
       ...remotePatternFor(process.env.R2_PUBLIC_URL),
       ...(streamCode
         ? [

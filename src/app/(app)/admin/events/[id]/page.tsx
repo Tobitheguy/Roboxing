@@ -58,7 +58,7 @@ export default async function AdminEventPage(
         action={
           <div className="flex gap-2">
             <Button asChild variant="outline">
-              <Link href={`/watch/${event.slug}`} target="_blank">
+              <Link href={`/events/${event.slug}`} target="_blank">
                 <ExternalLink />
                 Viewer page
               </Link>

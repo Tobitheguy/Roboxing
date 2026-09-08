@@ -4,9 +4,11 @@ import { useViewerTimeZone } from "@/lib/client-env";
 import {
   dayOffset,
   formatDate,
+  formatDateLong,
   formatTime,
   formatTimeWithZone,
   formatZoneLabel,
+  isoDateIn,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +35,7 @@ export function EventTime({
   city,
   className,
   showDate = true,
+  timeTbd = false,
 }: {
   /** ISO string — Dates do not survive the server/client boundary intact. */
   startsAt: string;
@@ -40,9 +43,38 @@ export function EventTime({
   city?: string | null;
   className?: string;
   showDate?: boolean;
+  /**
+   * The organizer announced a date and no time.
+   *
+   * Everything below this line converts a known instant between two zones. If
+   * the clock part of that instant was never announced, the conversion is not
+   * merely useless — it manufactures a fact and then dresses it up as a
+   * precise one, in two timezones. So the whole mechanism is skipped and the
+   * date stands alone.
+   */
+  timeTbd?: boolean;
 }) {
   const date = new Date(startsAt);
   const viewerZone = useViewerTimeZone();
+
+  // Before the viewer-zone branch on purpose: with no announced time there is
+  // nothing a second zone could add, and the venue's own calendar date is the
+  // only claim we can actually stand behind.
+  if (timeTbd) {
+    return (
+      <span className={cn("tabular", className)}>
+        {/* The VENUE's calendar date, not the UTC one. 8:00 PM in New York is
+            already the next day in UTC and 12:30 AM in Riyadh is still the
+            previous one, so a date-only value taken off the raw ISO string is
+            off by one in both directions. */}
+        <time dateTime={isoDateIn(date, timeZone)}>
+          {formatDateLong(date, timeZone)}
+        </time>
+        <span className="text-ink-dim"> · </span>
+        <span className="text-ink-muted">Start time TBA</span>
+      </span>
+    );
+  }
 
   // Same zone as the venue: printing the identical time twice is just noise.
   const showViewer = Boolean(viewerZone && viewerZone !== timeZone);

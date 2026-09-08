@@ -52,11 +52,16 @@ export default async function ResultsPage(props: PageProps<"/results">) {
         <Card>
           <EmptyState
             icon={<Trophy />}
-            title="No results recorded"
+            // The absence is explained, not just stated. The real reason
+            // there are no rows is a fact about the SPORT — the leagues do
+            // not publish complete fight cards yet — and saying so turns an
+            // empty page from "this site is broken" into the site's core
+            // promise stated at the exact moment a visitor tests it.
+            title="No verified results yet"
             description={
               competition
-                ? "This competition has no completed bouts yet."
-                : "Completed bouts appear here as soon as results are entered."
+                ? "This league has not published a complete, verifiable fight card yet. The day it does, the card is here."
+                : "Not a gap in this site — a gap in the sport. No league has yet published complete fight cards we can verify, and we record nothing we cannot stand behind. The moment one does, its results appear here the same day."
             }
           />
         </Card>

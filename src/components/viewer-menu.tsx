@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { UserButton } from "@clerk/nextjs";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Target } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isPaywallEnabled } from "@/lib/access";
 import { getViewer } from "@/lib/auth";
 import { rethrowControlFlow } from "@/lib/next-errors";
 
@@ -72,11 +73,24 @@ export async function ViewerMenu() {
             because that is where someone looks for it. Clerk owns the profile;
             the money is ours, so it is a link out rather than a Clerk page. */}
         <UserButton.MenuItems>
+          {/* Above billing on purpose: for almost everyone this is the only
+              reason they have an account at all, and billing is a page most
+              of them will never open. */}
           <UserButton.Link
-            label="Billing"
-            labelIcon={<CreditCard className="size-4" />}
-            href="/account/billing"
+            label="Your picks"
+            labelIcon={<Target className="size-4" />}
+            href="/account/picks"
           />
+          {/* Only when something is actually for sale. A "Billing" entry on an
+              account that has never been charged and cannot be is a dead end
+              that implies a subscription the person does not have. */}
+          {isPaywallEnabled() ? (
+            <UserButton.Link
+              label="Billing"
+              labelIcon={<CreditCard className="size-4" />}
+              href="/account/billing"
+            />
+          ) : null}
         </UserButton.MenuItems>
       </UserButton>
     </div>

@@ -8,55 +8,83 @@ import { NextResponse } from "next/server";
  * convention. Clerk's handler works unchanged — it is an ordinary request
  * handler, and the proxy runtime is Node, which it needs.
  *
- * Roboxing is closed: every route requires an account. So this file is an
- * ALLOWLIST, not a blocklist. The difference matters — with a blocklist, a
- * route added tomorrow is public until someone remembers to list it, and the
- * person who would notice is the one who cannot see the problem because they
- * are signed in.
+ * Roboxing is a public site with private corners, and this file is the
+ * BLOCKLIST that names the corners.
  *
- * This layer establishes only that someone is SIGNED IN. Two further checks
- * live deeper, where they can be made without a network call per request:
+ * It used to be the reverse — an allowlist with `/` as the only entry, because
+ * the site was built as a rights holder's subscription product where the
+ * schedule itself was worth an account. That model does not survive contact
+ * with the actual one: the audience arrives from a clip on TikTok or YouTube,
+ * and a link that answers them with a sign-in form converts nobody. It also
+ * left the site unindexable, which for a publication is most of the point.
  *
- *   - the second factor, in `(app)/layout.tsx` and `requireViewer()`
- *   - the admin allowlist, in `requireAdmin()`
+ * So: the CONTENT is open — schedule, events, results, standings, teams,
+ * robots. The two things that are not are named below.
+ *
+ * The inversion costs a real safety property and it is worth being explicit
+ * about which. Under the allowlist, a route added tomorrow was private by
+ * default and the worst case was a page nobody could reach. Under a blocklist
+ * the worst case is a page everyone can reach. That is the correct default for
+ * every page this site will grow — a publication's pages are meant to be read
+ * — but it is NOT the correct default for anything handling money, identity or
+ * a broadcast credential. Those do not rely on this file at all:
+ *
+ *   - `/admin/*` re-checks the ADMIN_EMAILS allowlist in its own layout, and
+ *     `requireAdmin()` re-checks it in every API handler.
+ *   - `/account/*` gates in its own layout.
+ *   - Video playback is gated per event by `checkEventAccess()`, at the point
+ *     the URL is minted rather than at the point it is displayed.
  *
  * Layers that fail differently: a matcher typo here is caught by the handler,
- * a forgotten check in a handler is caught here.
+ * a forgotten check in a handler is caught here. That property is unchanged.
  */
 
 /**
- * The only routes reachable without a session.
+ * Everything that still requires a session.
  *
- * `/api/stripe/webhook` is the one that must never be removed from this list.
- * Stripe is not a signed-in browser — redirect it and every subscription
- * event silently stops arriving. Nobody would see an error; entitlements
- * would simply stop being written, and the first sign would be a paying
- * customer who cannot watch.
- *
- * `/welcome` is here because it is where an account WITHOUT a second factor
- * goes to get one. Behind the gate it enforces, enrolling would require
- * having already enrolled.
+ * Note what is NOT here: `/watch/*` and `/events/*`. The page is public — it
+ * has a card, results and a countdown that anyone should be able to read and
+ * link to. Only the video itself is entitled, and that decision is made in
+ * `resolvePlayback()` where it can distinguish "sign in" from "subscribe".
+ * Gating the whole page here would have hidden the free half too.
  */
-const isPublicRoute = createRouteMatcher([
-  // The landing page, and ONLY the landing page — this pattern is an exact
-  // match, so `/schedule` and everything else still requires an account. It
-  // is the shop window: it names the next event, the teams and the price, and
-  // shows no standings, no results and no video.
-  "/",
-  // Plan selection comes BEFORE the account exists — that is the point of it.
-  // It shows the price and the billing terms and takes no input.
-  "/plans",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/welcome(.*)",
-  "/api/stripe/webhook",
-  "/robots.txt",
+const isPrivateRoute = createRouteMatcher([
+  "/admin(.*)",
+  "/account(.*)",
+  "/api/admin(.*)",
 ]);
 
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
 
+/**
+ * The commerce pages.
+ *
+ * Closed while PAYWALL_ENABLED is off, which is the normal state: Roboxing
+ * holds no broadcast rights, so there is nothing to sell and a pricing page is
+ * an offer we cannot honour. Handled here rather than with a guard at the top
+ * of each page because this one matcher covers `/subscribe`, its checkout and
+ * success steps, and `/plans` — and a fifth commerce page added later is
+ * covered by where it lives rather than by someone remembering.
+ *
+ * They redirect rather than 404: these URLs appear in old emails and in
+ * Stripe's return path, and "this does not exist" is a worse answer than
+ * putting someone on the home page.
+ *
+ * The pages themselves are untouched and still work. Flip the flag the day
+ * there is a broadcast to sell.
+ */
+const isCommerceRoute = createRouteMatcher(["/subscribe(.*)", "/plans(.*)"]);
+
+function isPaywallEnabled() {
+  return process.env.PAYWALL_ENABLED === "true";
+}
+
 export default clerkMiddleware(async (auth, request) => {
-  if (isPublicRoute(request)) return;
+  if (isCommerceRoute(request) && !isPaywallEnabled()) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (!isPrivateRoute(request)) return;
 
   const { userId } = await auth();
   if (userId) return;

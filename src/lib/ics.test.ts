@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { buildEventIcs, escapeIcsText, foldLine, toIcsStamp } from "./ics";
+import {
+  buildEventIcs,
+  escapeIcsText,
+  foldLine,
+  nextIcsDate,
+  toIcsDate,
+  toIcsStamp,
+} from "./ics";
 
 const encoder = new TextEncoder();
 
@@ -107,5 +114,63 @@ describe("ics", () => {
     expect(ics).not.toContain("LOCATION:");
     expect(ics).not.toContain("DESCRIPTION:");
     expect(ics).not.toContain("URL:");
+  });
+});
+
+describe("all-day entries", () => {
+  it("takes the date from the VENUE's zone, not UTC", () => {
+    // Behind UTC: an American evening card. 8:00 PM on 9 September in New York
+    // is already 10 September in UTC, so the naive read lands a day LATE.
+    const usEvening = new Date("2026-09-09T20:00:00-04:00");
+    expect(toIcsDate(usEvening, "America/New_York")).toBe("20260909");
+    expect(toIcsDate(usEvening, "UTC")).toBe("20260910");
+
+    // Ahead of UTC: an Asian late-night card. 12:30 AM on 10 September in
+    // Riyadh is still 9 September in UTC, so the naive read lands a day EARLY.
+    // Both directions are wrong, which is why the zone is a parameter rather
+    // than an assumption.
+    const riyadhLateNight = new Date("2026-09-10T00:30:00+03:00");
+    expect(toIcsDate(riyadhLateNight, "Asia/Riyadh")).toBe("20260910");
+    expect(toIcsDate(riyadhLateNight, "UTC")).toBe("20260909");
+  });
+
+  it("rolls the exclusive end date over month and year boundaries", () => {
+    expect(nextIcsDate("20260909")).toBe("20260910");
+    expect(nextIcsDate("20260930")).toBe("20261001");
+    expect(nextIcsDate("20261231")).toBe("20270101");
+    // A leap year, which is where hand-rolled date arithmetic usually breaks.
+    expect(nextIcsDate("20280228")).toBe("20280229");
+  });
+
+  it("emits VALUE=DATE with an exclusive end, and no timestamps", () => {
+    const ics = buildEventIcs({
+      uid: "event-9@roboxing",
+      start: new Date("2026-09-09T21:00:00+03:00"),
+      end: new Date("2026-09-09T23:30:00+03:00"),
+      summary: "Riyadh",
+      allDay: true,
+      timeZone: "Asia/Riyadh",
+      stamp: new Date("2026-09-07T00:00:00Z"),
+    });
+
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260909");
+    // The day AFTER — an all-day range is end-exclusive, and a same-day end
+    // produces a zero-length entry that some clients drop silently.
+    expect(ics).toContain("DTEND;VALUE=DATE:20260910");
+    // The timed forms must be gone entirely, not merely unused.
+    expect(ics).not.toContain("DTSTART:2026");
+    expect(ics).not.toContain("DTEND:2026");
+  });
+
+  it("still emits timestamps when allDay is not set", () => {
+    const ics = buildEventIcs({
+      uid: "u",
+      start: new Date("2026-09-09T18:00:00Z"),
+      end: new Date("2026-09-09T20:30:00Z"),
+      summary: "Timed",
+      stamp: new Date("2026-09-07T00:00:00Z"),
+    });
+    expect(ics).toContain("DTSTART:20260909T180000Z");
+    expect(ics).not.toContain("VALUE=DATE");
   });
 });

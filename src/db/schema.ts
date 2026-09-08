@@ -1,4 +1,5 @@
 import {
+  boolean,
   check,
   index,
   integer,
@@ -70,6 +71,19 @@ export const boutMethod = pgEnum("bout_method", [
 ]);
 
 export const streamStatus = pgEnum("stream_status", ["idle", "live", "ended"]);
+
+/**
+ * What a post IS, which decides how it is laid out.
+ *
+ * A `clip` leads with the video and carries a sentence of context; an
+ * `article` leads with text. Derivable from whether `embedUrl` is set, and
+ * deliberately not derived: a written recap can legitimately carry a video,
+ * and inferring the layout from a field's presence means the writer cannot
+ * choose.
+ */
+export const postKind = pgEnum("post_kind", ["clip", "article"]);
+
+export const postStatus = pgEnum("post_status", ["draft", "published"]);
 
 /**
  * What it takes to watch an event.
@@ -224,6 +238,21 @@ export const events = pgTable(
     /** UTC instant the broadcast starts. */
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     /**
+     * True when the organizer announced a DATE but no time.
+     *
+     * `startsAt` still carries an instant, because ordering the calendar needs
+     * one and a nullable start time would infect every query that sorts. This
+     * flag says the clock part of it is ours, not theirs — so the UI prints the
+     * date alone, suppresses the countdown, and the .ics becomes an all-day
+     * entry.
+     *
+     * Not cosmetic. Most events we cover are somebody else's, and they announce
+     * "September 9" on Weibo and nothing more. Rendering that as "6:15 PM EDT"
+     * invents a fact, and inventing facts is the one thing a system of record
+     * cannot survive doing.
+     */
+    startTimeTbd: boolean("start_time_tbd").notNull().default(false),
+    /**
      * IANA timezone of the VENUE, e.g. "Asia/Shanghai". Not the viewer's.
      * Stored so the site can print "8:00 AM ET · 8:00 PM Shenzhen" from one
      * instant without guessing where the event happened.
@@ -245,6 +274,32 @@ export const events = pgTable(
      * always territory-limited, so the list comes from the rights agreement.
      */
     allowedCountries: text("allowed_countries").array(),
+    /**
+     * Where the world actually watches this, when the broadcast is not ours.
+     *
+     * The site was built on the assumption that an event on it is an event we
+     * hold the rights to, and for a long time that will be false for almost
+     * everything worth covering. An event with a `broadcastUrl` sends viewers
+     * to YouTube, Bilibili or wherever the organizer put it, and never offers
+     * a player of our own.
+     *
+     * Deliberately a single link rather than a table of them. An event
+     * simulcast in three places is a real thing and a rare one; a join table
+     * for it today buys a case we have not met and complicates every read.
+     */
+    broadcastUrl: text("broadcast_url"),
+    /** Who is showing it — "Hero Esports on YouTube". Rendered on the button. */
+    broadcastName: text("broadcast_name"),
+    /**
+     * Where we learned this event exists.
+     *
+     * Not displayed as a headline, but present on the page. When the claim is
+     * "we are the reliable calendar for this sport", the difference between a
+     * date we can attribute and a date we cannot is the whole product, and the
+     * moment to record the source is when it is entered — not when someone
+     * disputes it.
+     */
+    sourceUrl: text("source_url"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -501,6 +556,247 @@ export const entitlements = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Posts                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A piece of published coverage — a clip with context, or a written piece.
+ *
+ * The site had no way to say anything before this table. It could list what
+ * happened and it could not tell you what it meant, which is the difference
+ * between a database and a publication, and the publication is the product.
+ *
+ * Two rules shape it:
+ *
+ * 1. WE DO NOT HOST THE VIDEO. `embedUrl` points at YouTube, Bilibili or
+ *    wherever the organizer put it, and the page embeds their player. Not a
+ *    limitation to route around later: re-hosting somebody's footage without
+ *    a deal is the one move that ends the relationships this whole strategy
+ *    depends on. The embed also has to survive being pointed at an arbitrary
+ *    string — see `resolveEmbed()`, which allowlists by host and refuses to
+ *    put anything else in an iframe.
+ *
+ * 2. THE BODY IS PLAIN TEXT, rendered as paragraphs. Not markdown and
+ *    certainly not HTML. A rich text field on a public page is an XSS surface
+ *    that has to be sanitised correctly forever, in exchange for formatting
+ *    that a clip caption does not need. When there is a piece long enough to
+ *    want subheadings, that is the moment to add a real renderer — with a
+ *    sanitiser and tests — rather than now, on spec.
+ */
+export const posts = pgTable(
+  "posts",
+  {
+    id: serial("id").primaryKey(),
+    slug: text("slug").notNull().unique(),
+    kind: postKind("kind").notNull().default("clip"),
+    status: postStatus("status").notNull().default("draft"),
+    title: text("title").notNull(),
+    /** One line under the headline, and the description search engines get. */
+    summary: text("summary"),
+    /** Plain text. Blank lines separate paragraphs. */
+    body: text("body"),
+    /** The clip. Resolved to an iframe only if its host is on the allowlist. */
+    embedUrl: text("embed_url"),
+    coverImageUrl: text("cover_image_url"),
+    /**
+     * The event this is about, if it is about one.
+     *
+     * `set null`, not cascade: deleting an event must not delete the coverage
+     * of it. The writing outlives the fixture, and an orphaned post is a post
+     * that still reads fine.
+     */
+    eventId: integer("event_id").references(() => events.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * When it goes live. Null while drafting.
+     *
+     * A separate gate from `status` so a post can be finished and scheduled —
+     * set to published with a future instant and it appears on its own. The
+     * public queries check BOTH, which is what makes that work; checking only
+     * `status` would publish it the moment it was saved.
+     */
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // The index feed: published, newest first. Both columns, in this order,
+    // because that is exactly the WHERE and ORDER BY it runs.
+    index("posts_status_published_at_idx").on(t.status, t.publishedAt),
+    index("posts_event_id_idx").on(t.eventId),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Predictions                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One viewer's call on who wins one bout.
+ *
+ * Free to play. There is no stake column and there is not going to be one:
+ * taking money on these would make this an unlicensed gambling business, which
+ * is a US federal matter that no choice of company domicile affects. See the
+ * note in STATUS.md.
+ *
+ * That constraint costs less than it sounds like. What makes a pick worth
+ * making is being right in public, and everything that produces — a crowd
+ * split before the fight, a running accuracy record, a leaderboard — is here.
+ * It also produces the one thing this business genuinely needs right now: a
+ * count of people who cared enough about a fight to commit to an opinion
+ * before it happened. A pageview cannot say that.
+ *
+ * Modelled as one row per person per bout, replaced on change rather than
+ * appended to. There is no audit interest in a mind changed at 11pm the night
+ * before, and keeping the history would mean every read had to find the
+ * latest — which is the shape that eventually gets that wrong somewhere.
+ */
+export const predictions = pgTable(
+  "predictions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    boutId: integer("bout_id")
+      .notNull()
+      .references(() => bouts.id, { onDelete: "cascade" }),
+    /**
+     * The robot they think wins.
+     *
+     * Must be one of this bout's two, and Postgres cannot say so — a CHECK
+     * cannot reference another table. `savePrediction()` verifies it against
+     * the bout, exactly as `computeStandings()` has to verify the winner.
+     *
+     * `restrict`, not cascade: deleting a robot must not silently delete the
+     * predictions people made about it and quietly improve their records.
+     */
+    robotId: integer("robot_id")
+      .notNull()
+      .references(() => robots.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // One pick per person per bout. Without this, a double-submit stores two
+    // rows and the crowd split counts one person twice — and if they differ,
+    // the person is retroactively right whatever happens.
+    unique("predictions_user_bout_unique").on(t.userId, t.boutId),
+    // "How did the crowd split on this bout" runs for every bout on a card.
+    index("predictions_bout_id_idx").on(t.boutId),
+    // "Every pick this person made" powers their record.
+    index("predictions_user_id_idx").on(t.userId),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Signals                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One item the watcher found: a headline, a video, an announcement.
+ *
+ * This is the intake side of the editorial pipeline — the "chief of staff"
+ * layer Tobias described at the very start. A cron sweeps configured feeds
+ * every morning (Google News in English AND Chinese, channel feeds as they
+ * are added — see lib/signals.ts) and lands everything here for triage in
+ * the admin. Nothing in this table is ever shown to the public: a signal
+ * becomes content only by a human decision, or later by the summarise
+ * pipeline that writes clearly-attributed briefs.
+ *
+ * `url` is UNIQUE and is the dedupe key: the same story surfacing on day
+ * two must not resurface in the inbox.
+ */
+export const signals = pgTable(
+  "signals",
+  {
+    id: serial("id").primaryKey(),
+    /** Which configured source produced it, e.g. "google-news-zh". */
+    source: text("source").notNull(),
+    /** Coarse shape: "news" | "video". Text, not an enum — sources will grow. */
+    kind: text("kind").notNull().default("news"),
+    title: text("title").notNull(),
+    url: text("url").notNull().unique(),
+    /** The feed's own timestamp, when it carries one. */
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    /** "en" | "zh" — which sweep found it, so the inbox can group. */
+    language: text("language"),
+    /** Triage state: new | kept | dismissed. */
+    status: text("status").notNull().default("new"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // The inbox query: new items, newest first.
+    index("signals_status_created_idx").on(t.status, t.createdAt),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Audience                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Someone who asked to hear when something happens.
+ *
+ * Separate from `users` on purpose, and the separation is the point. A `users`
+ * row means an account with Clerk behind it; this table means an email address
+ * and consent, nothing more. Almost everyone who cares about this sport in the
+ * next year will give an address and never create an account, and forcing a
+ * sign-up in front of "tell me when the next one is" would throw away the only
+ * demand signal worth having.
+ *
+ * No mail is sent from here yet — there is no sending provider wired up. The
+ * shape assumes one will be:
+ *
+ * - `confirmedAt` is null until a double opt-in is completed. Nothing reads
+ *   this list as "confirmed subscribers" yet, but a list gathered without the
+ *   column cannot be retro-confirmed, and single opt-in is not lawful for EU
+ *   recipients. Cheaper to have the column and not need it.
+ * - `unsubscribeToken` exists from the first row, so the one-click unsubscribe
+ *   link in the first mail ever sent resolves against rows captured today.
+ *
+ * The consent IP is deliberately NOT stored. It is the usual German practice
+ * for proving opt-in, and it is also personal data we would be holding for a
+ * dispute that cannot arise until mail is actually sent. Add it with the
+ * sending provider, not before.
+ */
+export const subscribers = pgTable(
+  "subscribers",
+  {
+    id: serial("id").primaryKey(),
+    /**
+     * Lowercased before insert. Postgres compares text case-sensitively, so
+     * without normalising, `Tobi@x.com` and `tobi@x.com` are two rows that the
+     * UNIQUE constraint is perfectly happy with and that both get mailed.
+     */
+    email: text("email").notNull().unique(),
+    /** Which surface captured it — "footer", "event:riyadh-2026", "home". */
+    source: text("source"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+    unsubscribeToken: text("unsubscribe_token")
+      .notNull()
+      .unique()
+      .default(sql`gen_random_uuid()`),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("subscribers_created_at_idx").on(t.createdAt)],
+);
+
+/* -------------------------------------------------------------------------- */
 /* Audit                                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -558,6 +854,11 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     fields: [events.id],
     references: [streams.eventId],
   }),
+  posts: many(posts),
+}));
+
+export const postsRelations = relations(posts, ({ one }) => ({
+  event: one(events, { fields: [posts.eventId], references: [events.id] }),
 }));
 
 export const boutsRelations = relations(bouts, ({ one }) => ({
@@ -591,6 +892,16 @@ export const streamsRelations = relations(streams, ({ one }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   entitlements: many(entitlements),
+  predictions: many(predictions),
+}));
+
+export const predictionsRelations = relations(predictions, ({ one }) => ({
+  user: one(users, { fields: [predictions.userId], references: [users.id] }),
+  bout: one(bouts, { fields: [predictions.boutId], references: [bouts.id] }),
+  robot: one(robots, {
+    fields: [predictions.robotId],
+    references: [robots.id],
+  }),
 }));
 
 export const entitlementsRelations = relations(entitlements, ({ one }) => ({
@@ -615,6 +926,12 @@ export type BoutResult = typeof boutResults.$inferSelect;
 export type Stream = typeof streams.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Entitlement = typeof entitlements.$inferSelect;
+export type Subscriber = typeof subscribers.$inferSelect;
+export type Prediction = typeof predictions.$inferSelect;
+export type Post = typeof posts.$inferSelect;
+export type Signal = typeof signals.$inferSelect;
+export type PostKindValue = (typeof postKind.enumValues)[number];
+export type PostStatusValue = (typeof postStatus.enumValues)[number];
 export type BoutMethodValue = (typeof boutMethod.enumValues)[number];
 export type EventAccessValue = (typeof eventAccess.enumValues)[number];
 export type EntitlementKindValue = (typeof entitlementKind.enumValues)[number];

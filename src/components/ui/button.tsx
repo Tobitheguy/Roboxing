@@ -10,8 +10,14 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // `border-input`, not `border-border`. The hairline token is for
+        // separators BETWEEN things and measures 1.15:1 on the canvas; an
+        // outline button's border IS the component, which WCAG 1.4.11 holds
+        // to 3:1. On the old dark palette shadcn's `dark:` variant happened to
+        // swap it for exactly this token — with dark mode gone, that fix has
+        // to be stated rather than inherited.
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-input bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

@@ -52,6 +52,55 @@ function FieldShell({
 const inputClass =
   "border-input bg-surface-2 text-ink focus-visible:border-volt w-full rounded-md border px-3 py-2 text-sm outline-none";
 
+/**
+ * A checkbox.
+ *
+ * Does NOT use FieldShell: every other field in the kit puts its label above
+ * a full-width control, and a checkbox reads as a statement you agree with,
+ * beside its box. Forcing it into the same shell produces a stray label
+ * floating above a lone tick with nothing to say what it means.
+ *
+ * Note the browser's behaviour this has to survive on the server: an unticked
+ * checkbox sends NOTHING at all, not "off". The `checkbox` schema in the admin
+ * actions treats a missing key as false for that reason.
+ */
+export function CheckboxField({
+  label,
+  name,
+  hint,
+  errors,
+  defaultChecked,
+  className,
+}: Omit<FieldProps, "required"> & { defaultChecked?: boolean }) {
+  return (
+    <div className={className}>
+      <div className="flex items-start gap-2.5">
+        <input
+          id={name}
+          name={name}
+          type="checkbox"
+          defaultChecked={defaultChecked}
+          aria-describedby={errors?.length ? `${name}-error` : undefined}
+          className="border-input bg-surface-2 accent-volt mt-0.5 size-4 shrink-0 rounded border"
+        />
+        <label htmlFor={name} className="text-ink text-sm">
+          {label}
+        </label>
+      </div>
+      {hint ? <p className="text-ink-dim mt-1 ml-6.5 text-xs">{hint}</p> : null}
+      {errors?.length ? (
+        <p
+          id={`${name}-error`}
+          role="alert"
+          className="text-destructive mt-1 ml-6.5 text-xs"
+        >
+          {errors.join(" ")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function TextField({
   type = "text",
   defaultValue,

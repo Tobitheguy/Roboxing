@@ -53,7 +53,7 @@ export default async function LiveConsolePage(
         }
         action={
           <Button asChild variant="outline">
-            <Link href={`/watch/${event.slug}`} target="_blank">
+            <Link href={`/events/${event.slug}`} target="_blank">
               <ExternalLink />
               Viewer page
             </Link>

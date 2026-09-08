@@ -1,47 +1,38 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 import { AppChrome } from "@/components/app-chrome";
 import { HomeDashboard } from "@/components/home-dashboard";
-import { Landing } from "@/components/marketing/landing";
-import { ENROL_PATH, getViewer, isTwoFactorRequired } from "@/lib/auth";
 
 /**
- * The front door — the only route with two faces.
+ * The front door.
  *
- * Signed out: a landing page that says what Roboxing is, names the next event
- * and the teams, shows the price, and asks you to sign up. Signed in: the
- * member home.
+ * It used to have two faces — a marketing landing page for signed-out
+ * visitors, the member home for everyone else — and that split died with the
+ * login wall. It was right for a subscription product whose content was behind
+ * a gate: show the shop window, ask for the sale. It is wrong now for a
+ * straightforward reason: almost everyone arriving here came from a clip on
+ * somebody else's platform, and answering them with a pitch for a $9.99
+ * subscription to a service that holds no broadcast rights is both a bad offer
+ * and a lie about what the site is.
  *
- * It lives outside `(app)` for exactly one reason: the gate in that layout
- * would send signed-out visitors to a login form, and a login form is a bad
- * first thing to show someone who has never heard of the product. Every OTHER
- * route stays behind the gate. This is the shop window, not an open door.
+ * So everyone gets the same page, because the content IS the pitch. The asks
+ * are the mailing list in the footer and the prediction game on each event —
+ * both free, both reversible, both things a stranger will actually do.
  *
- * The member half runs the same checks the gate does, written out here rather
- * than inherited — which is the cost of moving this route out of the group,
- * and worth naming so nobody assumes it is protected by proximity.
+ * `src/components/marketing/landing.tsx` is no longer routed to. It is left in
+ * place rather than deleted because most of it is the right raw material for
+ * an /about page, which this site will want once someone asks "who is behind
+ * this" — and that is a real question for a one-person outlet covering a sport
+ * nobody knows.
  */
 export const metadata: Metadata = {
-  title: "Roboxing — Live humanoid robot combat",
+  title: "Roboxing — Humanoid robot fighting",
   description:
-    "Every Roboxing event live and on demand, plus league standings, team rosters and full fight history. 14 days free, then $9.99 a month.",
-  // The one page that SHOULD be found. Everything else is disallowed in
-  // robots.ts, because everything else is a redirect to a sign-in form.
+    "The English-language record of humanoid robot fighting. Every league, every event, full cards, results and standings — URKL, CyberHero, the World Humanoid Robot Games and more.",
   robots: { index: true, follow: true },
 };
 
-export default async function RootPage() {
-  const viewer = await getViewer();
-
-  if (!viewer) {
-    return <Landing />;
-  }
-
-  if (isTwoFactorRequired() && !viewer.twoFactorEnabled) {
-    redirect(`${ENROL_PATH}?redirect_url=%2F`);
-  }
-
+export default function RootPage() {
   return (
     <AppChrome>
       <HomeDashboard />

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarClock, ListOrdered } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
@@ -11,9 +12,13 @@ import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { StandingsTable } from "@/components/standings-table";
 import { StatRow, StatTile } from "@/components/stat-tile";
+import { LeagueMarkBadge } from "@/components/league-mark";
+import { toParagraphs } from "@/lib/embeds";
+import { formatDateLong } from "@/lib/format";
 import {
   getCompetitionBySlug,
   getEventsForCompetition,
+  getLastResultRecordedAt,
 } from "@/lib/queries";
 import { getStandings } from "@/lib/standings";
 
@@ -32,9 +37,10 @@ export default async function CompetitionPage(
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
-  const [standings, events] = await Promise.all([
+  const [standings, events, lastRecordedAt] = await Promise.all([
     getStandings(competition.id),
     getEventsForCompetition(competition.id),
+    getLastResultRecordedAt(competition.id),
   ]);
 
   const upcoming = events.filter(
@@ -49,6 +55,7 @@ export default async function CompetitionPage(
 
   return (
     <PageShell>
+      <BackLink href="/competitions" label="All leagues" />
       <PageHeading
         eyebrow={
           competition.organizer
@@ -57,8 +64,21 @@ export default async function CompetitionPage(
               ? `Season ${competition.seasonYear}`
               : undefined
         }
-        title={competition.name}
-        description={competition.description ?? undefined}
+        title={
+          <span className="flex items-center gap-4">
+            <LeagueMarkBadge
+              slug={competition.slug}
+              name={competition.name}
+              logoUrl={competition.logoUrl}
+              size="lg"
+            />
+            {competition.name}
+          </span>
+        }
+        // Deliberately NOT the description. PageHeading renders whatever it is
+        // given inside a single <p>, and a league description is now several
+        // paragraphs — HTML would collapse the blank lines and serve one
+        // unreadable block. The prose renders below instead.
         action={
           <Badge variant={competition.status === "active" ? "volt" : "outline"}>
             {competition.status}
@@ -66,15 +86,53 @@ export default async function CompetitionPage(
         }
       />
 
-      <StatRow className="mb-8">
-        <StatTile label="Teams" value={standings.length} />
-        <StatTile label="Events" value={events.length} />
-        <StatTile label="Bouts fought" value={boutsFought} />
-        <StatTile label="Knockouts" value={knockouts} emphasis />
-      </StatRow>
+      {/* What this league actually is. On a site covering five of them, with
+          nobody yet knowing any, this is the most valuable text on the page —
+          more so than the table underneath it. Same plain-text-to-paragraphs
+          renderer the posts use; there is no HTML path into it. */}
+      {competition.description ? (
+        <div className="mb-8 max-w-3xl space-y-4">
+          {toParagraphs(competition.description).map((paragraph, i) => (
+            <p key={i} className="text-ink-muted leading-relaxed">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Fight-count tiles only once fights are on record; until then the
+          row is events-only rather than a parade of zeros. */}
+      {boutsFought > 0 ? (
+        <StatRow className="mb-8">
+          <StatTile label="Teams" value={standings.length} />
+          <StatTile label="Events" value={events.length} />
+          <StatTile label="Bouts fought" value={boutsFought} />
+          <StatTile label="Knockouts" value={knockouts} emphasis />
+        </StatRow>
+      ) : (
+        <StatRow className="mb-8">
+          <StatTile label="Events on record" value={events.length} emphasis />
+          <StatTile
+            label="Verified results"
+            value="—"
+            sub="No full cards published yet"
+          />
+        </StatRow>
+      )}
 
       <Card>
-        <CardHeader title="Standings" />
+        <CardHeader
+          title="Standings"
+          action={
+            // HLTV's "Last updated" stamp. A table with no date on it claims
+            // to be current forever; a dated one says what it actually is.
+            lastRecordedAt ? (
+              <span className="text-ink-dim tabular text-xs">
+                Last result {formatDateLong(lastRecordedAt, "UTC")}
+              </span>
+            ) : null
+          }
+        />
         <CardBodyFlush>
           {standings.length > 0 ? (
             <StandingsTable rows={standings} />
@@ -131,7 +189,7 @@ function EventList({ events }: { events: EventRow[] }) {
       {events.map(({ event, boutCount }) => (
         <li key={event.id} className="border-line/60 border-b last:border-b-0">
           <Link
-            href={`/watch/${event.slug}`}
+            href={`/events/${event.slug}`}
             className="hover:bg-surface-2 flex items-center justify-between gap-4 px-4 py-4 transition-colors sm:px-6"
           >
             <div className="min-w-0">
@@ -143,6 +201,7 @@ function EventList({ events }: { events: EventRow[] }) {
                   startsAt={event.startsAt.toISOString()}
                   timeZone={event.timezone}
                   city={event.city}
+                  timeTbd={event.startTimeTbd}
                 />
               </p>
             </div>

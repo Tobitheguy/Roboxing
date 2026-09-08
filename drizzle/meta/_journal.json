@@ -36,6 +36,34 @@
       "when": 1788153599776,
       "tag": "0004_add_event_state_code",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788820171197,
+      "tag": "0005_fair_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788823281236,
+      "tag": "0006_youthful_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788824826713,
+      "tag": "0007_bright_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788837573408,
+      "tag": "0008_good_morlun",
+      "breakpoints": true
     }
   ]
 }

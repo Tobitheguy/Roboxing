@@ -26,6 +26,46 @@ export function toIcsStamp(date: Date): string {
 }
 
 /**
+ * A DATE value: YYYYMMDD, in a given timezone.
+ *
+ * The timezone argument is the whole point, and it breaks in both directions.
+ * 8:00 PM in New York is already the next day in UTC; 12:30 AM in Riyadh is
+ * still the previous one. Taking the date off the ISO string is therefore
+ * wrong for a US evening card and wrong for an Asian late-night card, which
+ * between them is most of what this site covers.
+ */
+export function toIcsDate(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(date)
+    .replace(/-/g, "");
+}
+
+/**
+ * The day after a YYYYMMDD value, as YYYYMMDD.
+ *
+ * Exported because both the .ics and the Google Calendar link need it, and
+ * both need it for the same non-obvious reason: an all-day range is END
+ * EXCLUSIVE. A one-day event runs from its date to the NEXT date. Using the
+ * same date twice yields a zero-length entry that Google refuses and some
+ * desktop clients drop without saying so.
+ */
+export function nextIcsDate(yyyymmdd: string): string {
+  const year = Number(yyyymmdd.slice(0, 4));
+  const month = Number(yyyymmdd.slice(4, 6));
+  const day = Number(yyyymmdd.slice(6, 8));
+  // Built in UTC and read back in UTC, so this is pure calendar arithmetic
+  // with no timezone in it. Date.UTC rolls month and year over for us, which
+  // is the part that is easy to get wrong by hand on 31 December.
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  return next.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+/**
  * Escape TEXT values: backslash, semicolon, comma, and newlines.
  *
  * An unescaped comma in a venue name silently truncates the field in some
@@ -86,9 +126,35 @@ export type IcsEvent = {
   status?: "CONFIRMED" | "CANCELLED";
   /** Injected rather than read from the clock, so output is testable. */
   stamp?: Date;
+  /**
+   * Write a date-only entry instead of a timed one.
+   *
+   * For an event whose organizer announced a day and no hour. A timed entry
+   * would place it at whatever hour we guessed, and the guess then sits in the
+   * viewer's calendar looking like something we were told — with an alarm
+   * attached to it.
+   *
+   * Requires `timeZone`, because the calendar day depends on where the event
+   * is, not on where the server is.
+   */
+  allDay?: boolean;
+  /** IANA zone of the venue. Only read when `allDay` is set. */
+  timeZone?: string;
 };
 
 export function buildEventIcs(event: IcsEvent): string {
+  // VALUE=DATE, and DTEND is the day AFTER the last day — RFC 5545 makes the
+  // end exclusive for date values. Setting it to the same day produces a
+  // zero-length entry that some clients drop silently and others show on the
+  // wrong day.
+  const dateLines = () => {
+    const start = toIcsDate(event.start, event.timeZone ?? "UTC");
+    return [
+      `DTSTART;VALUE=DATE:${start}`,
+      `DTEND;VALUE=DATE:${nextIcsDate(start)}`,
+    ];
+  };
+
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -98,8 +164,9 @@ export function buildEventIcs(event: IcsEvent): string {
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${toIcsStamp(event.stamp ?? new Date())}`,
-    `DTSTART:${toIcsStamp(event.start)}`,
-    `DTEND:${toIcsStamp(event.end)}`,
+    ...(event.allDay
+      ? dateLines()
+      : [`DTSTART:${toIcsStamp(event.start)}`, `DTEND:${toIcsStamp(event.end)}`]),
     `SUMMARY:${escapeIcsText(event.summary)}`,
     event.description ? `DESCRIPTION:${escapeIcsText(event.description)}` : null,
     event.location ? `LOCATION:${escapeIcsText(event.location)}` : null,

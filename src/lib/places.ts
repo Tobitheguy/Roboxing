@@ -59,6 +59,36 @@ export function isKnownCountry(code: string): boolean {
 }
 
 /**
+ * Normalise an ISO 3166-1 alpha-2 code, or null if it is not one.
+ *
+ * This replaced a `flagEmoji()` helper that built flags out of regional
+ * indicator symbols. It was correct, it was tested, and it did not work:
+ * **Windows ships no flag emoji font**, so every 🇺🇸 rendered as a tiny "US"
+ * while the same page showed real flags on macOS and Android. Verified in the
+ * browser rather than assumed — the home page rendered "us Test event".
+ *
+ * A design that looks deliberate on one platform and like a font bug on
+ * another is worse than one that looks the same everywhere, so the code
+ * itself is now the mark. See `CountryTag`.
+ *
+ * Deliberately NOT validated against COUNTRIES: that list is what an admin may
+ * pick from, and refusing to render a country we forgot to list would hide a
+ * data-entry gap behind a missing label.
+ */
+export function countryCode(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const trimmed = code.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(trimmed) ? trimmed : null;
+}
+
+/** The full name for a code, for a tooltip or an accessible label. */
+export function countryName(code: string | null | undefined): string | null {
+  const normalised = countryCode(code);
+  if (!normalised) return null;
+  return COUNTRIES.find((c) => c.code === normalised)?.name ?? normalised;
+}
+
+/**
  * US states, DC and the territories that host events.
  *
  * Only meaningful for the United States, which is why the field is hidden for

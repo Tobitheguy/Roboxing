@@ -12,6 +12,7 @@ import {
   competitions,
   events,
   pointsRules,
+  posts,
   robots,
   teams,
 } from "@/db/schema";
@@ -65,6 +66,44 @@ const optionalInt = (min: number, max: number) =>
     .union([z.coerce.number().int().min(min).max(max), z.literal("")])
     .optional()
     .transform((v) => (v === "" || v === undefined ? undefined : Number(v)));
+
+/**
+ * An optional link that will be rendered as an `href`.
+ *
+ * The scheme check is the point, and it is a security control rather than
+ * tidiness. `z.url()` alone accepts `javascript:alert(1)` — it is a
+ * syntactically valid URL — and these values go straight into an anchor on a
+ * public page. Restricting to http and https is what stops a stored value
+ * from becoming script execution in every visitor's browser.
+ *
+ * Length-capped for the same reason as every other free-text field: the column
+ * is unbounded `text`.
+ */
+const optionalHttpUrl = (max = 500) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v))
+    .refine(
+      (v) => {
+        if (!v) return true;
+        try {
+          const { protocol } = new URL(v);
+          return protocol === "http:" || protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      "Enter a full link starting with https://",
+    );
+
+/** An HTML checkbox sends "on" when ticked and nothing at all when not. */
+const checkbox = z
+  .union([z.literal("on"), z.literal("true"), z.literal("")])
+  .optional()
+  .transform((v) => v === "on" || v === "true");
 
 /* -------------------------------------------------------------------------- */
 /* Competitions                                                                */
@@ -310,6 +349,19 @@ const EventSchema = z.object({
   posterUrl: optionalText(500),
   /** Comma-separated ISO country codes; empty means unrestricted. */
   allowedCountries: optionalText(500),
+  /**
+   * Set when the organizer announced a date and no time.
+   *
+   * `startsAtLocal` is still required, because the calendar has to sort. What
+   * this says is that its clock half is our placeholder rather than their
+   * announcement, and the site should print neither it nor a countdown to it.
+   */
+  startTimeTbd: checkbox,
+  /** Where the broadcast actually is, when it is not ours. */
+  broadcastUrl: optionalHttpUrl(500),
+  broadcastName: optionalText(120),
+  /** The announcement this event's details came from. */
+  sourceUrl: optionalHttpUrl(500),
 })
   .refine(
     (v) => !v.country || isKnownCountry(v.country),
@@ -401,6 +453,13 @@ export async function saveEvent(
         // Null, not an empty array. An empty array means "no territory is
         // permitted" and blocks everyone — see the note in lib/stream.ts.
         allowedCountries: countries.length > 0 ? countries : null,
+        startTimeTbd: input.startTimeTbd,
+        broadcastUrl: input.broadcastUrl ?? null,
+        // Dropped when there is no link to label. A broadcaster name on its
+        // own renders nowhere and would only reappear, stale, if a URL were
+        // added months later.
+        broadcastName: input.broadcastUrl ? (input.broadcastName ?? null) : null,
+        sourceUrl: input.sourceUrl ?? null,
       };
 
       const id = input.id
@@ -420,6 +479,127 @@ export async function saveEvent(
       entity: "event",
       entityId: out.id,
       payload: { name: input.name, status: input.status, access: input.access },
+    }),
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Posts                                                                       */
+/* -------------------------------------------------------------------------- */
+
+const PostSchema = z
+  .object({
+    id: optionalInt(1, Number.MAX_SAFE_INTEGER),
+    kind: z.enum(["clip", "article"]).default("clip"),
+    status: z.enum(["draft", "published"]).default("draft"),
+    title: z.string().trim().min(1, "Required.").max(200),
+    slug: Slug.optional(),
+    summary: optionalText(400),
+    /**
+     * Plain text. Not sanitised, because nothing here is ever interpreted as
+     * markup — the page splits it on blank lines and renders each paragraph as
+     * a React text child. See the note on `posts.body`.
+     */
+    body: optionalText(20_000),
+    embedUrl: optionalHttpUrl(500),
+    coverImageUrl: optionalText(500),
+    eventId: optionalInt(1, Number.MAX_SAFE_INTEGER),
+    /**
+     * When it goes live, as a UTC `datetime-local` value. Blank means "now"
+     * for a post being published, and stays null for a draft.
+     */
+    publishedAtLocal: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v === "" ? undefined : v))
+      .refine(
+        (v) => !v || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v),
+        "Use the date and time picker.",
+      ),
+  })
+  .refine((v) => v.kind !== "clip" || Boolean(v.embedUrl), {
+    path: ["embedUrl"],
+    // A clip with no clip in it renders as a headline and a blank space. The
+    // writer meant to paste a link and did not; better to say so than to
+    // publish the gap.
+    message: "A clip needs a video link. Switch the type to Analysis for a text post.",
+  });
+
+export async function savePost(
+  _prev: ActionResult<{ id: number }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ id: number }>> {
+  return adminAction({
+    schema: PostSchema,
+    input: Object.fromEntries(formData),
+    run: async (input) => {
+      // Publishing with no date means now. Without this a post marked
+      // published would have a null `published_at`, and the public query —
+      // which requires BOTH — would never show it. The author would see it
+      // saved as published and never live, with nothing on screen explaining
+      // why.
+      const publishedAt =
+        input.status === "published"
+          ? input.publishedAtLocal
+            ? new Date(`${input.publishedAtLocal}:00Z`)
+            : new Date()
+          : null;
+
+      const values = {
+        kind: input.kind,
+        status: input.status,
+        title: input.title,
+        slug: input.slug ?? slugify(input.title),
+        summary: input.summary ?? null,
+        body: input.body ?? null,
+        embedUrl: input.embedUrl ?? null,
+        coverImageUrl: input.coverImageUrl ?? null,
+        eventId: input.eventId ?? null,
+        publishedAt,
+        updatedAt: new Date(),
+      };
+
+      const id = input.id
+        ? (
+            await db
+              .update(posts)
+              .set(values)
+              .where(eq(posts.id, input.id))
+              .returning({ id: posts.id })
+          )[0].id
+        : (await db.insert(posts).values(values).returning({ id: posts.id }))[0]
+            .id;
+      return { id };
+    },
+    audit: (input, out) => ({
+      action: input.id ? "post.update" : "post.create",
+      entity: "post",
+      entityId: out.id,
+      payload: { title: input.title, status: input.status },
+    }),
+  });
+}
+
+const DeletePostSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export async function deletePost(
+  _prev: ActionResult<{ id: number }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ id: number }>> {
+  return adminAction({
+    schema: DeletePostSchema,
+    input: Object.fromEntries(formData),
+    run: async ({ id }) => {
+      await db.delete(posts).where(eq(posts.id, id));
+      return { id };
+    },
+    audit: (input) => ({
+      action: "post.delete",
+      entity: "post",
+      entityId: input.id,
     }),
   });
 }

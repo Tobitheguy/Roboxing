@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { ImageField } from "@/components/admin/image-field";
 import {
+  CheckboxField,
   FormStatus,
   SelectField,
   SubmitButton,
@@ -15,6 +16,7 @@ import {
   saveBout,
   saveCompetition,
   saveEvent,
+  savePost,
   saveRobot,
   saveTeam,
 } from "@/app/(app)/admin/actions";
@@ -393,6 +395,10 @@ export function EventForm({
     access: string;
     posterUrl: string | null;
     allowedCountries: string[] | null;
+    startTimeTbd: boolean;
+    broadcastUrl: string | null;
+    broadcastName: string | null;
+    sourceUrl: string | null;
   };
   competitions: { id: number; name: string }[];
   /** Precomputed on the server: the UTC instant rendered in the venue's zone. */
@@ -435,6 +441,14 @@ export function EventForm({
           hint="The time on the clock at the venue, not your time."
           defaultValue={startsAtLocal}
           errors={errors.startsAtLocal}
+        />
+        <CheckboxField
+          label="Start time not announced"
+          name="startTimeTbd"
+          hint="Tick when the organizer gave a date only. The date above still sorts the calendar, but the site shows no time and no countdown."
+          defaultChecked={event?.startTimeTbd}
+          errors={errors.startTimeTbd}
+          className="self-center"
         />
         {/* A select, not free text, and no UTC default. The old field defaulted
             to UTC and accepted anything — so the first real event entered, at
@@ -512,6 +526,40 @@ export function EventForm({
             { value: "subscription", label: "Subscribers only" },
           ]}
           errors={errors.access}
+        />
+      </div>
+
+      {/* Everything below is for an event we do NOT carry, which is most of
+          them. Grouped and labelled as such so the two cases stay visibly
+          distinct — an admin filling in a broadcast URL on an event we are
+          actually streaming would silently replace our own player with a link
+          out. */}
+      <div className="border-line space-y-5 rounded-lg border p-4">
+        <p className="eyebrow">Somebody else&rsquo;s broadcast</p>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <TextField
+            label="Broadcast URL"
+            name="broadcastUrl"
+            type="url"
+            hint="Where it actually streams — YouTube, Bilibili, X. Setting this replaces our player with a link out."
+            defaultValue={event?.broadcastUrl}
+            errors={errors.broadcastUrl}
+          />
+          <TextField
+            label="Broadcaster"
+            name="broadcastName"
+            hint='Shown on the button, e.g. "Hero Esports on YouTube".'
+            defaultValue={event?.broadcastName}
+            errors={errors.broadcastName}
+          />
+        </div>
+        <TextField
+          label="Source"
+          name="sourceUrl"
+          type="url"
+          hint="The announcement these details came from. Printed on the page — a date we can attribute is worth more than one we cannot."
+          defaultValue={event?.sourceUrl}
+          errors={errors.sourceUrl}
         />
       </div>
 
@@ -596,6 +644,146 @@ export function BoutForm({
 
       <FormStatus state={state} successMessage="Bout added." />
       <SubmitButton pending={pending} label="Add bout" />
+    </form>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Write or edit a post.
+ *
+ * Two shapes in one form, switched by `kind`. A clip is a link plus a
+ * sentence; an article is text. The type selector is held in state so the
+ * embed field can be marked required for one and not the other — the server
+ * refuses a clip with no link regardless, this only spares the round trip.
+ */
+export function PostForm({
+  post,
+  events,
+  publishedAtLocal,
+}: {
+  post?: {
+    id: number;
+    kind: string;
+    status: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    body: string | null;
+    embedUrl: string | null;
+    coverImageUrl: string | null;
+    eventId: number | null;
+  };
+  events: { id: number; name: string }[];
+  /** Precomputed on the server: publishedAt rendered as a UTC form value. */
+  publishedAtLocal?: string;
+}) {
+  const [state, action, pending] = useActionState<Saved, FormData>(
+    savePost,
+    null,
+  );
+  const [kind, setKind] = useState(post?.kind ?? "clip");
+  const errors = fieldErrorsOf(state);
+
+  return (
+    <form action={action} className="space-y-5">
+      {post ? <input type="hidden" name="id" value={post.id} /> : null}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <SelectField
+          label="Type"
+          name="kind"
+          required
+          defaultValue={kind}
+          onChange={(e) => setKind(e.target.value)}
+          options={[
+            { value: "clip", label: "Clip — video first" },
+            { value: "article", label: "Analysis — text first" },
+          ]}
+          errors={errors.kind}
+        />
+        <SelectField
+          label="Status"
+          name="status"
+          required
+          hint="Published with a future date schedules it — it appears on its own."
+          defaultValue={post?.status ?? "draft"}
+          options={[
+            { value: "draft", label: "Draft" },
+            { value: "published", label: "Published" },
+          ]}
+          errors={errors.status}
+        />
+      </div>
+
+      <TextField
+        label="Headline"
+        name="title"
+        required
+        defaultValue={post?.title}
+        errors={errors.title}
+      />
+
+      <TextField
+        label="Standfirst"
+        name="summary"
+        hint="One line under the headline. Also the description search engines and share cards use."
+        defaultValue={post?.summary}
+        errors={errors.summary}
+      />
+
+      <TextField
+        label="Video link"
+        name="embedUrl"
+        type="url"
+        required={kind === "clip"}
+        hint="YouTube, Bilibili or Vimeo embeds inline. Anything else becomes a link card — we never re-host the video."
+        defaultValue={post?.embedUrl}
+        errors={errors.embedUrl}
+      />
+
+      <TextArea
+        label="Body"
+        name="body"
+        rows={10}
+        hint="Plain text. Leave a blank line between paragraphs. No formatting — markup is not interpreted."
+        defaultValue={post?.body}
+        errors={errors.body}
+      />
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <SelectField
+          label="About which event"
+          name="eventId"
+          hint="Optional. Links the post to an event, and shows it on that event's page."
+          defaultValue={post?.eventId ?? ""}
+          options={[
+            { value: "", label: "Not about a specific event" },
+            ...events.map((e) => ({ value: e.id, label: e.name })),
+          ]}
+          errors={errors.eventId}
+        />
+        <TextField
+          label="Publish at (UTC)"
+          name="publishedAtLocal"
+          type="datetime-local"
+          hint="Leave blank to publish immediately."
+          defaultValue={publishedAtLocal}
+          errors={errors.publishedAtLocal}
+        />
+      </div>
+
+      <ImageField
+        label="Cover image"
+        name="coverImageUrl"
+        hint="Used on share cards. Optional."
+        defaultValue={post?.coverImageUrl}
+        errors={errors.coverImageUrl}
+      />
+
+      <FormStatus state={state} successMessage="Post saved." />
+      <SubmitButton pending={pending} label={post ? "Save post" : "Add post"} />
     </form>
   );
 }

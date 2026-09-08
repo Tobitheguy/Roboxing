@@ -25,7 +25,7 @@ export default async function TeamsPage() {
       <PageHeading
         eyebrow="Competitors"
         title="Teams"
-        description="The organisations that build and field the robots."
+        description="Two kinds of organisation share this sport: the manufacturers who build the machines, and the teams who pilot them."
       />
 
       {teams.length === 0 ? (
@@ -37,8 +37,37 @@ export default async function TeamsPage() {
           />
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {teams.map(({ team, robotCount }) => {
+        <>
+          {/* Split by what the data actually says: an organisation with
+              machines on the roster is a manufacturer/platform owner, one
+              without is a competing team piloting somebody else's hardware.
+              That is the real structure of this sport — every URKL team runs
+              the same T800 — and pretending they are one kind of thing is
+              what made this page a wall of "0 robots". */}
+          {[
+            {
+              heading: "Manufacturers & platforms",
+              blurb: "They build the machines the sport runs on.",
+              rows: teams.filter((t) => t.robotCount > 0),
+            },
+            {
+              heading: "Competing teams",
+              blurb:
+                "They pilot standardised hardware supplied by the league — which is why no machines are listed against their names.",
+              rows: teams.filter((t) => t.robotCount === 0),
+            },
+          ]
+            .filter((section) => section.rows.length > 0)
+            .map((section) => (
+              <section key={section.heading} className="mb-10">
+                <div className="mb-4">
+                  <h2 className="font-display text-title text-ink uppercase">
+                    {section.heading}
+                  </h2>
+                  <p className="text-ink-muted mt-1 text-sm">{section.blurb}</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {section.rows.map(({ team, robotCount }) => {
             const standing = bySlug.get(team.slug);
             return (
               <Card
@@ -66,7 +95,9 @@ export default async function TeamsPage() {
                         {[team.orgName, team.country].filter(Boolean).join(" · ")}
                       </p>
                       <p className="text-ink-muted tabular mt-3 text-xs">
-                        {robotCount} {robotCount === 1 ? "robot" : "robots"}
+                        {robotCount > 0
+                          ? `${robotCount} ${robotCount === 1 ? "machine" : "machines"}`
+                          : "Pilots league hardware"}
                         {standing ? (
                           <>
                             <span className="text-ink-dim"> · </span>
@@ -84,8 +115,11 @@ export default async function TeamsPage() {
                 </CardBody>
               </Card>
             );
-          })}
-        </div>
+                  })}
+                </div>
+              </section>
+            ))}
+        </>
       )}
     </PageShell>
   );

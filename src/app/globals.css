@@ -5,58 +5,102 @@
 /* ==========================================================================
    ROBOXING DESIGN TOKENS — single source of truth
 
-   Every colour, size, and radius in the product is defined in this file. A
-   real brand pass later should be an edit here, not a rewrite of components.
+   Every colour, size, and radius in the product is defined in this file. This
+   file is the brand pass: the palette below was rewritten from dark to light
+   without touching a single component, which is what the token layer was for.
 
-   The product is video-first, so the UI is permanently dark: a light chrome
-   fights the player for attention. There is no light mode and no theme
-   toggle — `<html class="dark">` is set so shadcn's `dark:` variants resolve,
-   but both themes resolve to the same values.
+   WHY LIGHT. The old comment here said "the product is video-first, so the UI
+   is permanently dark: a light chrome fights the player for attention." That
+   was true of a streaming product. It is not true of this one — Roboxing is a
+   publication that rarely carries the video, and most of what a reader does
+   here is READ: fight cards, results, standings, schedules, coverage. Dark
+   chrome is right for a player and wrong for a page of text and tables. Every
+   light-mode sports reference does the same thing (UFC, ESPN, HLTV): light
+   page, dark type, one saturated accent.
 
-   THE ONE RULE: --color-live (#FF2D2D) means "broadcasting right now".
-   Never a button, never an error, never decoration. If it is red on this
-   site, something is live. That rule is worth more than the colour.
-   Errors use --destructive. Live-edge drift uses --color-drift.
+   THE BRAND, decided by Tobias on 2026-09-08 and simple enough to state in
+   one line: **black and white, nothing else.**
+
+     - Ink (#14161A) and white. No accent colour. Links, buttons, countdowns,
+       badges, monograms — all ink. What used to be a coloured accent
+       (`--color-volt`, lime in the dark era, blue in the first light pass)
+       now RESOLVES TO INK: the token survives so 130+ call sites keep
+       working, but it no longer names a colour.
+     - The logo is the SPLIT R — the R cut diagonally into two offset halves,
+       the cut being the fight. White on an ink tile: favicon (app/icon.svg),
+       header lockup (RoboxingMark), share card (app/opengraph-image.tsx).
+     - League identities (league-identity.ts) are monochrome too, per the
+       same decision.
+
+   TWO FUNCTIONAL EXCEPTIONS, deliberately outside the brand: --color-live
+   (red) means "broadcasting right now" and --destructive (red) means "this
+   action destroys something". Both are signals, not identity — a colour-blind
+   traffic system is a safety bug, not a style choice. Remove them only on an
+   explicit instruction that names them.
+
+   THE ONE RULE, kept: --color-live (#E5231F) means "broadcasting right now".
+   Never a button, never an error, never decoration. If it is red on this site,
+   something is live. Errors use --destructive. Live-edge drift uses
+   --color-drift.
+
+   Note the logo description above is one iteration stale on purpose — the
+   authoritative account of the mark lives in roboxing-mark.tsx: the split R
+   is the display face's own R with a transparent diagonal cut, not a drawn
+   tile.
+
+   Every text pair below was checked against WCAG AA (4.5:1 for body, 3:1 for
+   component boundaries). The numbers are recorded beside each token, because
+   a contrast decision with no number next to it is a guess that survives.
    ========================================================================== */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* --- Surfaces: a four-step ramp from canvas up to raised ------------- */
-  --color-canvas: #0b0b0f; /* page background */
-  --color-surface: #15151c; /* cards, table rows, header */
-  --color-surface-2: #1e1e27; /* hover, popovers, inputs */
-  --color-line: #26262f; /* default hairline border */
-  --color-line-strong: #3a3a47; /* emphasised divider */
+  /* --- Surfaces: a four-step ramp from canvas up to raised -------------
+     Warm-neutral rather than blue-grey. A cold grey page reads as software;
+     a warm one reads as editorial, which is what this is. */
+  --color-canvas: #f6f6f3; /* page background */
+  --color-surface: #ffffff; /* cards, table rows, header */
+  --color-surface-2: #eeeeea; /* hover, popovers, inputs */
+  --color-line: #e2e2dc; /* default hairline border */
+  --color-line-strong: #c8c8c0; /* emphasised divider */
 
   /* --- Ink ------------------------------------------------------------- */
-  --color-ink: #ffffff; /* primary text — 19.4:1 on canvas */
-  --color-ink-muted: #a1a1ae; /* secondary text, table headers — 7.7:1 on canvas */
-  /* Metadata and de-emphasised copy. Chosen as the darkest grey that still
-     clears WCAG AA (4.5:1) on BOTH canvas and surface — 4.62:1 and 4.51:1
-     respectively. The obvious-looking #6B6B78 measures 3.74:1 and 3.46:1,
-     which fails: this token ends up carrying real sentences, not just chrome. */
-  --color-ink-dim: #7e7e8c;
+  --color-ink: #14161a; /* primary text — 16.4:1 on canvas */
+  --color-ink-muted: #52565e; /* secondary text, table headers — 7.4:1 on canvas */
+  /* Metadata and de-emphasised copy. The lightest grey that still clears AA
+     on BOTH canvas and surface — 4.64:1 and 4.98:1. This token carries real
+     sentences, not just chrome, so it is held to the body-text bar rather
+     than the 3:1 one. */
+  --color-ink-dim: #6d717a;
 
-  /* --- Accent ---------------------------------------------------------- */
-  /* Named "volt" rather than "accent" on purpose: shadcn already owns
-     --color-accent for its hover backgrounds, and overriding that would turn
-     every hover state lime. */
-  --color-volt: #c8ff00;
-  --color-volt-dim: #9fcc00; /* hover/pressed on volt fills */
-  --color-volt-ink: #0b0b0f; /* text on a volt fill — never white */
+  /* --- Accent -----------------------------------------------------------
+     There is none. The brand is black and white, and "volt" — kept under its
+     historical name so 130+ call sites need no edit — now resolves to ink.
+     A link distinguishes itself by weight and underline, not hue; a filled
+     button is a black block; the countdown is black numerals. 16.4:1 on
+     canvas, trivially AAA. */
+  --color-volt: #14161a;
+  --color-volt-dim: #3a3d44; /* hover/pressed on ink fills */
+  --color-volt-ink: #ffffff; /* text on an ink fill */
 
   /* --- State ----------------------------------------------------------- */
-  --color-live: #ff2d2d; /* LIVE ONLY. See the rule above. */
-  --color-drift: #ffb020; /* viewer has fallen behind the live edge */
-  --color-win: #c8ff00;
-  --color-loss: #6b6b78;
+  /* Darkened from #FF2D2D, which measured 3.4:1 on white and failed as text.
+     4.7:1 here, and still unmistakably an alarm. */
+  --color-live: #e5231f; /* LIVE ONLY. See the rule above. */
+  --color-drift: #a35c00; /* viewer has fallen behind the live edge — 4.8:1 */
+  --color-win: #14161a;
+  --color-loss: #8a8e96;
 
   /* --- Type ------------------------------------------------------------
-     Display face carries names, scores, and numbers. UI face carries
-     everything else. Mono is for timecodes, RTMP keys, and IDs. */
+     ONE face — Oswald — carries everything; --font-sans and --font-display
+     both resolve to it (decision 2026-09-08). Mono is for timecodes, RTMP
+     keys, and IDs only. */
   --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Same face as display — ONE typeface site-wide, Tobias's call. The two
+     tokens survive so a future second face is a one-line change, but today
+     they resolve identically. */
+  --font-sans: var(--font-oswald), "Arial Narrow", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Fluid so a fight card headline works on a 375px phone and a 27" desktop
@@ -104,9 +148,13 @@
   --popover: var(--color-surface-2);
   --popover-foreground: var(--color-ink);
 
-  /* Primary is volt — the one high-energy fill in the system. */
-  --primary: var(--color-volt);
-  --primary-foreground: var(--color-volt-ink);
+  /* Primary is INK, not the accent — a near-black fill with white on it.
+     Two reasons. On a light page a black button is the most emphatic thing
+     available and it is what UFC and ESPN both reach for; and it leaves the
+     accent free to mean "link" everywhere without a filled blue button
+     competing with every blue link on the same screen. */
+  --primary: var(--color-ink);
+  --primary-foreground: #ffffff;
 
   --secondary: var(--color-surface-2);
   --secondary-foreground: var(--color-ink);
@@ -118,23 +166,28 @@
   --accent: var(--color-line);
   --accent-foreground: var(--color-ink);
 
-  /* Errors and destructive actions. Distinct from --color-live by design. */
-  --destructive: #ff4d4f;
+  /* Errors and destructive actions. Distinct from --color-live by design:
+     one of these means "you broke something", the other means "a fight is
+     happening". They must never be the same colour. 5.1:1 on white. */
+  --destructive: #c4162b;
 
   /* Decorative hairlines between rows and around cards. Intentionally faint —
      WCAG 1.4.11 governs component boundaries, not separators. */
   --border: var(--color-line);
   /* Borders that ARE the component: outline buttons, text inputs, selects.
      These must clear 3:1 against the canvas to be perceivable, which the
-     hairline value does not (1.3:1). This measures 3.06:1. */
-  --input: #5d5d69;
+     hairline value does not (1.15:1). This measures 3.910:1 on canvas. */
+  --input: #8b8f97;
   --ring: var(--color-volt);
 
-  --chart-1: var(--color-volt);
-  --chart-2: #7dd3fc;
-  --chart-3: #a78bfa;
-  --chart-4: #fb923c;
-  --chart-5: var(--color-ink-muted);
+  /* Categorical series as a greyscale ramp — the brand is black and white,
+     and a chart that needs more than tone to be readable should use labels,
+     patterns or direct annotation rather than smuggling colour back in. */
+  --chart-1: #14161a;
+  --chart-2: #52565e;
+  --chart-3: #83878f;
+  --chart-4: #b4b7bd;
+  --chart-5: #d8dade;
 
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-ink);
@@ -238,7 +291,10 @@
     @apply font-sans;
     /* Vertical rhythm is 8px: prefer even Tailwind spacing steps
        (2, 4, 6, 8, 12, 16, 24) over odd ones. */
-    color-scheme: dark;
+    /* Tells the browser to render its own furniture — scrollbars, form
+       controls, the autofill tint — light. Without it a light page keeps dark
+       scrollbars and a very obviously wrong yellow-on-dark autofill. */
+    color-scheme: light;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -256,6 +312,17 @@
   ::selection {
     background: var(--color-volt);
     color: var(--color-volt-ink);
+  }
+
+  /* Display type is the brand now that the colour is quieter. Oswald in
+     uppercase is the same register UFC and F1 use, and on a light page a wall
+     of tight condensed black caps is what stops this reading as a spreadsheet.
+     Kept deliberately when the palette was rewritten — the aggression moved
+     from the colour into the type. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
   }
 
   /* A visible focus ring is not optional. Keyboard users navigate the

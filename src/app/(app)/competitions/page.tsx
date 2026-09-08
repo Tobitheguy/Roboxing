@@ -5,10 +5,12 @@ import { Trophy } from "lucide-react";
 import { Badge } from "@/components/badge";
 import { Card, CardBody } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
+import { LeagueMarkBadge } from "@/components/league-mark";
 import { PageHeading, PageShell } from "@/components/page-shell";
+import { toParagraphs } from "@/lib/embeds";
 import { getCompetitions } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "Competitions" };
+export const metadata: Metadata = { title: "Leagues" };
 
 export default async function CompetitionsPage() {
   const competitions = await getCompetitions();
@@ -16,8 +18,8 @@ export default async function CompetitionsPage() {
   return (
     <PageShell>
       <PageHeading
-        eyebrow="Leagues"
-        title="Competitions"
+        eyebrow="Humanoid robot fighting"
+        title="The Leagues"
         description="Seasons, standings, and full fixture lists."
       />
 
@@ -35,20 +37,28 @@ export default async function CompetitionsPage() {
             <Card key={competition.id} className="hover:border-line-strong transition-colors">
               <CardBody>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2 className="font-display text-title text-ink uppercase">
-                      <Link
-                        href={`/competitions/${competition.slug}`}
-                        className="hover:text-volt transition-colors"
-                      >
-                        {competition.name}
-                      </Link>
-                    </h2>
-                    {competition.organizer ? (
-                      <p className="text-ink-dim mt-1 text-xs">
-                        {competition.organizer}
-                      </p>
-                    ) : null}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <LeagueMarkBadge
+                      slug={competition.slug}
+                      name={competition.name}
+                      logoUrl={competition.logoUrl}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <h2 className="font-display text-title text-ink uppercase">
+                        <Link
+                          href={`/competitions/${competition.slug}`}
+                          className="hover:text-volt transition-colors"
+                        >
+                          {competition.name}
+                        </Link>
+                      </h2>
+                      {competition.organizer ? (
+                        <p className="text-ink-dim mt-1 truncate text-xs">
+                          {competition.organizer}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                   <Badge
                     variant={
@@ -60,8 +70,11 @@ export default async function CompetitionsPage() {
                 </div>
 
                 {competition.description ? (
-                  <p className="text-ink-muted mt-4 text-sm">
-                    {competition.description}
+                  // First paragraph only, clamped. Descriptions grew into
+                  // multi-paragraph prose for the league detail page, and an
+                  // index card that dumps all of it stops being an index.
+                  <p className="text-ink-muted mt-4 line-clamp-3 text-sm">
+                    {toParagraphs(competition.description)[0]}
                   </p>
                 ) : null}
 

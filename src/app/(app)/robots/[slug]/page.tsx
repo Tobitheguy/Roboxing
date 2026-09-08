@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Swords } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
@@ -68,6 +69,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
 
   return (
     <PageShell>
+      <BackLink href="/robots" label="All machines" />
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
         <RobotAvatar
           name={robot.name}
@@ -125,7 +127,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         <Card className="mb-6">
           <CardHeader title="Upcoming" />
           <CardBodyFlush>
-            <BoutList bouts={upcoming} showEvent />
+            <BoutList bouts={upcoming} showEvent showLeague />
           </CardBodyFlush>
         </Card>
       ) : null}
@@ -143,7 +145,7 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
         />
         <CardBodyFlush>
           {resolved.length > 0 ? (
-            <BoutList bouts={resolved} showEvent />
+            <BoutList bouts={resolved} showEvent showLeague />
           ) : (
             <EmptyState
               icon={<Swords />}

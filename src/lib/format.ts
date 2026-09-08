@@ -171,6 +171,43 @@ export function formatWeight(grams: number | null): string | null {
   return `${(grams / 1000).toFixed(1)} kg`;
 }
 
+/**
+ * A coarse "how far away is this", e.g. "Tomorrow", "in 12 days", "in 8 weeks".
+ *
+ * HLTV's event rail does this — "10 days", "56 days" — and it is the right
+ * register for a sparse calendar. An exact countdown to something nine weeks
+ * out is false precision that nobody reads; "in 9 weeks" is the actual answer
+ * to the question being asked. The live countdown still runs on the event
+ * itself and in the strip, where the number genuinely matters.
+ *
+ * Computed in UTC rather than the reader's zone, which the server does not
+ * know. That can be a day out for a few hours around midnight — acceptable for
+ * a label that already rounds to whole days, and the alternative is either a
+ * hydration mismatch or a client component for a static phrase.
+ */
+export function formatDaysUntil(target: Date, now: Date): string | null {
+  const MS_PER_DAY = 86_400_000;
+  const startOfDay = (d: Date) =>
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+  const days = Math.round((startOfDay(target) - startOfDay(now)) / MS_PER_DAY);
+
+  if (days < 0) return null;
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 14) return `in ${days} days`;
+
+  const weeks = Math.round(days / 7);
+  if (weeks < 9) return `in ${weeks} weeks`;
+
+  // Always plural, and that is provable rather than sloppy: this line is only
+  // reached at 9 weeks or more, which is 60+ days, so the rounded month count
+  // can never be 1. A `months === 1 ? "" : "s"` here would be a branch that
+  // cannot execute — and an unreachable branch is worse than no branch,
+  // because it implies a case someone will later try to reason about.
+  return `in ${Math.round(days / 30)} months`;
+}
+
 /** Sentence-case a snake_case or kebab-case token for display. */
 export function humanize(value: string): string {
   const spaced = value.replace(/[_-]+/g, " ").trim();

@@ -4,6 +4,8 @@ import {
   COUNTRIES,
   STATE_COUNTRY,
   US_STATES,
+  countryCode,
+  countryName,
   isKnownCountry,
   isKnownUsState,
 } from "./places";
@@ -105,5 +107,61 @@ describe("timezones", () => {
 
   it("passes a good zone straight through", () => {
     expect(safeTimeZone("Asia/Tokyo")).toBe("Asia/Tokyo");
+  });
+});
+
+/**
+ * The country mark beside every corner of every bout. Two letters rather than
+ * a flag emoji: Windows ships no flag emoji font, so 🇺🇸 rendered as a tiny
+ * "US" there while showing a real flag on macOS. See `CountryTag`.
+ */
+describe("countryCode", () => {
+  it("normalises a two-letter code", () => {
+    expect(countryCode("cn")).toBe("CN");
+    expect(countryCode(" us ")).toBe("US");
+    expect(countryCode("SA")).toBe("SA");
+  });
+
+  it("returns null for anything that is not one", () => {
+    for (const bad of [null, undefined, "", "C", "USA", "1A", "C-"]) {
+      expect(countryCode(bad)).toBeNull();
+    }
+  });
+
+  it("accepts every code on the pick list", () => {
+    for (const country of COUNTRIES) {
+      expect(countryCode(country.code)).toBe(country.code);
+    }
+  });
+
+  it("accepts a code that is NOT on the pick list", () => {
+    // COUNTRIES is what an admin may choose from. Refusing here would hide a
+    // data-entry gap behind a missing label. "ZZ" is user-assigned in ISO
+    // 3166 and so is guaranteed never to join the list.
+    expect(countryCode("ZZ")).toBe("ZZ");
+  });
+});
+
+describe("countryName", () => {
+  it("expands a known code", () => {
+    expect(countryName("CN")).toBe("China");
+    expect(countryName("us")).toBe("United States");
+  });
+
+  it("falls back to the code itself for one we do not list", () => {
+    // Used as the accessible expansion of an abbreviation, so it must never
+    // come back empty and leave a screen reader spelling out two letters.
+    expect(countryName("ZZ")).toBe("ZZ");
+  });
+
+  it("expands every code on the pick list to a real name", () => {
+    for (const country of COUNTRIES) {
+      expect(countryName(country.code)).toBe(country.name);
+    }
+  });
+
+  it("is null for a malformed code", () => {
+    expect(countryName("USA")).toBeNull();
+    expect(countryName(null)).toBeNull();
   });
 });

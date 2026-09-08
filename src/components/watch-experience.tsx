@@ -7,6 +7,7 @@ import { Lock, MonitorPlay, Swords } from "lucide-react";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
+import { ExternalBroadcast } from "@/components/external-broadcast";
 import { RoboxingPlayer } from "@/components/roboxing-player";
 import { Button } from "@/components/ui/button";
 import type { BoutDetail } from "@/lib/queries";
@@ -53,6 +54,7 @@ export function WatchExperience({
   unavailableReason,
   directSource = false,
   blocked,
+  externalBroadcast,
 }: {
   eventSlug: string;
   initialBouts: BoutDetail[];
@@ -72,6 +74,15 @@ export function WatchExperience({
    * one to an existing subscriber is how you generate a refund request.
    */
   blocked?: "sign_in_required" | "subscription_required";
+  /**
+   * Set when the broadcast belongs to someone else.
+   *
+   * Replaces the player with a link out, and keeps everything else — the
+   * polling, the fight card, the live results. That combination is the point:
+   * the viewer watches on YouTube in one tab and reads our card in the other,
+   * which is the only role available to us until there are rights to buy.
+   */
+  externalBroadcast?: { url: string; name: string | null };
 }) {
   const [eventStatus, setEventStatus] = useState<EventStatus>(initialEventStatus);
   const [playback, setPlayback] = useState<string | null>(playbackUrl);
@@ -90,6 +101,11 @@ export function WatchExperience({
 
   const isLive = eventStatus === "live";
   const isFinished = eventStatus === "completed" || eventStatus === "cancelled";
+  // A boolean, not the object itself, because this feeds an effect's
+  // dependency array. An object prop gets a fresh identity whenever the server
+  // component above re-renders, which would tear down and restart the poll
+  // loop for no reason; a boolean only changes when the answer changes.
+  const isExternal = Boolean(externalBroadcast);
 
   const fetchPlayback = useCallback(async () => {
     try {
@@ -136,8 +152,13 @@ export function WatchExperience({
         // the whole card is left staring at a frozen final frame.
         if (state.eventStatus !== lastStatusRef.current) {
           lastStatusRef.current = state.eventStatus;
-          const url = await fetchPlayback();
-          if (!cancelled && url) setPlayback(url);
+          // Not for an external broadcast: there is no playback URL of ours to
+          // fetch, and asking anyway would spend a request per state change to
+          // be told so.
+          if (!isExternal) {
+            const url = await fetchPlayback();
+            if (!cancelled && url) setPlayback(url);
+          }
         }
       } catch {
         // A failed poll is not worth surfacing — the next one is seconds away
@@ -155,7 +176,7 @@ export function WatchExperience({
       controller.abort();
       clearInterval(id);
     };
-  }, [eventSlug, isLive, isFinished, blocked, fetchPlayback]);
+  }, [eventSlug, isLive, isFinished, blocked, fetchPlayback, isExternal]);
 
   // Merge polled state over the server-rendered bouts. A bout's identity,
   // robots, and teams never change mid-event; only status and result do.
@@ -175,7 +196,17 @@ export function WatchExperience({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div>
-        {playback ? (
+        {externalBroadcast ? (
+          // Before the playback branch, not after. An external event can still
+          // have a stale `streams` row from an earlier plan to carry it
+          // ourselves, and reaching the player first would put a dead or —
+          // worse — unlicensed video where the link out belongs.
+          <ExternalBroadcast
+            url={externalBroadcast.url}
+            broadcasterName={externalBroadcast.name}
+            status={eventStatus}
+          />
+        ) : playback ? (
           <RoboxingPlayer
             src={playback}
             poster={posterUrl}

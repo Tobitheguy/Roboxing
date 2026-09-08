@@ -64,7 +64,19 @@ export function rateLimit(
  * the one the platform observed.
  */
 export function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+  return clientIpFromHeaders(request.headers);
+}
+
+/**
+ * The same lookup, from a bare Headers object.
+ *
+ * Server Actions never see a Request — they get the incoming headers through
+ * `headers()` from next/headers instead. Without this they would have to
+ * re-implement the x-forwarded-for parsing, and the copy that gets the
+ * "take the FIRST entry" detail wrong is the one an attacker can spoof.
+ */
+export function clientIpFromHeaders(headers: Headers): string {
+  const forwarded = headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return headers.get("x-real-ip") ?? "unknown";
 }

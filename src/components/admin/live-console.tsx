@@ -15,6 +15,7 @@ import {
   setEventStatus,
 } from "@/app/(app)/admin/actions";
 import type { BoutDetail } from "@/lib/queries";
+import type { StreamSignal } from "@/lib/stream-status";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,6 +36,24 @@ type StreamCredentials = {
   streamKey: string;
   liveInputId: string;
   reused: boolean;
+};
+
+/**
+ * Four answers, not two.
+ *
+ * "Reconnecting" is separated out because it is the ordinary behaviour of any
+ * domestic uplink, and the first version of this light collapsed it into "no
+ * signal" — announcing an outage through a broadcast that was working.
+ *
+ * "Status unavailable" covers both "we could not reach Cloudflare" and "we did
+ * not understand its answer". Neither is a statement about the encoder, and
+ * neither should be dressed up as one.
+ */
+const SIGNAL_LABELS: Record<StreamSignal, string> = {
+  receiving: "Cloudflare is receiving",
+  reconnecting: "Encoder reconnecting",
+  "not-receiving": "No signal yet",
+  unknown: "Status unavailable",
 };
 
 export function LiveConsole({
@@ -202,15 +221,19 @@ function StreamPanel({
   const [confirmingRotate, setConfirmingRotate] = useState(false);
 
   /**
-   * Whether Cloudflare is receiving a signal right now.
+   * What Cloudflare is hearing on this input right now.
    *
-   * `null` means "could not ask" and is shown differently from "not
-   * receiving" — telling someone their encoder is down when the status call
-   * merely failed would send them to debug the one thing that was working.
+   * `unknown` means "could not ask, or could not understand the answer" and is
+   * shown differently from "not receiving" — telling someone their encoder is
+   * down when the status call merely failed would send them to debug the one
+   * thing that was working.
+   *
+   * `undefined` is the separate case of not having asked yet, which shows
+   * nothing at all rather than a light that guesses during the first second.
    */
-  const [receiving, setReceiving] = useState<boolean | null | undefined>(
-    undefined,
-  );
+  const [signal, setSignal] = useState<StreamSignal | undefined>(undefined);
+  /** Cloudflare's own word for the state, shown so a wrong light is readable. */
+  const [cfState, setCfState] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,7 +246,10 @@ function StreamPanel({
         );
         if (!response.ok) return;
         const body = await response.json();
-        if (!cancelled) setReceiving(body.receiving);
+        if (!cancelled) {
+          setSignal(body.signal as StreamSignal);
+          setCfState(body.state ?? null);
+        }
       } catch {
         // A failed poll is not news. The previous answer stays on screen.
       }
@@ -289,28 +315,35 @@ function StreamPanel({
           // The one thing the console could not say before: is Cloudflare
           // actually hearing the encoder. Without it a black player is two
           // different failures wearing the same face.
-          receiving === undefined ? null : (
+          signal === undefined ? null : (
             <span className="flex items-center gap-2 text-xs">
               <span
                 aria-hidden
                 className={cn(
                   "size-2 rounded-full",
-                  receiving === true && "bg-live animate-pulse",
-                  receiving === false && "bg-ink-dim",
-                  receiving === null && "bg-drift",
+                  signal === "receiving" && "bg-live animate-pulse",
+                  signal === "reconnecting" && "bg-drift animate-pulse",
+                  signal === "not-receiving" && "bg-ink-dim",
+                  signal === "unknown" && "bg-drift",
                 )}
               />
               <span
                 className={cn(
-                  receiving === true ? "text-live" : "text-ink-muted",
+                  signal === "receiving" ? "text-live" : "text-ink-muted",
                 )}
               >
-                {receiving === true
-                  ? "Cloudflare is receiving"
-                  : receiving === false
-                    ? "No signal yet"
-                    : "Status unavailable"}
+                {SIGNAL_LABELS[signal]}
               </span>
+              {/*
+                Cloudflare's raw state. Small and muted because it is for
+                whoever is debugging, not for whoever is broadcasting — but it
+                is on screen, which the first version of this light was not.
+                That version said "no signal" through a working broadcast and
+                offered nothing to check it against.
+              */}
+              {cfState ? (
+                <code className="text-ink-dim text-[10px]">{cfState}</code>
+              ) : null}
             </span>
           )
         }

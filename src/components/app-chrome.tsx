@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 
 import { DemoBanner } from "@/components/demo-banner";
+import { EventStrip } from "@/components/event-strip";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
@@ -24,6 +25,12 @@ export function AppChrome({ children }: { children: ReactNode }) {
         <DemoBanner />
       </Suspense>
       <SiteHeader />
+      {/* Below the header, above everything else — the F1 position. Suspense
+          for the same reason as the banner: its database round trip must not
+          hold up the shell painting. */}
+      <Suspense fallback={null}>
+        <EventStrip />
+      </Suspense>
       <main className="flex-1">{children}</main>
       <SiteFooter />
     </>

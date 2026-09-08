@@ -1,5 +1,6 @@
 "use client";
 
+import { RoboxingMark } from "@/components/roboxing-mark";
 import { cn } from "@/lib/utils";
 
 /**
@@ -61,7 +62,7 @@ export function AnimatedMark({ className }: { className?: string }) {
           // noise.
           aria-hidden
         >
-          Robo<span className="text-volt roboxing-pulse">x</span>ing
+          <RoboxingMark size="lg" className="text-[inherit]" />
         </span>
 
         {/* The sweep. Sits above the letters, masked to the mark's box. */}

@@ -1,9 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" rx="14" fill="#0B0B0F" />
-  <path
-    d="M18 18 L46 46 M46 18 L18 46"
-    stroke="#C8FF00"
-    stroke-width="11"
-    stroke-linecap="square"
-  />
+  <!--
+    The favicon: the SAME split R the header wears.
+
+    The letterform is Oswald 700's own "R", extracted as a path from the very
+    TTF the site serves (src/app/_fonts/oswald-700.ttf, via opentype.js) —
+    because the brand rule is ONE typeface, and that has to include the
+    browser tab. The cut is the header's cut restated in geometry: a thin bar
+    at 10 degrees through the letter's waist, in the tile's own black, rising
+    to the right.
+
+    Tobias's original files in /Logos were the inspiration for the split; the
+    letter they contained was a different face, which is why this is generated
+    rather than copied.
+  -->
+  <rect width="64" height="64" rx="14" fill="#14161A" />
+  <path fill="#FFFFFF" d="M28.03 54L18.31 54L18.31 10L30.42 10Q34.88 10 38.14 10.98Q41.40 11.96 43.22 14.48Q45.04 17.01 45.04 21.62Q45.04 24.34 44.60 26.46Q44.17 28.58 43 30.13Q41.83 31.67 39.66 32.71L45.69 54L35.64 54L30.80 34.28L28.03 34.28L28.03 54M28.03 16.52L28.03 28.69L30.75 28.69Q32.81 28.69 33.96 27.95Q35.10 27.22 35.56 25.83Q36.02 24.45 36.02 22.49Q36.02 19.67 34.99 18.09Q33.96 16.52 31.19 16.52" />
+  <!-- The cut: centered slightly below the waist (matching the wordmark's
+       ~48% position), 10 degrees, tile-coloured. -->
+  <rect x="-6" y="31.2" width="76" height="4.4" fill="#14161A" transform="rotate(-10 32 33.4)" />
 </svg>

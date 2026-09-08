@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getViewer } from "@/lib/auth";
+import { requireVerifiedViewer } from "@/lib/auth";
 
 /**
  * Admin shell and the allowlist gate.
@@ -11,10 +11,19 @@ import { getViewer } from "@/lib/auth";
  * signed-in person is actually on ADMIN_EMAILS. Putting it in the layout means
  * a new admin page is protected the moment it exists, rather than the moment
  * someone remembers to add a guard to it.
+ *
+ * `requireVerifiedViewer()` rather than `getViewer()`, so the second-factor
+ * requirement survives the site going public. It used to arrive here inherited
+ * from the site-wide gate in `(app)/layout.tsx`; that gate is gone, and without
+ * this line administrators would be the only signed-in people on the site held
+ * to a WEAKER standard than viewers — which is backwards, since they are the
+ * ones who change results and hold the broadcast credential.
  */
 
 const ADMIN_NAV = [
   { href: "/admin", label: "Events" },
+  { href: "/admin/signals", label: "Signals" },
+  { href: "/admin/posts", label: "Posts" },
   { href: "/admin/competitions", label: "Competitions" },
   { href: "/admin/teams", label: "Teams" },
   { href: "/admin/robots", label: "Robots" },
@@ -26,11 +35,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const viewer = await getViewer();
+  const viewer = await requireVerifiedViewer("/admin");
 
   // A signed-in stranger gets sent to the public site, not to a "forbidden"
   // page — there is no reason to confirm to them that an admin area exists.
-  if (!viewer?.isAdmin) redirect("/");
+  if (!viewer.isAdmin) redirect("/");
 
   return (
     <div>

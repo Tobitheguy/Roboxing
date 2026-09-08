@@ -47,7 +47,7 @@ export async function Landing() {
         className="pointer-events-none absolute inset-0 opacity-[0.55]"
         style={{
           backgroundImage:
-            "linear-gradient(to right, #26262f 1px, transparent 1px), linear-gradient(to bottom, #26262f 1px, transparent 1px)",
+            "linear-gradient(to right, #e2e2dc 1px, transparent 1px), linear-gradient(to bottom, #e2e2dc 1px, transparent 1px)",
           backgroundSize: "72px 72px",
           maskImage:
             "radial-gradient(ellipse 90% 60% at 50% 0%, #000 30%, transparent 80%)",
@@ -60,7 +60,7 @@ export async function Landing() {
         className="pointer-events-none absolute inset-x-0 -top-40 h-96 opacity-[0.18] blur-3xl"
         style={{
           background:
-            "radial-gradient(ellipse 60% 100% at 50% 100%, #c8ff00 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 100% at 50% 100%, #14161a 0%, transparent 70%)",
         }}
       />
 
@@ -105,7 +105,7 @@ export async function Landing() {
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href="/plans"
-              className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt inline-flex h-12 w-full max-w-xs items-center justify-center rounded-md px-8 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none sm:w-auto"
+              className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt inline-flex h-12 w-full max-w-xs items-center justify-center rounded-md px-8 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none sm:w-auto"
             >
               Start watching
             </Link>
@@ -232,7 +232,7 @@ export async function Landing() {
           </p>
           <Link
             href="/plans"
-            className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt mt-8 inline-flex h-12 items-center justify-center rounded-md px-10 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none"
+            className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt mt-8 inline-flex h-12 items-center justify-center rounded-md px-10 text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
           >
             Create an account
           </Link>

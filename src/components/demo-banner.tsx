@@ -1,10 +1,6 @@
 import { connection } from "next/server";
-import { eq } from "drizzle-orm";
 
-import { db } from "@/db";
-import { DEMO_COMPETITION_SLUG } from "@/db/constants";
-import { competitions } from "@/db/schema";
-import { rethrowControlFlow } from "@/lib/next-errors";
+import { isDemoData } from "@/lib/demo-data";
 
 /**
  * Site-wide notice that the data on screen is invented.
@@ -25,28 +21,17 @@ export async function DemoBanner() {
   // long as that deployment is served after real data replaces it.
   await connection();
 
-  let isDemo = false;
-  try {
-    const rows = await db
-      .select({ id: competitions.id })
-      .from(competitions)
-      .where(eq(competitions.slug, DEMO_COMPETITION_SLUG))
-      .limit(1);
-    isDemo = rows.length > 0;
-  } catch (error) {
-    // Suspense does NOT catch thrown errors — it only catches components that
-    // suspend. Without this try/catch a transient Neon failure here would
-    // propagate out of the root layout and take down every page on the site,
-    // not just this banner. Degrade to hiding the notice instead.
-    //
-    // Next's own signals (redirect, notFound, dynamic-usage) are rethrown —
-    // catching those would silently break the thing they are signalling.
-    rethrowControlFlow(error);
-    console.error("[DemoBanner] could not determine demo state:", error);
-    return null;
-  }
-
-  if (!isDemo) return null;
+  // The query, its try/catch and its fail-closed behaviour all live in
+  // `isDemoData()` now, because robots.txt has to reach the same verdict and
+  // two implementations of "is this data real yet" would eventually disagree
+  // — with the banner saying one thing on the page and the crawler being told
+  // another.
+  //
+  // Note that it fails CLOSED: a database error shows the notice rather than
+  // hiding it. Wrongly warning that real data is fake is embarrassing;
+  // silently dropping the warning from a page of invented results is not
+  // recoverable.
+  if (!(await isDemoData())) return null;
 
   return (
     <div className="border-drift/30 bg-drift/10 border-b">

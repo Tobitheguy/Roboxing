@@ -1,28 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Oswald } from "next/font/google";
+import { Oswald } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
 
 import { roboxingLocalization } from "@/components/auth/localization";
 
 import "./globals.css";
 
 /**
- * Display face. Condensed and heavy — it carries robot names, scores, and the
- * countdown, which are the things a visitor should read first from across a room.
+ * The site's ONE typeface, per Tobias's instruction of 2026-09-08: "generell
+ * braucht die gesamte seite die gleiche font type". Oswald carries display
+ * AND body — Inter was removed rather than left loaded-but-unused, so the
+ * decision is enforced by the bundle, not by discipline. Geist Mono stays for
+ * stream keys and timecodes only: those are technical strings where digit
+ * alignment is function, not typography.
  */
 const oswald = Oswald({
   variable: "--font-oswald",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-/** UI face for everything that is prose rather than a scoreline. */
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
   display: "swap",
 });
 
@@ -35,16 +31,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Roboxing — Live Robot Fighting",
+    // "The record of", not "live" — the site holds no broadcast rights, and
+    // the default title is quoted verbatim in search results. It should make
+    // the claim the site can keep.
+    default: "Roboxing — Humanoid Robot Fighting",
     template: "%s · Roboxing",
   },
   description:
-    "Live humanoid robot combat: streams, league standings, team rosters, and full fight history.",
+    "The record of humanoid robot fighting: every league, every event, full fight cards, results and standings — URKL, CyberHero, the World Humanoid Robot Games and more.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B0F",
-  colorScheme: "dark",
+  // Matches --color-canvas. This is the colour a mobile browser paints its
+  // chrome and its overscroll with, so a stale value here shows up as a dark
+  // band above a light page on every phone.
+  themeColor: "#F6F6F3",
+  colorScheme: "light",
 };
 
 /**
@@ -79,23 +81,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // the largest text on the sign-in screen. See localization.ts — this is
       // a patch over a dashboard setting, not the fix.
       localization={roboxingLocalization}
+      // Clerk's own UI, themed to the light palette. The `dark` theme import
+      // is gone: leaving it on would render a near-black sign-in card in the
+      // middle of a white page, which reads as a third-party interruption
+      // rather than part of the site.
       appearance={{
-        theme: dark,
         variables: {
-          colorPrimary: "#C8FF00",
-          colorBackground: "#15151C",
-          colorDanger: "#FF4D4F",
+          colorPrimary: "#14161A",
+          colorBackground: "#FFFFFF",
+          // No `colorText` — Core 3 dropped it from Variables. Clerk derives
+          // its foreground from colorBackground, which is white here, so the
+          // text comes out dark on its own.
+          colorDanger: "#C4162B",
           borderRadius: "0.5rem",
         },
       }}
     >
-      {/* `dark` is set permanently, not toggled: the product is video-first and
-          a light chrome competes with the player. Both themes resolve to the
-          same tokens in globals.css — the class exists so shadcn's `dark:`
-          variants land on the right side of their conditionals. */}
       <html
         lang="en"
-        className={`dark ${oswald.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+        // No `dark` class any more. It used to be set unconditionally so
+        // shadcn's `dark:` variants resolved against a permanently dark
+        // palette; the palette is light now, and leaving it on would apply
+        // dark-mode overrides on top of light tokens — which is how you get a
+        // white page with dark-grey form controls on it.
+        className={`${oswald.variable} ${geistMono.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col">{children}</body>
       </html>

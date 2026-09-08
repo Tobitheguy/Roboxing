@@ -42,7 +42,10 @@ export default async function SignInPage({
       subtitle={
         interval
           ? "Sign in and we will take you straight to payment."
-          : "Welcome back."
+          : // Names the reason. Nothing on this site is gated any more, so an
+            // account is a choice rather than a toll — and "Welcome back"
+            // answered a question nobody arriving here is asking.
+            "Sign in to make picks and keep your record."
       }
     >
       {interval ? (

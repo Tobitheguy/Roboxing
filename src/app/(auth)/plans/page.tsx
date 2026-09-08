@@ -195,7 +195,7 @@ export default async function PlansPage({
       {configured && sellable ? (
         <Link
           href={destination}
-          className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt mt-6 flex h-12 w-full items-center justify-center rounded-md text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0f] focus-visible:outline-none"
+          className="bg-volt text-volt-ink hover:bg-volt-dim focus-visible:ring-volt mt-6 flex h-12 w-full items-center justify-center rounded-md text-sm font-semibold tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none"
         >
           {active ? "Manage your subscription" : "Start free trial"}
         </Link>

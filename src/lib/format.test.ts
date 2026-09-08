@@ -1,5 +1,64 @@
 import { describe, expect, it } from "vitest";
 
+import { formatDaysUntil } from "./format";
+
+describe("formatDaysUntil", () => {
+  const now = new Date("2026-09-07T12:00:00Z");
+
+  it("names today and tomorrow rather than counting them", () => {
+    expect(formatDaysUntil(new Date("2026-09-07T23:00:00Z"), now)).toBe("Today");
+    expect(formatDaysUntil(new Date("2026-09-08T01:00:00Z"), now)).toBe(
+      "Tomorrow",
+    );
+  });
+
+  it("counts days inside a fortnight", () => {
+    expect(formatDaysUntil(new Date("2026-09-09T18:00:00Z"), now)).toBe(
+      "in 2 days",
+    );
+    expect(formatDaysUntil(new Date("2026-09-19T12:00:00Z"), now)).toBe(
+      "in 12 days",
+    );
+  });
+
+  it("switches to weeks and then months, because an exact day count that far out is false precision", () => {
+    expect(formatDaysUntil(new Date("2026-10-05T12:00:00Z"), now)).toBe(
+      "in 4 weeks",
+    );
+    expect(formatDaysUntil(new Date("2026-12-20T12:00:00Z"), now)).toBe(
+      "in 3 months",
+    );
+  });
+
+  it("stays in weeks up to the eight-week mark", () => {
+    // The boundary matters: the months branch is only reachable from 9 weeks
+    // out, which is why the month count is never 1 and never singular.
+    expect(formatDaysUntil(new Date("2026-10-09T12:00:00Z"), now)).toBe(
+      "in 5 weeks",
+    );
+    expect(formatDaysUntil(new Date("2026-11-01T12:00:00Z"), now)).toBe(
+      "in 8 weeks",
+    );
+    expect(formatDaysUntil(new Date("2026-11-09T12:00:00Z"), now)).toBe(
+      "in 2 months",
+    );
+  });
+
+  it("is null for anything already past", () => {
+    expect(formatDaysUntil(new Date("2026-09-06T12:00:00Z"), now)).toBeNull();
+    expect(formatDaysUntil(new Date("2025-01-01T00:00:00Z"), now)).toBeNull();
+  });
+
+  it("compares calendar days, not elapsed hours", () => {
+    // 23:00 today and 01:00 tomorrow are two hours apart and must not both
+    // read as "Today" — the label is about which day, not how long.
+    const late = new Date("2026-09-07T23:59:00Z");
+    const justAfter = new Date("2026-09-08T00:01:00Z");
+    expect(formatDaysUntil(late, now)).toBe("Today");
+    expect(formatDaysUntil(justAfter, now)).toBe("Tomorrow");
+  });
+});
+
 import {
   dayOffset,
   formatClock,

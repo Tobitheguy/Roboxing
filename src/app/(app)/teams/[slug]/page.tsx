@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bot, CalendarClock, Trophy } from "lucide-react";
 
+import { BackLink } from "@/components/back-link";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
@@ -53,6 +54,7 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
 
   return (
     <PageShell>
+      <BackLink href="/teams" label="All teams" />
       <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
         <TeamCrest name={team.name} logoUrl={team.logoUrl} size="xl" decorative />
         <div className="min-w-0 flex-1">
@@ -70,17 +72,28 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
         </div>
       </div>
 
-      <StatRow className="mb-8">
-        <StatTile
-          label="Record"
-          value={formatRecord(record)}
-          sub={record.ko > 0 ? `${record.ko} by KO` : undefined}
-          emphasis
-        />
-        <StatTile label="Robots" value={robots.length} />
-        <StatTile label="Bouts fought" value={record.fought} />
-        <StatTile label="Upcoming" value={upcoming.length} />
-      </StatRow>
+      {/* Only once there is anything to count. A row reading 0-0 / 0 / 0 is
+          not information, it is the site advertising its own thinnest spot —
+          and for most organisations here the zeros are permanent until the
+          leagues publish full cards. */}
+      {record.fought > 0 || upcoming.length > 0 ? (
+        <StatRow className="mb-8">
+          <StatTile
+            label="Record"
+            value={formatRecord(record)}
+            sub={record.ko > 0 ? `${record.ko} by KO` : undefined}
+            emphasis
+          />
+          <StatTile label="Machines" value={robots.length} />
+          <StatTile label="Bouts fought" value={record.fought} />
+          <StatTile label="Upcoming" value={upcoming.length} />
+        </StatRow>
+      ) : (
+        <p className="text-ink-dim mb-8 text-sm">
+          No verified bouts on record yet — the leagues have not published
+          complete fight cards. Records appear here the day they do.
+        </p>
+      )}
 
       <Card>
         <CardHeader title="Roster" />
@@ -141,7 +154,7 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
           <CardHeader title="Upcoming bouts" />
           <CardBodyFlush>
             {upcoming.length > 0 ? (
-              <BoutList bouts={upcoming} showEvent />
+              <BoutList bouts={upcoming} showEvent showLeague />
             ) : (
               <EmptyState
                 icon={<CalendarClock />}
@@ -156,7 +169,7 @@ export default async function TeamPage(props: PageProps<"/teams/[slug]">) {
           <CardHeader title="Recent results" />
           <CardBodyFlush>
             {resolved.length > 0 ? (
-              <BoutList bouts={resolved.slice(0, 8)} showEvent />
+              <BoutList bouts={resolved.slice(0, 8)} showEvent showLeague />
             ) : (
               <EmptyState
                 icon={<Trophy />}

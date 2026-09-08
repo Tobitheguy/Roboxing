@@ -35,6 +35,12 @@ const PUBLIC_ROUTES = [
   "/schedule",
   "/results",
   "/watch",
+  "/events",
+  "/news",
+  // The sitemap prerenders at build time, so without this a new event stays
+  // invisible to crawlers until the next deploy — which on a site whose
+  // events are announced days ahead is most of the window that mattered.
+  "/sitemap.xml",
 ];
 
 export function revalidatePublic(extra: string[] = []) {
@@ -45,7 +51,13 @@ export function revalidatePublic(extra: string[] = []) {
   revalidatePath("/competitions/[slug]", "page");
   revalidatePath("/teams/[slug]", "page");
   revalidatePath("/robots/[slug]", "page");
+  // `/watch/[slug]` is now a permanent redirect with nothing cached worth
+  // refreshing, but it stays in the list: it costs one no-op call, and
+  // dropping it would silently stop refreshing anything that route grows back
+  // into later.
   revalidatePath("/watch/[slug]", "page");
+  revalidatePath("/events/[slug]", "page");
+  revalidatePath("/news/[slug]", "page");
 }
 
 type AuditEntry = {
