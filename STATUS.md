@@ -21,10 +21,10 @@
 >
 > Still open, in order:
 >
-> 1. **Confirm RESEND_API_KEY is in the Vercel production env**, not only in
->    `.env.local`. A missing key there fails at send time, not at deploy time,
->    and the failure is silent to the person signing up. Prove it by
->    subscribing on the live site and watching for the mail.
+> 1. **Prove the signup works end to end** — subscribe on the live site with a
+>    real address and watch for the confirmation mail. Never verified: the
+>    crash fix and RESEND_API_KEY both landed, but no successful production
+>    signup has been observed. `vercel logs <deployment>` shows what happened.
 > 2. Create the social accounts — still the only thing that puts a human on the
 >    site, and the reason there are zero subscribers.
 > 3. Triage the 240 scored signals; none has been kept or dismissed yet.
@@ -405,6 +405,44 @@
 >   - **`METHOD_LABELS` moved from `components/badge.tsx` to `lib/format.ts`**
 >     now that an email renders the same strings. Two copies would drift into
 >     "KO" on the site and "Ko" in the mail.
+>
+> - **2026-09-08, the signup form broke in production, and the cause is worth
+>   knowing.** A `"use server"` file may export **async functions and nothing
+>   else**. `app/newsletter-actions.ts` had always exported
+>   `initialSubscribeState`, an object. That is illegal and it sat there for
+>   months doing nothing, because the rule only fires once the module lands in
+>   a bundle that enforces it — adding one unrelated import (the confirmation
+>   mail) was enough to trip it:
+>
+>   ```
+>   Error: A "use server" file can only export async functions, found object.
+>   ```
+>
+>   **`next build` does not catch this.** Build, lint, tsc and 353 tests were
+>   all green; the first symptom was the site's error page on a form that had
+>   worked for weeks. Confirmed by matching digests: production reported
+>   `2246611989@E352`, and the same build run locally reported
+>   `3314924314@E352` — same `@E352`.
+>
+>   Both state objects now live in import-free modules (`lib/subscribe-state.ts`,
+>   `lib/pick-state.ts`), which is also what keeps them out of the browser
+>   bundle when a client component reads them.
+>   **`app/prediction-actions.ts` had the identical bug with `initialPickState`
+>   and simply had not been triggered yet** — moved pre-emptively. If you add a
+>   `"use server"` file, export only async functions from it; there is no
+>   compile-time guard.
+>
+> - **2026-09-08: the Vercel CLI is installed and already authenticated**
+>   (`tobitheguy`, project linked via `.vercel/project.json`). This is a
+>   genuine unlock — `vercel env ls`, `vercel ls`, `vercel logs` and
+>   `vercel inspect` all work with no further setup, and the newsletter bug
+>   above was diagnosed blind for an hour because none of that was available.
+>   Reach for it before reproducing anything locally.
+>
+>   It immediately found the second, independent failure: `RESEND_API_KEY` was
+>   in `.env.local` but NOT in Vercel. Added 2026-09-08. **Note that Vercel
+>   bakes environment variables in at build time** — setting one changes
+>   nothing until a redeploy, which is its own quiet trap.
 >
 > - **Resend (newsletter) is provisioned** via the marketplace with
 >   `domain=roboxing.tv` — final browser step may still be pending, and DNS
