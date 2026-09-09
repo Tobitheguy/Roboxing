@@ -41,11 +41,19 @@ export async function generateMetadata(
       description: post.summary ?? undefined,
       publishedTime: post.publishedAt?.toISOString(),
       url: `${getAppUrl()}/news/${post.slug}`,
-      // A set cover wins; otherwise the video's own poster frame, so a shared
-      // clip post unfurls with the footage rather than the generic site card.
-      images: (() => {
+      /*
+       * A set cover wins; otherwise the video's own poster frame, so a shared
+       * clip post unfurls with the footage rather than the generic site card.
+       *
+       * Spread in, never written as `images: undefined`. Setting the key at
+       * all — even to undefined — counts as explicit metadata and beats both
+       * the `opengraph-image` file convention and the site-wide fallback, so
+       * a post with no cover and no embed ended up with NO og:image whatever.
+       * Absent means "fall back"; present-and-undefined means "nothing".
+       */
+      ...(() => {
         const image = post.coverImageUrl ?? youtubeThumbnailUrl(post.embedUrl);
-        return image ? [{ url: image }] : undefined;
+        return image ? { images: [{ url: image }] } : {};
       })(),
     },
   };

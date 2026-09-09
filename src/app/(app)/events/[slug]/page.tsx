@@ -69,7 +69,18 @@ export async function generateMetadata(
       type: "website",
       title: `${event.name} — ${competitionName}`,
       url: `${getAppUrl()}/events/${event.slug}`,
-      images: event.posterUrl ? [{ url: event.posterUrl }] : undefined,
+      /*
+       * `images` is spread in only when there IS a poster, and the difference
+       * matters: writing `images: undefined` still counts as setting the key,
+       * and an explicitly-set key beats the `opengraph-image.tsx` file
+       * convention. The result was an event page with no og:image at all —
+       * not the generated card, and not even the site-wide fallback.
+       *
+       * Present and absent, not present-and-undefined. When a promoter's own
+       * artwork exists it should win; otherwise the generated result card
+       * fills in.
+       */
+      ...(event.posterUrl ? { images: [{ url: event.posterUrl }] } : {}),
     },
   };
 }
