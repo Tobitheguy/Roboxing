@@ -406,6 +406,31 @@
 >     now that an email renders the same strings. Two copies would drift into
 >     "KO" on the site and "Ko" in the mail.
 >
+> - **2026-09-08: results and stories have their own share cards.**
+>   `events/[slug]/opengraph-image.tsx` and `news/[slug]/opengraph-image.tsx`,
+>   built like the root card — rectangles and text only, Oswald read off disk
+>   rather than fetched, dark because the card competes inside somebody else's
+>   feed. A result now unfurls as MATADOR def. WHITE EAGLE with method, date
+>   and city; a story leads with its headline.
+>
+>   The event card takes the **LAST** decided bout, not the first. A fight card
+>   is built to finish on its biggest fight, so bout one is the opener.
+>
+>   **The bug found while building it was worse than the missing cards.** The
+>   event page had NO `og:image` at all, and neither did any post without a
+>   cover or an embed — four of seven. Both wrote `images: undefined` in
+>   `generateMetadata`, and **setting the key counts as explicit metadata**,
+>   which beats both the `opengraph-image` file convention and the inherited
+>   site-wide card. Absent means "fall back"; present-and-undefined means
+>   "nothing". Spread `images` in only when there is a real image.
+>
+>   Two rendering faults that only a rendered PNG catches, neither visible to
+>   tsc, lint or the build: "time TBA" printed under a fight whose result was
+>   directly above it (only show it for `scheduled` events), and a separator
+>   that landed as a speck off the baseline as a positioned box, then glued
+>   itself to the next word when `gap` was used instead. Explicit margins on a
+>   text middot is the version that renders. **Look at the image.**
+>
 > - **2026-09-08, the signup form broke in production, and the cause is worth
 >   knowing.** A `"use server"` file may export **async functions and nothing
 >   else**. `app/newsletter-actions.ts` had always exported
