@@ -127,6 +127,36 @@ const POSTS = [
       "One more thing worth saying plainly: this story broke across Chinese tech media a day before English outlets caught up, and our morning sweep of Chinese-language sources flagged it at dawn. That pipeline exists because the last time a story lived only in Chinese, it took this site to put the result on the record in English. It will not be the last time.",
     ],
   },
+  {
+    /*
+     * Brought into this file on 2026-09-09. It had been created through the
+     * admin and lived ONLY in the database — no source-controlled origin, so
+     * no diff, no review, and no way to correct it except by hand. STATUS
+     * claimed it was already here; it was not.
+     *
+     * The correction that prompted the move: the body said the fight was
+     * "tomorrow night", written the day before. By the morning of the event
+     * that sentence was simply false on a live page. Relative time does not
+     * belong in a post body — the reader's today is not the writer's.
+     */
+    slug: "cyberhero-riyadh-preview",
+    kind: "article",
+    title: "CyberHero x Riyadh: the Middle East gets its first robot fight night",
+    summary:
+      "Ten EngineAI T800s, two squads of three, best-of-seven, and no live stream. What to expect from Hero Esports' debut on 9 September.",
+    embedUrl: null,
+    eventSlug: "cyberhero-riyadh-2026",
+    body: [
+      "Ten EngineAI T800 humanoids fight in Riyadh on the evening of 9 September, and it is the first time this sport has been staged in the Middle East.",
+      "The T800 is the same machine URKL standardised on in China: about 1.73 metres and 75 to 85 kilos, roughly the size of an adult man, with 29 articulated joints. It walks, runs, punches, kicks, turns, and — the part audiences actually come for — gets back up after going down.",
+      "The format is published, and it is closer to a fighting game than to a fight card. Two squads of three robots meet in a best-of-seven series of one-on-one rounds. Each robot carries 30 hit points; a round ends when three minutes elapse or a robot is knocked out at zero. A knocked-out machine is replaced rather than ending the tie, and the squad with more robots still standing takes it. That substitution rule is the likeliest reason ten T800s are in the building for six starting places.",
+      "The pilots are the tell. URKL fields engineers and university teams and scores its bouts on balance, power delivery and structural durability. CyberHero has the robots driven by two professional Street Fighter players. Same hardware, completely different sport: one is a robotics benchmark, the other is esports with a physical avatar.",
+      "That fits what Hero Esports is: Asia's largest esports company, staging this as a two-hour show with music and lighting and a set from the producer Tokyo Machine, rather than as a technical competition.",
+      "One thing to know before you look for it: there is no stream. The organizer's own FAQ says the event will not be broadcast live — it is being professionally recorded, with highlights released afterwards on CyberHero's channels. If you are not in the room, you are waiting for the edit.",
+      "Doors at 8:30 PM, first fight at 9:00 PM, at MBC Studio 1 in Boulevard City.",
+      "Neither squad has been named and neither pilot has been identified, so this site lists no card for the event. Nothing goes on the record here until there is a source for it.",
+    ],
+  },
 ] as const;
 
 const LOGOS: Array<{ table: "competitions" | "teams"; slug: string; url: string }> = [

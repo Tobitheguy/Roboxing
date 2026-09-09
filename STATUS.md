@@ -231,10 +231,19 @@
 >   fixture data somebody else owns breaks for reasons unrelated to the code it
 >   covers.
 >
-> - **2026-09-08: the site is filled with launch content.** Six published
+> - **2026-09-08: the site is filled with launch content.** Seven published
 >   pieces (`scripts/seed-content.ts`, idempotent — edit a body there and
 >   re-run): the five-leagues cornerstone, URKL explained, Iron Fist King
->   retrospective, REK feature, WHRG recap, CyberHero preview. Three carry
+>   retrospective, REK feature, WHRG recap, the Unitree autonomy story, and
+>   the CyberHero preview.
+>
+>   **Corrected 2026-09-09:** this entry said the CyberHero preview was in that
+>   script. It was not — it had been written through the admin and existed only
+>   as a database row, with no diff, no review and no way to correct it except
+>   by hand. It is in the script now. Anything published straight from the
+>   admin is invisible to the repository; put it here.
+>
+>   Three carry
 >   YouTube embeds, and every video id was verified against YouTube's oEmbed
 >   endpoint (200 + title) before being written down — never guess an embed id.
 >   New facts folded in from a second research pass: REK's pilots included UFC
