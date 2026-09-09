@@ -159,6 +159,24 @@ const POSTS = [
       "Neither squad has been named and neither pilot has been identified, so this site lists no card for the event. Nothing goes on the record here until there is a source for it.",
     ],
   },
+  {
+    slug: "cyberhero-is-a-league",
+    kind: "article",
+    title: "CyberHero isn't an event. It's a league, and it wants eight cities",
+    summary:
+      "Hero Esports used the Riyadh debut to announce a season across four regions. What it did not announce — hours later, still — is who won.",
+    embedUrl: null,
+    eventSlug: "cyberhero-riyadh-2026",
+    body: [
+      "The Riyadh show was billed as a one-night debut. Hero Esports used it to launch a league.",
+      "In a release issued after the event, the company announced an inaugural CyberHero season of eight stops across four regions — the Middle East, Europe, the Americas and Asia — with two of the eight in the Middle East. No cities have been named and no dates have been given, so nothing from that announcement appears on our schedule. An intention to visit eight cities is not eight fixtures.",
+      "The people it did name say more about the property than the robots do. The two squads were managed by MENA creator AboFlah and Saudi sports creator Bashar Arabi — not engineers, not roboticists, but two of the region's largest digital audiences pointed at each other. Hero Esports describes its team model as builders, coders and drivers, which is a fighting-game roster with hardware attached.",
+      "Set that beside URKL, which fields university teams from Tsinghua and Stanford and scores bouts on balance and structural durability, and the split in this sport stops being a matter of degree. One league is a robotics benchmark that happens to be watchable. The other is a spectator format that happens to use robots. Same T800 chassis on both sides of the line.",
+      "The event was invite-only, which explains something we spent the evening noticing: almost nothing came out of the room. No stream by design, a closed guest list, and a promoter who controls every frame of footage. The first pictures anyone outside sees will be the ones Hero Esports chooses to release.",
+      "And the thing a league launch cannot substitute for: there is still no result. Hours after the final round, no source — the organizer's own release included — has said which squad won, by what score, or how any round finished. So there is no card and no result on this site, and there will not be until someone publishes one we can check against a second source.",
+      "That is not a gap in the reporting. It is the reporting. A sport that stages a fight and does not say who won is telling you what it currently is: a show first, a competition second. The record will note the difference for as long as it lasts.",
+    ],
+  },
 ] as const;
 
 const LOGOS: Array<{ table: "competitions" | "teams"; slug: string; url: string }> = [
