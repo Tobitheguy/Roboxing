@@ -4,6 +4,8 @@ import {
   buildBatchPrompt,
   chunk,
   coerceClassification,
+  estimateCostUsd,
+  ZERO_USAGE,
   type SignalToClassify,
 } from "./classify";
 
@@ -107,5 +109,57 @@ describe("coerceClassification", () => {
     expect(coerceClassification({ nope: true }, items)).toEqual([]);
     expect(coerceClassification(null, items)).toEqual([]);
     expect(coerceClassification(reply([{ id: "one" }]), items)).toEqual([]);
+  });
+});
+
+describe("estimateCostUsd", () => {
+  /*
+   * A normal 200-item morning on Haiku 4.5: roughly 20k in, 6k out. This test
+   * exists to pin the number that the cost decision was actually made on — if
+   * a prompt change or a chunk-size change moves it by an order of magnitude,
+   * something worth knowing about happened.
+   */
+  it("prices a typical run at about five cents", () => {
+    const cost = estimateCostUsd("claude-haiku-4-5", {
+      ...ZERO_USAGE,
+      inputTokens: 20_000,
+      outputTokens: 6_000,
+    });
+    expect(cost).toBeCloseTo(0.05, 4);
+  });
+
+  it("prices output well above input", () => {
+    const million = { ...ZERO_USAGE, inputTokens: 1_000_000 };
+    const millionOut = { ...ZERO_USAGE, outputTokens: 1_000_000 };
+    expect(estimateCostUsd("claude-haiku-4-5", million)).toBeCloseTo(1, 6);
+    expect(estimateCostUsd("claude-haiku-4-5", millionOut)).toBeCloseTo(5, 6);
+  });
+
+  it("discounts cache reads and surcharges cache writes", () => {
+    expect(
+      estimateCostUsd("claude-haiku-4-5", {
+        ...ZERO_USAGE,
+        cacheReadTokens: 1_000_000,
+      }),
+    ).toBeCloseTo(0.1, 6);
+    expect(
+      estimateCostUsd("claude-haiku-4-5", {
+        ...ZERO_USAGE,
+        cacheWriteTokens: 1_000_000,
+      }),
+    ).toBeCloseTo(1.25, 6);
+  });
+
+  /*
+   * The important one. SIGNALS_MODEL can point anywhere, and a made-up price
+   * for an unrecognised model would be a confident lie in the one place
+   * someone is checking whether spending is under control.
+   */
+  it("returns null for a model it has no price for", () => {
+    expect(estimateCostUsd("some-future-model", ZERO_USAGE)).toBeNull();
+  });
+
+  it("costs nothing when nothing was spent", () => {
+    expect(estimateCostUsd("claude-haiku-4-5", ZERO_USAGE)).toBe(0);
   });
 });

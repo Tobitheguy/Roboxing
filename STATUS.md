@@ -16,13 +16,15 @@
 > option). Optional one-click in the dashboard: redirect roboxing.vercel.app
 > and www to the apex as primary.
 >
-> Still open, in order: **put ANTHROPIC_API_KEY and RESEND_API_KEY into the
-> Vercel production environment** — both are in `.env.local` and stage 2 works
-> locally, but the cron runs in production, where a missing key makes
-> `classifySignals()` skip silently by design; finish the Resend browser step
-> (DNS can now verify), create the social accounts, delete the orphaned
-> Cloudflare input ff17908f by hand. (Vercel Pro: verified Active on
-> 2026-09-08.)
+> ANTHROPIC_API_KEY is set in the Vercel production environment (2026-09-08),
+> so the morning cron classifies for real. **RESEND_API_KEY is in `.env.local`
+> but has NOT been confirmed in production** — check that before building
+> anything that sends mail, because a missing key there fails at send time, not
+> at deploy time.
+>
+> Still open, in order: finish the Resend browser step (DNS can now verify),
+> create the social accounts, delete the orphaned Cloudflare input ff17908f by
+> hand. (Vercel Pro: verified Active on 2026-09-08.)
 >
 > The Vercel CLI is **not installed**, which is why those two variables are a
 > manual dashboard job rather than one command. `npm i -g vercel` then
@@ -323,11 +325,19 @@
 >     scored, the other 50 simply waited. The client now runs `maxRetries: 5`,
 >     because a request that never got a response generated no tokens and so
 >     costs nothing to retry.
->   - **Haiku 4.5 by default** (`SIGNALS_MODEL` overrides). Roughly $1.50/month
->     at 200 items/day against ~$5 on Sonnet. Do **not** add
+>   - **Haiku 4.5 by default** (`SIGNALS_MODEL` overrides). Do **not** add
 >     `output_config.effort` to that call — Haiku 4.5 rejects it. Omitting both
 >     `effort` and `thinking` is valid on every current model, which is exactly
 >     what makes the override safe.
+>   - **Every run reports what it cost.** `usage` and `estimatedCostUsd` come
+>     back on `ClassifyResult`, so the cron's JSON response and the manual
+>     script both say it out loud. **Measured, not estimated:** 10 items billed
+>     1290 in / 385 out = $0.0032, so 200 items a day is roughly $0.06 — call
+>     it **$2/month**, and that is an upper bound because a full 25-item chunk
+>     amortises the system prompt better than that 10-item one did. The price
+>     table in `classify.ts` is a local copy of list prices and WILL go stale;
+>     an unknown model returns null rather than a confident wrong number, and
+>     the invoice remains the source of truth.
 >   - **`SIGNALS_CLASSIFY_LIMIT`** (default 300) is a hard row cap per run. A
 >     feed that suddenly returns 5,000 items must not become a 5,000-row bill.
 >     A cost control that lives only in the prompt is not a cost control.

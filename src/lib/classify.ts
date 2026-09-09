@@ -227,11 +227,62 @@ function textOf(message: Anthropic.Message): string {
     .join("");
 }
 
+export type Usage = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+};
+
+export const ZERO_USAGE: Usage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+};
+
+/**
+ * Sticker prices per million tokens, for turning a token count into a number a
+ * human can act on.
+ *
+ * THE INVOICE IS THE SOURCE OF TRUTH, not this table. It is a local copy of
+ * published list prices and it will go stale — when a model is repriced or an
+ * introductory rate lapses, nothing here notices. Treat the output as an order
+ * of magnitude for spotting a runaway run, never as accounting.
+ *
+ * An unknown model returns null rather than a guess. A confidently wrong cost
+ * figure is worse than no figure for someone watching a bill.
+ */
+const PRICE_PER_MTOK: Record<string, { input: number; output: number }> = {
+  "claude-haiku-4-5": { input: 1, output: 5 },
+  "claude-sonnet-5": { input: 3, output: 15 },
+  "claude-opus-5": { input: 5, output: 25 },
+};
+
+/**
+ * Estimated USD for one run. Cache reads bill at roughly a tenth of input and
+ * writes at roughly 1.25x — both are zero in practice here, because the system
+ * prompt is far below Haiku 4.5's 4096-token minimum cacheable prefix, so no
+ * `cache_control` marker is set. They are counted anyway so that a future
+ * prompt long enough to cache does not silently stop being priced.
+ */
+export function estimateCostUsd(model: string, usage: Usage): number | null {
+  const price = PRICE_PER_MTOK[model];
+  if (!price) return null;
+
+  const input = (usage.inputTokens / 1_000_000) * price.input;
+  const output = (usage.outputTokens / 1_000_000) * price.output;
+  const cacheRead = (usage.cacheReadTokens / 1_000_000) * price.input * 0.1;
+  const cacheWrite = (usage.cacheWriteTokens / 1_000_000) * price.input * 1.25;
+
+  return input + output + cacheRead + cacheWrite;
+}
+
 /** Classify one chunk. Throws on transport or refusal — the caller absorbs it. */
 async function classifyChunk(
   client: Anthropic,
   items: SignalToClassify[],
-): Promise<Classification[]> {
+): Promise<{ results: Classification[]; usage: Usage }> {
   const message = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -240,14 +291,46 @@ async function classifyChunk(
     output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
   });
 
+  const usage: Usage = {
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
+    cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: message.usage.cache_creation_input_tokens ?? 0,
+  };
+
   // Check before reading content: on a refusal `content` is empty, and on
   // max_tokens it is truncated JSON. Both parse to nothing useful, and both
   // should leave the rows queued rather than write garbage.
+  //
+  // Note this happens AFTER usage is read: a refused or truncated turn was
+  // still generated and still billed, so dropping its tokens here would make
+  // the run look cheaper than the invoice.
   if (message.stop_reason !== "end_turn") {
-    throw new Error(`stop_reason=${message.stop_reason}`);
+    throw new ChunkError(`stop_reason=${message.stop_reason}`, usage);
   }
 
-  return coerceClassification(JSON.parse(textOf(message)), items);
+  return {
+    results: coerceClassification(JSON.parse(textOf(message)), items),
+    usage,
+  };
+}
+
+/**
+ * A chunk failure that still cost something.
+ *
+ * The tokens are carried on the error so the caller can add them to the run's
+ * total. A refusal or a truncated response is billed like any other output,
+ * and a cost report that only counts successes is the one that under-reports
+ * exactly when something is going wrong.
+ */
+class ChunkError extends Error {
+  constructor(
+    message: string,
+    readonly usage: Usage,
+  ) {
+    super(message);
+    this.name = "ChunkError";
+  }
 }
 
 export type ClassifyResult = {
@@ -261,6 +344,12 @@ export type ClassifyResult = {
   deferred: number;
   /** One entry per failed chunk. A run can partly succeed. */
   errors: string[];
+  /** Tokens actually billed this run, failed chunks included. */
+  usage: Usage;
+  /** Sticker-price estimate in USD. Null if the model is not in the table. */
+  estimatedCostUsd: number | null;
+  /** Which model produced the above — the price only means anything with it. */
+  model: string;
 };
 
 /**
@@ -291,6 +380,9 @@ export async function classifySignals(
       classified: 0,
       deferred: 0,
       errors: ["ANTHROPIC_API_KEY not set — skipped"],
+      usage: ZERO_USAGE,
+      estimatedCostUsd: 0,
+      model: MODEL,
     };
   }
 
@@ -327,13 +419,26 @@ export async function classifySignals(
     `${batch.length} waiting${deferred > 0 ? ` (+${deferred} over the cap, deferred)` : ""} — ${groups.length} chunks of up to ${CHUNK_SIZE}, model ${MODEL}`,
   );
 
+  const usage: Usage = { ...ZERO_USAGE };
+  const addUsage = (delta: Usage) => {
+    usage.inputTokens += delta.inputTokens;
+    usage.outputTokens += delta.outputTokens;
+    usage.cacheReadTokens += delta.cacheReadTokens;
+    usage.cacheWriteTokens += delta.cacheWriteTokens;
+  };
+
   for (const [index, group] of groups.entries()) {
     let results: Classification[];
     try {
-      results = await classifyChunk(client, group);
+      const outcome = await classifyChunk(client, group);
+      results = outcome.results;
+      addUsage(outcome.usage);
     } catch (error) {
       // A dead chunk costs its own rows, not the run. They stay queued.
       const message = error instanceof Error ? error.message : String(error);
+      // A refusal or a truncation was still generated and still billed; a
+      // connection error never reached the model and cost nothing.
+      if (error instanceof ChunkError) addUsage(error.usage);
       errors.push(message);
       onProgress?.(`  chunk ${index + 1}/${groups.length} FAILED — ${message}`);
       continue;
@@ -358,11 +463,22 @@ export async function classifySignals(
     );
   }
 
+  const estimatedCostUsd = estimateCostUsd(MODEL, usage);
+  onProgress?.(
+    `${usage.inputTokens} in / ${usage.outputTokens} out tokens` +
+      (estimatedCostUsd === null
+        ? ` — no price on file for ${MODEL}`
+        : ` — about $${estimatedCostUsd.toFixed(4)} at list price`),
+  );
+
   return {
     pending: batch.length + deferred,
     attempted: batch.length,
     classified,
     deferred,
     errors,
+    usage,
+    estimatedCostUsd,
+    model: MODEL,
   };
 }
