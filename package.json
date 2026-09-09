@@ -16,10 +16,12 @@
     "db:migrate-file": "tsx scripts/apply-migration.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "signals:classify": "tsx scripts/classify-signals.ts",
     "set-test-stream": "tsx scripts/set-test-stream.ts",
     "stripe:setup": "tsx scripts/stripe-setup.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@aws-sdk/client-s3": "^3.1121.0",
     "@aws-sdk/s3-request-presigner": "^3.1121.0",
     "@clerk/nextjs": "^7.8.3",

@@ -16,10 +16,17 @@
 > option). Optional one-click in the dashboard: redirect roboxing.vercel.app
 > and www to the apex as primary.
 >
-> Still open, in order: finish the Resend browser step (DNS can now verify),
-> provide an Anthropic key for watcher stages 2–3 and newsletter
-> intros, create the social accounts, delete the orphaned Cloudflare
-> input ff17908f by hand. (Vercel Pro: verified Active on 2026-09-08.)
+> Still open, in order: **put ANTHROPIC_API_KEY and RESEND_API_KEY into the
+> Vercel production environment** — both are in `.env.local` and stage 2 works
+> locally, but the cron runs in production, where a missing key makes
+> `classifySignals()` skip silently by design; finish the Resend browser step
+> (DNS can now verify), create the social accounts, delete the orphaned
+> Cloudflare input ff17908f by hand. (Vercel Pro: verified Active on
+> 2026-09-08.)
+>
+> The Vercel CLI is **not installed**, which is why those two variables are a
+> manual dashboard job rather than one command. `npm i -g vercel` then
+> `vercel link` makes env changes scriptable and is worth the two minutes.
 
 > **2026-09-07: the product changed shape.** Roboxing is no longer being built
 > as a rights holder's subscription streaming product. It is being built as the
@@ -296,10 +303,47 @@
 >   (keep/dismiss; dismissed URLs never resurface — the unique url IS the
 >   dedupe). First live run: 100 EN + 100 ZH items, including a same-day
 >   story English media didn't have yet (Unitree claiming the first fully
->   AUTONOMOUS world-model-driven robot fight). Stages 2–3 (LLM classify +
->   auto morning brief) need an Anthropic key — not yet provided.
+>   AUTONOMOUS world-model-driven robot fight).
 >   Note: never add `server-only` to a lib whose pure functions tests import;
 >   it fails the whole test file.
+>
+> - **2026-09-08: stage 2 is live — the feed is scored.** `lib/classify.ts`
+>   ranks every swept row 0–100, assigns a category, and writes a one-sentence
+>   summary that is **always English, including for Chinese sources**. That last
+>   column is the whole point: the ZH sweep is the edge and it was unreadable to
+>   the person doing the triage. Migration `0009_signal_classification.sql` adds
+>   `score` / `category` / `summary` / `classified_at`.
+>
+>   Four decisions worth not undoing:
+>
+>   - **`classified_at IS NULL` IS the work queue.** A row never seen and a row
+>     whose chunk died look identical, so the next sweep retries both. No
+>     separate failure column to keep in sync — and the first live run proved
+>     it: 2 of 10 chunks died on bare `Connection error.`, 190 of 240 rows
+>     scored, the other 50 simply waited. The client now runs `maxRetries: 5`,
+>     because a request that never got a response generated no tokens and so
+>     costs nothing to retry.
+>   - **Haiku 4.5 by default** (`SIGNALS_MODEL` overrides). Roughly $1.50/month
+>     at 200 items/day against ~$5 on Sonnet. Do **not** add
+>     `output_config.effort` to that call — Haiku 4.5 rejects it. Omitting both
+>     `effort` and `thinking` is valid on every current model, which is exactly
+>     what makes the override safe.
+>   - **`SIGNALS_CLASSIFY_LIMIT`** (default 300) is a hard row cap per run. A
+>     feed that suddenly returns 5,000 items must not become a 5,000-row bill.
+>     A cost control that lives only in the prompt is not a cost control.
+>   - **Structured outputs cannot express `minimum`/`maximum`,** so the 0–100
+>     range is clamped in `coerceClassification()` AND enforced by a CHECK on
+>     the column. The same function drops any id that was not in the chunk — a
+>     hallucinated id would otherwise write a score onto an unrelated row.
+>
+>   The inbox now leads with a cross-language **Priority** section (score ≥ 70)
+>   above the EN/ZH split, and says so when rows are unscored — a classifier
+>   that quietly stopped would otherwise just look like a calm news day. Run it
+>   by hand with `npm run signals:classify` (spends money, same cap).
+>
+>   Stage 3 (the auto morning brief) is next and lands **in the admin only** —
+>   Tobias's call: an LLM-written draft sitting one click from Publish is a
+>   worse failure mode than one he has to go and read.
 >
 > - **Resend (newsletter) is provisioned** via the marketplace with
 >   `domain=roboxing.tv` — final browser step may still be pending, and DNS

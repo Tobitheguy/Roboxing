@@ -732,6 +732,27 @@ export const signals = pgTable(
     language: text("language"),
     /** Triage state: new | kept | dismissed. */
     status: text("status").notNull().default("new"),
+
+    /*
+     * Stage 2 — what the classifier made of the row. See lib/classify.ts.
+     *
+     * All four start null, and that is load-bearing rather than incidental:
+     * `classified_at IS NULL` IS the work queue. A row the classifier has
+     * never seen and a row whose chunk failed mid-run look identical, so the
+     * next run picks both up. Nothing needs to record failure separately.
+     */
+    /** 0–100 relevance. Sorts the inbox. Clamped in code AND checked below. */
+    score: integer("score"),
+    /** result | event | league | hardware | business | other. */
+    category: text("category"),
+    /**
+     * One sentence, ALWAYS in English, even for a Chinese source. This is the
+     * column that pays for the whole stage: the Chinese sweep is this site's
+     * edge and it is unreadable to the person doing triage.
+     */
+    summary: text("summary"),
+    classifiedAt: timestamp("classified_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -739,6 +760,17 @@ export const signals = pgTable(
   (t) => [
     // The inbox query: new items, newest first.
     index("signals_status_created_idx").on(t.status, t.createdAt),
+    // The inbox query after stage 2: new items, best first.
+    index("signals_status_score_idx").on(t.status, t.score),
+    /*
+     * The model is what needs constraining here, not the caller. The code
+     * clamps as well; this is the backstop that survives a prompt rewrite or
+     * a model swap putting 0–10 or 0–1 in the column instead of 0–100.
+     */
+    check(
+      "signals_score_range",
+      sql`${t.score} IS NULL OR (${t.score} >= 0 AND ${t.score} <= 100)`,
+    ),
   ],
 );
 
