@@ -31,7 +31,10 @@ export function stripe(): Stripe {
     // versions, and a subscription system that silently changes shape is not
     // something to discover during a billing cycle.
     apiVersion: "2026-08-26.dahlia",
-    appInfo: { name: "Roboxing", url: "https://roboxing.vercel.app" },
+    // The canonical domain. Cosmetic — it identifies us in Stripe's logs and
+    // partner dashboard — but a stale one there is a support call that starts
+    // by pointing at the wrong site.
+    appInfo: { name: "Roboxing", url: "https://roboxing.tv" },
   });
   return client;
 }
