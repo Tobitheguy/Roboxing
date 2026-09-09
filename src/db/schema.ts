@@ -821,12 +821,52 @@ export const subscribers = pgTable(
       .notNull()
       .unique()
       .default(sql`gen_random_uuid()`),
+    /**
+     * Separate from `unsubscribeToken`, and it has to be.
+     *
+     * One token doing both jobs means the unsubscribe link at the foot of every
+     * mail would also be a valid confirm link — so a subscriber who wanted out
+     * could be counted as newly opted in, and anyone who saw one mail could
+     * confirm an address that never answered. Two secrets, two verbs.
+     */
+    confirmToken: text("confirm_token")
+      .notNull()
+      .unique()
+      .default(sql`gen_random_uuid()`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => [index("subscribers_created_at_idx").on(t.createdAt)],
 );
+
+/**
+ * One mail-out that actually went, and the reason it cannot go twice.
+ *
+ * `key` is the idempotency claim, not a label: "weekly:2026-W37",
+ * "event:12". The send path INSERTs the key first and only mails if the insert
+ * won. A cron that fires twice — Vercel retries, a manual trigger during an
+ * automatic run, a redeploy mid-send — therefore mails once. Everything else
+ * here is an audit trail; the UNIQUE is the mechanism.
+ *
+ * Note what this deliberately does NOT store: who received it. Per-recipient
+ * delivery records are a different table with different retention questions,
+ * and a count answers "did the Thursday send go out and to how many" without
+ * holding a copy of the list at every point in time.
+ */
+export const newsletterSends = pgTable("newsletter_sends", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  /** weekly | event | test — what shape of mail this was. */
+  kind: text("kind").notNull(),
+  subject: text("subject").notNull(),
+  recipientCount: integer("recipient_count").notNull().default(0),
+  /** Non-null once delivery finished; null means a claim that never completed. */
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /* -------------------------------------------------------------------------- */
 /* Audit                                                                       */

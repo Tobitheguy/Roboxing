@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { METHOD_LABELS } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -57,8 +58,10 @@ export function Badge({
 }
 
 /**
- * How a bout ended. Mapping lives here so every surface — fight card, robot
- * history, results page, admin console — labels a method identically.
+ * How a bout ended. The labels moved to `@/lib/format` once the newsletter
+ * became a second surface that has to say the same words — a component file is
+ * the wrong home for a string an email also renders. Re-exported below so
+ * existing importers do not care.
  */
 export type BoutMethod =
   | "ko"
@@ -67,15 +70,6 @@ export type BoutMethod =
   | "draw"
   | "dq"
   | "no_contest";
-
-const METHOD_LABELS: Record<BoutMethod, string> = {
-  ko: "KO",
-  tko: "TKO",
-  decision: "Decision",
-  draw: "Draw",
-  dq: "DQ",
-  no_contest: "No contest",
-};
 
 const METHOD_VARIANTS: Record<
   BoutMethod,

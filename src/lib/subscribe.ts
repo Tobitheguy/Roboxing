@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -73,7 +73,18 @@ export function normalizeEmail(raw: string): string {
 }
 
 export type SubscribeOutcome =
-  | { ok: true; alreadySubscribed: boolean }
+  | {
+      ok: true;
+      alreadySubscribed: boolean;
+      /**
+       * Present whenever the row still needs a confirmation mail. Null once
+       * the address is already confirmed — re-mailing a confirmed subscriber
+       * every time they retype their address is how a working list starts
+       * getting marked as spam by its own members.
+       */
+      confirmToken: string | null;
+      email: string;
+    }
   | { ok: false; error: string };
 
 /**
@@ -118,11 +129,39 @@ export async function addSubscriber(input: {
         // nothing either. `excluded` is the row we tried to insert.
         setWhere: sql`${subscribers.unsubscribedAt} is not null`,
       })
-      .returning({ id: subscribers.id, createdAt: subscribers.createdAt });
+      .returning({
+        id: subscribers.id,
+        confirmToken: subscribers.confirmToken,
+        confirmedAt: subscribers.confirmedAt,
+      });
 
     // No returned row means the conflict target matched and setWhere excluded
-    // it — an address already on the list, unchanged. Still a success.
-    return { ok: true, alreadySubscribed: rows.length === 0 };
+    // it — an address already on the list, unchanged. Still a success, but we
+    // now need the row anyway: someone who signed up and never clicked the
+    // confirmation should get another chance at it, and their token lives on
+    // the row the upsert declined to touch.
+    let row = rows[0];
+    if (!row) {
+      const existing = await db
+        .select({
+          id: subscribers.id,
+          confirmToken: subscribers.confirmToken,
+          confirmedAt: subscribers.confirmedAt,
+        })
+        .from(subscribers)
+        .where(eq(subscribers.email, email))
+        .limit(1);
+      row = existing[0];
+    }
+
+    return {
+      ok: true,
+      alreadySubscribed: rows.length === 0,
+      // Already confirmed means no mail. Unconfirmed — whether from today or
+      // from three weeks ago — gets the link again.
+      confirmToken: row && !row.confirmedAt ? row.confirmToken : null,
+      email,
+    };
   } catch (error) {
     // The list is worth more than the error message. Log the detail and tell
     // the visitor something they can act on.

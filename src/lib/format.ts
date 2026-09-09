@@ -13,6 +13,9 @@
  */
 
 import { safeTimeZone } from "@/lib/timezones";
+// Type-only: erased at build, so this does not pull the schema (and its
+// database client) into the client bundles that import this file.
+import type { BoutMethodValue } from "@/db/schema";
 
 /** e.g. "Sat 14 Mar" */
 export function formatDate(date: Date, timeZone: string): string {
@@ -220,3 +223,23 @@ export function humanize(value: string): string {
     .trim();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
+
+/**
+ * How each finish reads to a person.
+ *
+ * These live here rather than beside the badge that first needed them because
+ * they are display strings, and there is now a second surface — the newsletter
+ * — that has to say exactly the same words. Two copies would drift, and the
+ * failure is quiet: "KO" on the site and "Ko" in the email, spotted by nobody
+ * until a reader notices the site cannot keep its own vocabulary straight.
+ *
+ * `humanize()` cannot do this job: it would produce "Ko", "Tko" and "Dq".
+ */
+export const METHOD_LABELS: Record<BoutMethodValue, string> = {
+  ko: "KO",
+  tko: "TKO",
+  decision: "Decision",
+  draw: "Draw",
+  dq: "DQ",
+  no_contest: "No contest",
+};

@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 
+import { sendConfirmation } from "@/lib/newsletter";
 import { clientIpFromHeaders, rateLimit } from "@/lib/rate-limit";
 import { addSubscriber } from "@/lib/subscribe";
 
@@ -77,11 +78,32 @@ export async function subscribeAction(
     return { status: "error", message: result.error };
   }
 
-  // The same message whether or not the address was already stored. Differing
-  // here would turn the form into a way to test whether a given address is on
-  // the list.
+  /*
+   * Double opt-in. The row exists now, but nothing will ever be mailed to it
+   * until the link below is clicked — `getRecipients()` requires
+   * `confirmed_at`. A token comes back only when the address still needs
+   * confirming, so a confirmed subscriber retyping their address gets no
+   * second mail.
+   *
+   * A send failure is logged and swallowed. The signup itself succeeded, the
+   * token stays valid, and answering an error would tell someone who did
+   * everything right that they did something wrong.
+   */
+  if (result.confirmToken) {
+    const sent = await sendConfirmation(result.email, result.confirmToken);
+    if (!sent) {
+      console.error("[subscribe] confirmation mail not sent to", result.email);
+    }
+  }
+
+  /*
+   * The same message in every case — new address, repeat address, already
+   * confirmed, mail provider down. Differing here would turn the form into an
+   * oracle for testing whether a given address is on the list, and the
+   * enumeration risk is exactly why the original message was uniform too.
+   */
   return {
     status: "success",
-    message: "You're on the list. We'll mail you before the next event.",
+    message: "Check your inbox — click the link to confirm.",
   };
 }

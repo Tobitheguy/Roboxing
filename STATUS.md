@@ -17,14 +17,21 @@
 > and www to the apex as primary.
 >
 > ANTHROPIC_API_KEY is set in the Vercel production environment (2026-09-08),
-> so the morning cron classifies for real. **RESEND_API_KEY is in `.env.local`
-> but has NOT been confirmed in production** — check that before building
-> anything that sends mail, because a missing key there fails at send time, not
-> at deploy time.
+> so the morning cron classifies for real.
 >
-> Still open, in order: finish the Resend browser step (DNS can now verify),
-> create the social accounts, delete the orphaned Cloudflare input ff17908f by
-> hand. (Vercel Pro: verified Active on 2026-09-08.)
+> Still open, in order:
+>
+> 1. **Verify roboxing.tv in Resend.** The API key works and the account has
+>    ZERO domains, so no mail can leave — see the newsletter entry below. This
+>    gates the entire newsletter, including the double opt-in.
+> 2. **Confirm RESEND_API_KEY is in the Vercel production env**, not only in
+>    `.env.local`. A missing key there fails at send time, not at deploy time.
+> 3. Create the social accounts — still the only thing that puts a human on the
+>    site, and the reason there are zero subscribers.
+> 4. Triage the 240 scored signals; none has been kept or dismissed yet.
+> 5. Delete the orphaned Cloudflare input ff17908f by hand.
+>
+> (Vercel Pro: verified Active on 2026-09-08.)
 >
 > The Vercel CLI is **not installed**, which is why those two variables are a
 > manual dashboard job rather than one command. `npm i -g vercel` then
@@ -354,6 +361,50 @@
 >   Stage 3 (the auto morning brief) is next and lands **in the admin only** —
 >   Tobias's call: an LLM-written draft sitting one click from Publish is a
 >   worse failure mode than one he has to go and read.
+>
+> - **2026-09-08: the newsletter is built end to end — and cannot send yet.**
+>   Digest builder, double opt-in, unsubscribe, weekly cron and an admin
+>   console at `/admin/newsletter` (list counts, live HTML preview in an
+>   iframe, test-send to any address). Migration `0010_newsletter_sending.sql`
+>   adds `subscribers.confirm_token` and the `newsletter_sends` table.
+>
+>   **The blocker, verified rather than assumed:** `resend.domains.list()`
+>   returns an EMPTY ARRAY with no error. The API key is valid; the account has
+>   no domain at all. Every send from `news@roboxing.tv` will 403 with a message
+>   that does not say "domain". Add roboxing.tv in the Resend dashboard and
+>   publish the DNS records (the domain is on Vercel's registrar, so they go in
+>   Vercel's DNS panel). To exercise the code path before that, set
+>   `NEWSLETTER_FROM=onboarding@resend.dev` — Resend allows it with no domain
+>   but ONLY to the address owning the Resend account.
+>
+>   **Do not deploy the signup change before the domain verifies.** The footer
+>   form now answers "Check your inbox — click the link to confirm", and until
+>   mail can leave, that promise is false and the address is stranded
+>   unconfirmed: `getRecipients()` requires `confirmed_at`, so an unconfirmed
+>   row is never mailed. With zero subscribers today nobody is affected — that
+>   changes the moment the first social post lands.
+>
+>   Decisions worth not undoing:
+>
+>   - **The digest is assembled from the database, never generated.** No model
+>     in this path, deliberately. A hallucinated score on a web page can be
+>     corrected; one in an inbox cannot. Stage 2 of the watcher uses a model
+>     because a human reads its output before anyone else does — this is the
+>     opposite situation.
+>   - **Upcoming events never justify a send.** `hasNews()` looks only at
+>     results and posts. A weekly "these four events are still scheduled" is
+>     what teaches a list to ignore you; the schedule rides along as context.
+>   - **Every mailing claims a UNIQUE key before it sends** (`weekly:2026-W37`).
+>     Insert first, mail only if the insert won. A cron firing twice therefore
+>     mails once. `isoWeekKey()` handles the ISO year boundary — 1 Jan 2027 is
+>     `2026-W53`, and a naive version emits `2027-W01`, colliding with the real
+>     one four days later and silently suppressing that week.
+>   - **Confirm and unsubscribe use separate tokens.** One token for both would
+>     make the unsubscribe link at the foot of every mail a working confirm
+>     link.
+>   - **`METHOD_LABELS` moved from `components/badge.tsx` to `lib/format.ts`**
+>     now that an email renders the same strings. Two copies would drift into
+>     "KO" on the site and "Ko" in the mail.
 >
 > - **Resend (newsletter) is provisioned** via the marketplace with
 >   `domain=roboxing.tv` — final browser step may still be pending, and DNS

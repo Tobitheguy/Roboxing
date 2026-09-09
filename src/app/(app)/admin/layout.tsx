@@ -23,6 +23,7 @@ import { requireVerifiedViewer } from "@/lib/auth";
 const ADMIN_NAV = [
   { href: "/admin", label: "Events" },
   { href: "/admin/signals", label: "Signals" },
+  { href: "/admin/newsletter", label: "Newsletter" },
   { href: "/admin/posts", label: "Posts" },
   { href: "/admin/competitions", label: "Competitions" },
   { href: "/admin/teams", label: "Teams" },
