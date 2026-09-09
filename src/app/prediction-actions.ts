@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { predictions } from "@/db/schema";
 import { getViewer } from "@/lib/auth";
+import type { PickState } from "@/lib/pick-state";
 import { arePicksOpen, picksClosedReason } from "@/lib/predictions";
 import { getBoutForPicking } from "@/lib/queries";
 
@@ -32,16 +33,15 @@ const PickSchema = z.object({
   robotId: z.coerce.number().int().positive(),
 });
 
-export type PickState = {
-  status: "idle" | "saved" | "error";
-  message: string;
-  /** Echoed back so the card can show the pick without a round trip. */
-  boutId?: number;
-  robotId?: number;
-};
-
-export const initialPickState: PickState = { status: "idle", message: "" };
-
+/*
+ * PickState and initialPickState live in `@/lib/pick-state`, not here. A
+ * "use server" file may export async functions and NOTHING else; exporting the
+ * initial-state object from this file throws "A use server file can only
+ * export async functions, found object" at module evaluation. It does not fire
+ * until the module lands in a bundle that enforces the rule, and `next build`
+ * never reports it — the identical bug in the newsletter action reached
+ * production. Keep this file to actions only.
+ */
 export async function savePrediction(
   _previous: PickState,
   formData: FormData,

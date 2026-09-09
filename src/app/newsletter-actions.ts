@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { sendConfirmation } from "@/lib/newsletter";
 import { clientIpFromHeaders, rateLimit } from "@/lib/rate-limit";
 import { addSubscriber } from "@/lib/subscribe";
+import type { SubscribeState } from "@/lib/subscribe-state";
 
 /**
  * The signup form's Server Action.
@@ -32,16 +33,14 @@ import { addSubscriber } from "@/lib/subscribe";
  */
 const SIGNUPS_PER_HOUR = 5;
 
-export type SubscribeState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialSubscribeState: SubscribeState = {
-  status: "idle",
-  message: "",
-};
-
+/*
+ * The state type and its initial value live in `@/lib/subscribe-state`, not
+ * here. A "use server" file may export async functions and NOTHING else —
+ * exporting the `initialSubscribeState` object from this file throws
+ * "A use server file can only export async functions, found object" at module
+ * evaluation. `next build` does not catch it, so the first sign is the site's
+ * error page. Keep this file to actions only.
+ */
 export async function subscribeAction(
   _previous: SubscribeState,
   formData: FormData,

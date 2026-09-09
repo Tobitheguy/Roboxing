@@ -3,11 +3,11 @@
 import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
 
-import {
-  initialSubscribeState,
-  subscribeAction,
-} from "@/app/newsletter-actions";
+import { subscribeAction } from "@/app/newsletter-actions";
 import { Button } from "@/components/ui/button";
+// Not from the actions file: a "use server" module may only export async
+// functions, so the initial state object lives on its own.
+import { initialSubscribeState } from "@/lib/subscribe-state";
 import { cn } from "@/lib/utils";
 
 /**

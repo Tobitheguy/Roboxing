@@ -7,10 +7,10 @@ import { Check, Lock, Minus, X } from "lucide-react";
 
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { Button } from "@/components/ui/button";
-import {
-  initialPickState,
-  savePrediction,
-} from "@/app/prediction-actions";
+import { savePrediction } from "@/app/prediction-actions";
+// Not from the actions file: a "use server" module may only export async
+// functions, so the initial state object lives on its own.
+import { initialPickState } from "@/lib/pick-state";
 import { crowdSplit, type PredictionGrade } from "@/lib/predictions";
 import { cn } from "@/lib/utils";
 
