@@ -9,7 +9,12 @@ import { LeaguesBand } from "@/components/leagues-band";
 import { PageShell } from "@/components/page-shell";
 import { PostCard } from "@/components/post-card";
 import { SideRail } from "@/components/side-rail";
-import { getLatestResults, getPublishedPosts } from "@/lib/queries";
+import { pickLeadIndex } from "@/lib/lead-story";
+import {
+  getLatestResults,
+  getNextEvent,
+  getPublishedPosts,
+} from "@/lib/queries";
 
 /**
  * The home page, for everyone.
@@ -30,14 +35,27 @@ import { getLatestResults, getPublishedPosts } from "@/lib/queries";
  * the league page that can name them.
  */
 export async function HomeDashboard() {
-  const [posts, latest] = await Promise.all([
+  const [posts, latest, next] = await Promise.all([
     // Enough for the lead, the grid AND the rail from one query — the rail
     // receives these same rows as a prop rather than asking again.
     getPublishedPosts(9),
     getLatestResults(5),
+    getNextEvent(),
   ]);
 
-  const [lead, ...rest] = posts;
+  /*
+   * Not `posts[0]`. While an event is imminent its coverage leads, the way
+   * every sports front page works — see lib/lead-story.ts for why the
+   * alternative (moving the preview's publication date) is the one fix this
+   * site cannot make. Reverts to newest-first by itself once the event passes.
+   */
+  const leadIndex = pickLeadIndex(
+    posts,
+    next ? { slug: next.event.slug, startsAt: next.event.startsAt } : null,
+    new Date(),
+  );
+  const lead = posts[leadIndex];
+  const rest = posts.filter((_, index) => index !== leadIndex);
   const gridPosts = rest.slice(0, 4);
 
   return (
