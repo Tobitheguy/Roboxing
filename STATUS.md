@@ -466,14 +466,22 @@
 > the signals watcher (YouTube API + RSS + Bilibili + Reddit into a triage
 > inbox), OG result cards, free-to-play predictions.
 >
-> **Note on the database:** `drizzle-kit push` is unsafe against this project.
-> The live database has drifted from the migrations — it is missing
-> `bouts_event_order_unique`, so push proposes to add it and offers to TRUNCATE
-> `bouts` to do so. Migration 0005 was applied with
-> `npx tsx scripts/apply-migration.ts drizzle/0005_fair_luckman.sql`, which
-> runs one file's statements and nothing else. The drift is unfixed and is a
-> separate job: without that constraint two bouts on one event can share an
-> `order_index`.
+> **Note on the database:** keep applying migrations with
+> `npx tsx scripts/apply-migration.ts <file.sql>`, which runs one file's
+> statements and nothing else.
+>
+> **Corrected 2026-09-08:** this file said the live database was missing
+> `bouts_event_order_unique` and that `drizzle-kit push` would therefore offer
+> to TRUNCATE `bouts`. Checked directly against the live database — the
+> constraint IS present, alongside the two `team_*_not_null` checks and every
+> foreign key. That particular drift is gone, and the specific TRUNCATE
+> scenario with it.
+>
+> That is **not** a clearance for `drizzle-kit push`. Nobody has diffed the
+> full schema against the live database since, so whether push would now
+> propose something else destructive is simply unknown — and the migration
+> script costs one command. The rule stands; only the stated reason for it was
+> out of date.
 
 > **Steps 4, 5 and 6 were closed on 2026-09-06 by decision, not by passing
 > their gates.** The build is finished; the proof is not. No OBS signal has
