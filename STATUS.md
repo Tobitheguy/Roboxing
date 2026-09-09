@@ -21,15 +21,16 @@
 >
 > Still open, in order:
 >
-> 1. **Verify roboxing.tv in Resend.** The API key works and the account has
->    ZERO domains, so no mail can leave — see the newsletter entry below. This
->    gates the entire newsletter, including the double opt-in.
-> 2. **Confirm RESEND_API_KEY is in the Vercel production env**, not only in
->    `.env.local`. A missing key there fails at send time, not at deploy time.
-> 3. Create the social accounts — still the only thing that puts a human on the
+> 1. **Confirm RESEND_API_KEY is in the Vercel production env**, not only in
+>    `.env.local`. A missing key there fails at send time, not at deploy time,
+>    and the failure is silent to the person signing up. Prove it by
+>    subscribing on the live site and watching for the mail.
+> 2. Create the social accounts — still the only thing that puts a human on the
 >    site, and the reason there are zero subscribers.
-> 4. Triage the 240 scored signals; none has been kept or dismissed yet.
-> 5. Delete the orphaned Cloudflare input ff17908f by hand.
+> 3. Triage the 240 scored signals; none has been kept or dismissed yet.
+> 4. Delete the orphaned Cloudflare input ff17908f by hand.
+>
+> (roboxing.tv verified in Resend on 2026-09-08.)
 >
 > (Vercel Pro: verified Active on 2026-09-08.)
 >
@@ -368,21 +369,20 @@
 >   iframe, test-send to any address). Migration `0010_newsletter_sending.sql`
 >   adds `subscribers.confirm_token` and the `newsletter_sends` table.
 >
->   **The blocker, verified rather than assumed:** `resend.domains.list()`
->   returns an EMPTY ARRAY with no error. The API key is valid; the account has
->   no domain at all. Every send from `news@roboxing.tv` will 403 with a message
->   that does not say "domain". Add roboxing.tv in the Resend dashboard and
->   publish the DNS records (the domain is on Vercel's registrar, so they go in
->   Vercel's DNS panel). To exercise the code path before that, set
->   `NEWSLETTER_FROM=onboarding@resend.dev` — Resend allows it with no domain
->   but ONLY to the address owning the Resend account.
+>   **roboxing.tv is verified in Resend** (checked via `domains.list()`:
+>   `status=verified`, us-east-1). It was empty an hour earlier, which is worth
+>   remembering as the failure mode: a send from an unverified domain 403s with
+>   a message that never says "domain". `NEWSLETTER_FROM=onboarding@resend.dev`
+>   is the escape hatch that works with no domain at all, but only to the
+>   address owning the Resend account.
 >
->   **Do not deploy the signup change before the domain verifies.** The footer
->   form now answers "Check your inbox — click the link to confirm", and until
->   mail can leave, that promise is false and the address is stranded
->   unconfirmed: `getRecipients()` requires `confirmed_at`, so an unconfirmed
->   row is never mailed. With zero subscribers today nobody is affected — that
->   changes the moment the first social post lands.
+>   **The remaining way this silently does nothing: RESEND_API_KEY missing from
+>   the Vercel production environment.** It is in `.env.local`. If it is not in
+>   production, the footer form still answers "Check your inbox — click the
+>   link to confirm" and no mail is ever sent, leaving the address stranded
+>   unconfirmed — `getRecipients()` requires `confirmed_at`, so an unconfirmed
+>   row is never mailed, ever. The definitive check is not the dashboard: sign
+>   up on the live site with a real address and see whether the mail lands.
 >
 >   Decisions worth not undoing:
 >
