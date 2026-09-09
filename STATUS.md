@@ -478,6 +478,39 @@
 >   bakes environment variables in at build time** — setting one changes
 >   nothing until a redeploy, which is its own quiet trap.
 >
+> - **2026-09-09: mail on roboxing.tv — two senders, deliberately separated.**
+>   Google Workspace handles RECEIVING and human mail on the apex; Resend
+>   handles the app's outbound newsletter from the `send` subdomain. All records
+>   set via `vercel dns add` and read back from Google's public resolver, not
+>   just from Vercel's API.
+>
+>   | Name | Type | Purpose |
+>   |---|---|---|
+>   | `roboxing.tv` | TXT | Google site verification |
+>   | `roboxing.tv` | TXT | `v=spf1 include:_spf.google.com ~all` |
+>   | `roboxing.tv` | MX | `1 smtp.google.com` |
+>   | `google._domainkey` | TXT | Google DKIM (408 chars) |
+>   | `_dmarc` | TXT | `p=none` — monitoring only, not enforcing yet |
+>   | `send` | TXT + MX | Resend SPF and bounce handling — **do not touch** |
+>   | `resend._domainkey` | TXT | Resend DKIM — **do not touch** |
+>
+>   **The separation is what makes this safe.** The usual way to break a domain
+>   with two mail systems is two SPF records on the same name, which is invalid
+>   and fails both. Resend puts its SPF and bounce MX on `send.roboxing.tv`, so
+>   the apex was free for Google. There is exactly one SPF per name. If a third
+>   sender is ever added, it must NOT get a second apex SPF — merge it into the
+>   existing one with another `include:`.
+>
+>   Long TXT values are chunked into 255-character strings by DNS, and a
+>   truncated DKIM key fails silently — mail just starts landing in spam. The
+>   Google key was read back reassembled (408 chars, 2 chunks, correct tail)
+>   rather than assumed.
+>
+>   `news@roboxing.tv` is an ALIAS on the `hello@` mailbox, not a second
+>   licence. It exists because the newsletter sends from that address and the
+>   unsubscribe page promises a human will act on replies — without a mailbox
+>   there, that promise is false.
+>
 > - **Resend (newsletter) is provisioned** via the marketplace with
 >   `domain=roboxing.tv` — final browser step may still be pending, and DNS
 >   verification waits on the domain purchase. Duplicate inline newsletter
