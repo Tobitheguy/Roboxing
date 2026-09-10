@@ -173,8 +173,26 @@ const POSTS = [
       "The people it did name say more about the property than the robots do. The two squads were managed by MENA creator AboFlah and Saudi sports creator Bashar Arabi — not engineers, not roboticists, but two of the region's largest digital audiences pointed at each other. Hero Esports describes its team model as builders, coders and drivers, which is a fighting-game roster with hardware attached.",
       "Set that beside URKL, which fields university teams from Tsinghua and Stanford and scores bouts on balance and structural durability, and the split in this sport stops being a matter of degree. One league is a robotics benchmark that happens to be watchable. The other is a spectator format that happens to use robots. Same T800 chassis on both sides of the line.",
       "The event was invite-only, which explains something we spent the evening noticing: almost nothing came out of the room. No stream by design, a closed guest list, and a promoter who controls every frame of footage. The first pictures anyone outside sees will be the ones Hero Esports chooses to release.",
-      "And the thing a league launch cannot substitute for: there is still no result. Hours after the final round, no source — the organizer's own release included — has said which squad won, by what score, or how any round finished. So there is no card and no result on this site, and there will not be until someone publishes one we can check against a second source.",
-      "That is not a gap in the reporting. It is the reporting. A sport that stages a fight and does not say who won is telling you what it currently is: a show first, a competition second. The record will note the difference for as long as it lasts.",
+      "And the thing a league launch could not substitute for, for most of a day: a result. The release announced a global season and never mentioned who won. It took roughly ten hours, and it came from Chinese media rather than from the promoter — [we have it here](/news/cyberhero-first-title).",
+      "That gap is not a gap in the reporting. It is the reporting. A sport that stages a fight and lets ten hours pass without saying who won is telling you what it currently is: a show first, a competition second. The record will note the difference for as long as it lasts.",
+    ],
+  },
+  {
+    slug: "cyberhero-first-title",
+    kind: "article",
+    title: "Team FBA takes the first CyberHero title, 4–3, on a kick in the seventh",
+    summary:
+      "Ten hours after the final round, the result surfaced — in Chinese media, not from the promoter. Here is what is confirmed, what is not, and why it is not in our results table.",
+    embedUrl: null,
+    eventSlug: "cyberhero-riyadh-2026",
+    body: [
+      "Team FBA beat Team AL Majd 4–3 to win the first CyberHero event, in Riyadh on the evening of 9 September. The tie went the full seven rounds. In the decider, the winning side's robot knocked its opponent down with a kick.",
+      "That is the whole result, and it took about ten hours to become knowable. Hero Esports issued a press release after the event announcing an eight-city global season across four regions — and did not say who won. The wire syndicated that release across Malaysia, Vietnam, Saudi Arabia and the United States, all of it carrying the league announcement and none of it carrying the score.",
+      "The result came instead from [Xinhua's English service](https://english.news.cn/20260910/829e33c223904125a79d9ac7b7ce019e/c.html), which named both teams, and separately from Shanghai's Wenhui Bao, which reported the same 4–3 over seven rounds and the same finish — a knockdown from a powerful kick in the seventh — but identified the sides only as the yellow and blue corners.",
+      "So the arithmetic of what we know: the score, the round count and the method are carried by two independent newsrooms that agree and contradict each other nowhere. The team NAMES rest on Xinhua alone. Chinese coverage of this event is written as a technology story — the headline on the Wenhui piece is about robot fighting turning professional internationally — and in that frame the teams are almost incidental. A second naming source will probably come from Saudi or English media, or from Hero Esports.",
+      "Two details worth having from the Chinese reporting. The format was a seven-round, one-on-one contest inside an octagonal cage. And between rounds, each side's mechanics and engineers worked on damaged machines in a pit area, using telemetry to diagnose and repair them under time pressure. That last part is the most sports-shaped thing about the whole evening: it is a pit lane, and it means the competition is partly an engineering race run in public.",
+      "One note on our own table, because the absence is deliberate rather than an oversight. This site records bouts between two named robots. CyberHero ran a team best-of-seven, and no robot names have been published by anyone — the Chinese accounts identify the machines only by corner colour. There is nothing to enter that would be true. When names appear, the card goes in.",
+      "The event is invite-only and was not streamed. Whatever pictures exist will be the ones Hero Esports chooses to release.",
     ],
   },
 ] as const;

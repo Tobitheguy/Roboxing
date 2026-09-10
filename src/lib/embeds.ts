@@ -210,6 +210,21 @@ export type InlineNode =
 const INLINE_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 
 function safeHref(raw: string): string | null {
+  /*
+   * Site-relative paths, so one piece can link to another. `RichText` was
+   * already written for these — it withholds target="_blank" when an href
+   * starts with "/" — but this function rejected them, because `new URL()`
+   * without a base throws on a relative path. The result was a silent
+   * downgrade to plain text: the sentence still read, the link was simply
+   * gone.
+   *
+   * EXACTLY ONE leading slash. `//evil.com` is protocol-relative and leaves
+   * the site entirely, and some browsers treat `/\evil.com` the same way —
+   * both begin with "/" and neither is internal. That is why this tests the
+   * second character rather than just the first.
+   */
+  if (/^\/(?![/\\])/.test(raw)) return raw;
+
   let url: URL;
   try {
     url = new URL(raw);

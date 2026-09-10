@@ -259,4 +259,53 @@ describe("toInlineNodes", () => {
     const rich = toRichParagraphs(body);
     expect(rich.map((p) => p[0].kind)).toEqual(["link", "link"]);
   });
+
+  /*
+   * Internal links. RichText was always written for these — it withholds
+   * target="_blank" for an href starting with "/" — but the parser rejected
+   * them, so one article could not link to another. The failure was silent:
+   * the label stayed as plain text and the sentence still read.
+   */
+  it("keeps a site-relative path as a link", () => {
+    expect(toInlineNodes("see [the result](/news/cyberhero-first-title)")).toEqual([
+      { kind: "text", text: "see " },
+      { kind: "link", text: "the result", href: "/news/cyberhero-first-title" },
+    ]);
+  });
+
+  /*
+   * The reason the check looks at the SECOND character. Both of these begin
+   * with a slash and neither is internal — a protocol-relative URL leaves the
+   * site, and some browsers normalise the backslash form into the same thing.
+   * Treating either as internal would render an off-site link with no
+   * noopener and no visible signal that it leaves.
+   */
+  it("refuses protocol-relative and backslash hrefs that only look internal", () => {
+    expect(toInlineNodes("[x](//evil.example/path)")).toEqual([
+      { kind: "text", text: "x" },
+    ]);
+    expect(toInlineNodes("[x](/\\evil.example/path)")).toEqual([
+      { kind: "text", text: "x" },
+    ]);
+  });
+
+  it("still refuses a javascript: href", () => {
+    expect(toInlineNodes("[x](javascript:alert)")).toEqual([
+      { kind: "text", text: "x" },
+    ]);
+  });
+
+  /*
+   * The href pattern stops at the first ")", so a payload containing its own
+   * parentheses leaves the remainder behind as text. That is cosmetically
+   * untidy and exactly right where it counts: no link is produced. Asserted
+   * so nobody "fixes" the leftover by making the pattern greedy, which would
+   * let the closing paren of a payload extend the href.
+   */
+  it("refuses a javascript: href that contains parentheses, leftovers and all", () => {
+    expect(toInlineNodes("[x](javascript:alert(1))")).toEqual([
+      { kind: "text", text: "x" },
+      { kind: "text", text: ")" },
+    ]);
+  });
 });
