@@ -194,7 +194,7 @@ drizzle/              SQL migrations, applied one file at a time on purpose
 
 ## How this was built
 
-Solo, with Claude Code doing the typing. Three files in this repo are the working
+Solo, with Claude Code doing the typing. Two files in this repo are the working
 method, and they are probably more interesting than any single component:
 
 - **[`STATUS.md`](./STATUS.md)** — what is done, what is *not*, and what is waiting
@@ -204,7 +204,13 @@ method, and they are probably more interesting than any single component:
   them away.
 - **[`DECISIONS.md`](./DECISIONS.md)** — why each choice was made, and what it was
   chosen *over*. The reasoning is the valuable part and it does not survive in a diff.
-- **[`AGENTS.md`](./AGENTS.md)** — the standing instructions the agent reads first.
+
+They exist because a coding agent starts every session with no memory of the last
+one. Handing it a diff is not enough: a diff shows what changed, not what was tried
+and rejected, and an agent that cannot see the rejected option will cheerfully
+re-implement it. These two files are the context that makes the next session start
+where the last one stopped — which is also, roughly, what onboarding documentation
+does for a person.
 
 The habit those three encode: **verify, then write it down.** Several things in this
 project return success and change nothing — a Vercel env var that needs a redeploy
