@@ -7,6 +7,18 @@ because most of these were picked over a specific alternative for a specific rea
 
 Last updated: 2026-08-30 (project start).
 
+> **Read this first — the product changed shape on 2026-09-07, and this file was
+> written before that.** Roboxing is no longer being built as a rights holder's
+> subscription streaming product. It is the English-language system of record for
+> humanoid robot fighting — schedule, results, teams, machines and editorial — with
+> the stream as a later phase. The login wall came down, the paywall is behind a
+> flag that defaults to off, and the data on the site is real and sourced rather
+> than placeholder.
+>
+> Everything below is left as it was written, because what a decision was made
+> *for* is only legible next to what replaced it. The reversals and their reasons
+> are recorded in [`STATUS.md`](./STATUS.md).
+
 ---
 
 ## What Roboxing is

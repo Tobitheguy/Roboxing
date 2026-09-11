@@ -41,4 +41,19 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.env*
+# agent tooling — vendor skills are installed, not authored here.
+# AGENTS.md, CLAUDE.md, DECISIONS.md and STATUS.md are the parts worth committing.
+/.claude/
+/.agents/
+
+# working material: design references, screenshots and raw logo/photo sources.
+# Anything the site actually serves lives in /public.
+/Logos/
+/League Logos/
+/Login pages/
+/Page inspiration/
+/Robots/
+/*.png
+/*.jpg
+/*.jpeg
+/*.avif

@@ -28,7 +28,7 @@
 > 2. Create the social accounts — still the only thing that puts a human on the
 >    site, and the reason there are zero subscribers.
 > 3. Triage the 240 scored signals; none has been kept or dismissed yet.
-> 4. Delete the orphaned Cloudflare input ff17908f by hand.
+> 4. Delete the orphaned Cloudflare live input by hand (see "Do this first").
 >
 > (roboxing.tv verified in Resend on 2026-09-08.)
 >
@@ -522,9 +522,9 @@
 > Curaçao licence does not move US exposure: the Wire Act, UIGEA and 18 U.S.C.
 > §1955 attach to where the operator and the customers are, which is why every
 > offshore-licensed operator that took US action got prosecuted anyway. The
-> operator here is a German national resident in Washington — the state with
-> the harshest online-gambling law in the country — so the downside is an
-> immigration consequence, not a fine. Free-to-play predictions are the planned
+> operator here is resident in Washington — the state with the harshest
+> online-gambling law in the country — and is not a US citizen, so the downside
+> is personal, not merely financial. Free-to-play predictions are the planned
 > substitute; they produce better demand data and build the odds layer a real
 > book would need. Not legal advice; a gaming attorney is the next step if this
 > is ever revisited.
@@ -579,24 +579,23 @@ Last updated: 2026-08-31. Deployed at https://roboxing.vercel.app
 
 ## Do this first
 
-**The leaked live-input stream key is now ORPHANED, and the in-app fix no
-longer reaches it.**
+**An orphaned Cloudflare live input needs deleting by hand.**
 
-A stream key was pasted into a chat and was never replaced. The admin path for
-that — the test event → Live console → "Key leaked? Replace it" — worked by
-looking the input up through the `streams` row. Seeding the real leagues on
-2026-09-07 deleted the test event, which cascaded that row away. Verified:
+A test stream key was exposed and never rotated. The admin path for that — the
+test event → Live console → "Key leaked? Replace it" — worked by looking the
+input up through the `streams` row. Seeding the real leagues on 2026-09-07
+deleted the test event, which cascaded that row away. Verified:
 `select count(*) from streams` is now 0.
 
-The input itself still exists **at Cloudflare**, with the leaked key still
-valid. Nothing in this application can see it any more, so it has to be
-deleted by hand:
+The input itself still exists at Cloudflare. Nothing in this application can
+see it any more, so it has to be removed from the dashboard:
 
-> Cloudflare dashboard → Stream → Live Inputs → input `ff17908f…` → Delete.
+> Cloudflare dashboard → Stream → Live Inputs → the sole remaining test
+> input → Delete.
 
-Still low urgency — nothing broadcasts, there is no audience, the URL was
-never public — but it is now a manual job rather than two clicks, and it will
-not fix itself.
+Nothing broadcasts and there is no audience, but **this repository is public**,
+so the job is no longer low-urgency: do it, and set the Stream spend alert at
+the same time. The specific input id is deliberately not recorded here.
 
 ---
 
@@ -614,7 +613,8 @@ restriction, and the paywall.
 
 Proven for real: `createLiveInput()` works against the live Cloudflare API —
 **the $0 Stream plan does allow live inputs**, which was an open question for
-weeks. Input `ff17908f…` exists for event 7.
+weeks. One input was created for the test event and still exists at Cloudflare
+(see "Do this first").
 
 Never done, and all of it needs a person at a keyboard:
 
@@ -671,8 +671,9 @@ Billing → Notifications.
 | Stripe | Test mode | Live mode needs the business registered. |
 | Broadcast rights | None | **The actual gate on launch.** Everything on the site is invented placeholder data and says so. |
 
-The right Clerk instance is `ins_3Ief0BSpRBVjZXMj8cBy0GzpC98`, reachable via
-**vercel.com → roboxing → Integrations → Clerk → Manage**. The instance visible
+The right Clerk instance is the one reachable via
+**vercel.com → roboxing → Integrations → Clerk → Manage** (instance id
+deliberately not recorded here — this repo is public). The instance visible
 in a normal Clerk dashboard login is a different, unused app called "Infinita" —
 changes made there do nothing.
 
