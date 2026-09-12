@@ -19,6 +19,39 @@
 > ANTHROPIC_API_KEY is set in the Vercel production environment (2026-09-08),
 > so the morning cron classifies for real.
 >
+> **2026-09-12: the record build-out shipped** (`6d8e1aa`). Four new pages —
+> `/pilots`, `/get-in-the-ring`, `/open-questions`, `/context` — and the
+> schedule, which was empty, now carries twelve fixtures plus an "announced,
+> not yet scheduled" section. All verified live.
+>
+> **The four schema ideas, because everything else follows from them:**
+> `confidence` (confirmed/reported/unconfirmed, default *reported* so an
+> unlabelled row never overstates) with a source URL on every fact-bearing
+> table; `pilots` plus pilot columns on bouts; `competitions.class` and
+> `robots.class` (humanoid / piloted_mech / adjacent) with `events.kind`
+> (competition / exhibition), which together keep Robowar, NHRL, the GD01 and
+> the Dana White exhibition out of humanoid standings; and `manufacturers`,
+> which is what stopped Unitree appearing on the site as a competitor fighting
+> itself.
+>
+> **`robots.team_id` is now NULLABLE.** A platform model belongs to nobody —
+> URKL issues an identical T800 to all sixteen teams. Bouts still require both
+> teams, and `planFixtureImport` rejects a teamless robot rather than letting
+> anyone invent a team to satisfy the NOT NULL. Anything that joins robots to
+> teams must use a LEFT join; an inner join silently deletes every platform row
+> (this is exactly what broke the Machines page mid-build).
+>
+> **`date_tbd` makes a stored date unprintable.** Announced-but-unscheduled
+> events still need a `starts_at` so the calendar can order them; `dateTbd`
+> plus `dateLabel` is how the UI prints "December 2026 / January 2027" instead
+> of inventing a fixture. `EventDate` is the only component that should render
+> an event's date — it handles the instant, the window and the TBA case.
+>
+> **Re-run the data any time:** `npm run db:seed-record` is idempotent, upserts
+> by slug, and is the source of truth for the seeded facts (it overwrites admin
+> edits to those rows). Where a source URL was never actually verified it is
+> left NULL on purpose — a citation that does not resolve is worse than none.
+>
 > **2026-09-11: the cron can publish, and ONE VARIABLE IS MISSING.** Stage 3
 > (`src/lib/autopublish.ts`) fetches the source article behind a high-scoring
 > signal and writes a 2–4 paragraph brief. It is off until **`AUTOPUBLISH=on`**
