@@ -783,7 +783,14 @@ export const getRobotBySlug = cache(async (slug: string) => {
       teamLogoUrl: teams.logoUrl,
     })
     .from(robots)
-    .innerJoin(teams, eq(robots.teamId, teams.id))
+    /*
+     * LEFT, not INNER. `robots.team_id` became nullable when the Machines page
+     * started carrying platform models that belong to nobody — and this join
+     * stayed inner, which 404'd every one of them: the G1, the T800, the H2,
+     * the Booster T1. Six machine pages, silently gone, found by screenshotting
+     * the site rather than by any test.
+     */
+    .leftJoin(teams, eq(robots.teamId, teams.id))
     .where(eq(robots.slug, slug))
     .limit(1);
   return rows[0] ?? null;

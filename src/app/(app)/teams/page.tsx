@@ -38,23 +38,22 @@ export default async function TeamsPage() {
         </Card>
       ) : (
         <>
-          {/* Split by what the data actually says: an organisation with
-              machines on the roster is a manufacturer/platform owner, one
-              without is a competing team piloting somebody else's hardware.
-              That is the real structure of this sport — every URKL team runs
-              the same T800 — and pretending they are one kind of thing is
-              what made this page a wall of "0 robots". */}
+          {/*
+            ONE list, and the split that used to be here is gone.
+            It divided teams by "owns a machine = manufacturer", which was true
+            while Unitree and EngineAI were rows in this table. They are not any
+            more — `manufacturers` is its own table now — so the heuristic put
+            White Eagle and Matador under "Manufacturers & platforms", which is
+            exactly backwards: they are the competitors.
+
+            Makers live on the Machines page, where the hardware is.
+          */}
           {[
-            {
-              heading: "Manufacturers & platforms",
-              blurb: "They build the machines the sport runs on.",
-              rows: teams.filter((t) => t.robotCount > 0),
-            },
             {
               heading: "Competing teams",
               blurb:
-                "They pilot standardised hardware supplied by the league — which is why no machines are listed against their names.",
-              rows: teams.filter((t) => t.robotCount === 0),
+                "They pilot standardised hardware supplied by the league — every URKL entry is the same EngineAI T800 — which is why the machine count says little about them. The companies that BUILD the machines are on the Machines page.",
+              rows: teams,
             },
           ]
             .filter((section) => section.rows.length > 0)

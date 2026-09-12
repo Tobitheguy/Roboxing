@@ -63,3 +63,6 @@ next-env.d.ts
 /*.jpg
 /*.jpeg
 /*.avif
+
+# working material for a design handoff: screenshots and copied assets.
+/design-handoff/
