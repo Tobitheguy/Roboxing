@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, ListOrdered } from "lucide-react";
+import { CalendarClock, ExternalLink, ListOrdered } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
@@ -280,34 +280,34 @@ export default async function CompetitionPage(
                   {channels.map((channel) => (
                     <li
                       key={channel.id}
-                      className="border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-3 last:border-b-0 sm:px-6"
+                      className="border-line/60 border-b last:border-b-0"
                     >
-                      <div className="min-w-0">
-                        {channel.url ? (
-                          <a
-                            href={channel.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-ink hover:text-volt text-sm font-medium transition-colors"
-                          >
-                            {channel.name}
-                          </a>
-                        ) : (
-                          <span className="text-ink text-sm font-medium">
+                      {/* Whole row, same as /watch: one click to the platform. */}
+                      <a
+                        href={channel.url ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:bg-surface-2 group flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors sm:px-6"
+                      >
+                        <span className="min-w-0">
+                          <span className="text-ink group-hover:text-volt text-sm font-medium transition-colors">
                             {channel.name}
                           </span>
-                        )}
-                        {channel.note ? (
-                          <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
-                            {channel.note}
-                          </p>
-                        ) : null}
-                      </div>
-                      {channel.region ? (
-                        <span className="text-ink-dim shrink-0 text-xs">
-                          {channel.region}
+                          {channel.note ? (
+                            <span className="text-ink-dim mt-1 block max-w-md text-xs leading-relaxed">
+                              {channel.note}
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
+                        <span className="flex shrink-0 items-center gap-2">
+                          {channel.region ? (
+                            <span className="text-ink-dim text-xs">
+                              {channel.region}
+                            </span>
+                          ) : null}
+                          <ExternalLink className="text-ink-dim group-hover:text-volt size-3.5 transition-colors" />
+                        </span>
+                      </a>
                     </li>
                   ))}
                 </ul>

@@ -7,6 +7,18 @@ config({ path: ".env" });
  * The record build-out: leagues, schedule, results, people, machines, channels,
  * entry routes and open questions.
  *
+ * SCOPE: HUMANOID ONLY.
+ * -----------------------
+ * This site covers bipedal humanoid robot fighting and nothing adjacent to it.
+ * Robowar (a human inside a nine-foot mech), NHRL (wheeled destructive combat)
+ * and Unitree's GD01 (a 500 kg piloted vehicle) were all carried for a while,
+ * walled off in their own classes and excluded from every standings table, and
+ * they are gone — see scripts/humanoid-only.ts. A wall is not the same as a
+ * promise kept.
+ *
+ * Do not add a non-humanoid row here. `competition_class` and `robots.class`
+ * still exist as the guard that keeps one out of the standings if anyone tries.
+ *
  * Idempotent. Every write is an upsert keyed on a slug, so running it twice
  * changes nothing the second time and running it after a hand-edit in the admin
  * console overwrites that edit — which is the trade being made deliberately.
@@ -42,7 +54,6 @@ async function main() {
     posts,
     robots,
     teams,
-    watchChannels,
   } = await import("../src/db/schema");
   const { eq, inArray, sql } = await import("drizzle-orm");
 
@@ -174,35 +185,6 @@ The finals date and venue have not been published.`,
 EngineAI open-sourced the robot code beforehand so competing teams could customise and train their own fighters, the same "standardised hardware, differentiated algorithms" principle it would later build URKL on.
 
 No winner has ever been published. See Open Questions.`,
-    },
-    {
-      slug: "robowar",
-      name: "Robowar",
-      organizer: "Interactive Combat League",
-      status: "active" as const,
-      class: "piloted_mech" as const,
-      country: "US",
-      city: "Detroit",
-      foundedYear: 2025,
-      websiteUrl: "https://robowar.com",
-      confidence: "reported" as const,
-      description: `Founded by Art Cartwright in Detroit and running every few months since the summer of 2025.
-
-Human performers climb inside nine-foot piloted mech suits and fire projectiles at each other at twenty rounds a second, in a 572-seat auditorium on 7 Mile Road, behind bulletproof glass. Tickets start around $50 and it sells out. Matchups are city against city — Detroit versus Atlanta.
-
-This is not bipedal humanoid combat and it is filed under a separate class for that reason: a person is inside the machine. It appears on this site because it is the most commercially successful live mech-combat product in the United States, and because the people who like one of these sports tend to like the other.`,
-    },
-    {
-      slug: "nhrl",
-      name: "NHRL",
-      organizer: "National Havoc Robot League",
-      status: "active" as const,
-      class: "adjacent" as const,
-      country: "US",
-      confidence: "reported" as const,
-      description: `Wheeled destructive combat, not humanoid fighting — carried here for context and for the broadcast listings, never for the standings.
-
-NHRL is the largest regular combat-robot competition in the United States and its Pro Tour Finals fall in December 2026. It is on this site because it is where most of the American audience for robot fighting already is.`,
     },
     {
       slug: "exhibitions",
@@ -432,22 +414,6 @@ Nothing here is a sanctioned result and nothing here reaches a standings table. 
       confidence: "reported" as const,
       bio: "Used alongside the G1 at UFB's San Francisco events, and swept the humanoid titles at RoboCup 2026 — a pedigree in autonomous football rather than fighting.",
     },
-    {
-      slug: "unitree-gd01",
-      name: "GD01",
-      model: "GD01",
-      manufacturerId: makerId.get("unitree"),
-      teamId: null,
-      heightCm: 270,
-      weightGrams: 500_000,
-      priceUsd: 574_000,
-      priceNote:
-        "¥3.9M, converted at the rate reported when it was announced on 12 May 2026.",
-      class: "piloted_mech" as const,
-      confidence: "reported" as const,
-      usAvailability: "Classified as a civilian vehicle. No US availability announced.",
-      bio: "About 2.7 m and half a tonne with a pilot inside, and it transforms between bipedal and quadrupedal. A piloted mech, filed in a separate class: a person is in it, and it must never appear in a comparison table beside a 35 kg G1. Unitree's founder Wang Xingxing drove one through a brick wall in the announcement demo.",
-    },
   ];
 
   for (const r of PLATFORMS) {
@@ -602,8 +568,8 @@ Nothing here is a sanctioned result and nothing here reaches a standings table. 
       nationality: "CN",
       affiliation: "Founder and CEO, Unitree Robotics",
       notableResult:
-        "Piloted the GD01 mecha through a brick wall in the May 2026 demonstration.",
-      bio: "Founded Unitree in 2016. Met Dana White at the UFC's Shanghai humanoid exhibition in August 2025, and drove the GD01 piloted mech through a brick wall when it was announced in May 2026.",
+        "Founded Unitree, whose G1 is the platform most humanoid fighting is staged on.",
+      bio: "Founded Unitree in 2016. Its G1 was the machine in all four corners of the first Iron Fist King tournament, and Unitree became UFB's official robotics partner in November 2025. He met Dana White at the UFC's Shanghai humanoid exhibition in August 2025. In September 2026 Unitree claimed the first fully autonomous humanoid combat, a claim nobody outside the company has verified.",
       confidence: "reported" as const,
     },
     {
@@ -627,17 +593,6 @@ Nothing here is a sanctioned result and nothing here reaches a standings table. 
       notableResult:
         "Refereed the humanoid exhibition at UFC Fight Night 257, Shanghai, 23 August 2025.",
       bio: "The UFC president refereed a robot exhibition on a UFC card in Shanghai and met Unitree's CEO there. A promotional demonstration rather than a sanctioned bout, and still the closest this sport has come to mainstream combat-sports legitimacy.",
-      confidence: "reported" as const,
-    },
-    {
-      slug: "art-cartwright",
-      name: "Art Cartwright",
-      role: "founder" as const,
-      nationality: "US",
-      competitionId: C("robowar"),
-      affiliation: "Founder, Robowar / Interactive Combat League",
-      notableResult: "Founded Robowar in Detroit, running since summer 2025.",
-      bio: "Built a 572-seat auditorium on 7 Mile Road in Detroit where human performers fight inside nine-foot mech suits behind bulletproof glass, and sells it out. Piloted mech rather than humanoid combat, and the most commercially proven live product in the category.",
       confidence: "reported" as const,
     },
   ];
@@ -705,20 +660,6 @@ Nothing here is a sanctioned result and nothing here reaches a standings table. 
       status: "scheduled",
       confidence: "reported",
       note: "Confirmed for Dubai; the exact date has not been announced. The prize is a 10 kg solid gold belt worth roughly RMB 10 million (about US$1.44 million).",
-    },
-    {
-      slug: "nhrl-pro-tour-finals-2026",
-      competitionId: C("nhrl"),
-      name: "NHRL Pro Tour Finals",
-      country: "US",
-      startsAt: D("2026-12-01T00:00:00Z"),
-      startTimeTbd: true,
-      dateTbd: true,
-      dateLabel: "December 2026",
-      timezone: "America/New_York",
-      status: "scheduled",
-      confidence: "reported",
-      note: "Wheeled combat, not humanoid — listed for context and because it is where much of the American robot-fighting audience already is.",
     },
     {
       slug: "whrg-2027",
@@ -978,112 +919,15 @@ AGIBOT topped the medal table with 18 gold, 16 silver and 12 bronze. Tiangong Ul
   /* 8. Where to watch                                                       */
   /* ---------------------------------------------------------------------- */
 
-  console.log("Watch channels…");
-  await db.delete(watchChannels);
-  const CHANNELS: (typeof watchChannels.$inferInsert)[] = [
-    ...(["iron-fist-king", "cmg-2026", "world-humanoid-robot-games"] as const).flatMap(
-      (slug, group) =>
-        [
-          ["CCTV-10", "China", null],
-          ["CCTV News", "China", null],
-          ["CCTV Video", "China", null],
-          ["CCTV Sports", "China", null],
-          ["CGTN", "International", "CMG's English-language channel."],
-          [
-            "CMG global simultaneous broadcast",
-            "Worldwide",
-            "China Media Group carries its own events across its network simultaneously.",
-          ],
-        ].map(([name, region, note], i) => ({
-          competitionId: C(slug),
-          name: name as string,
-          region: region as string,
-          note: note as string | null,
-          orderIndex: group * 10 + i,
-          confidence: "reported" as const,
-        })),
-    ),
-    {
-      competitionId: C("ufb"),
-      name: "UFB live stream",
-      url: "https://luma.com/ufb-live-stream",
-      region: "Worldwide",
-      orderIndex: 0,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("ufb"),
-      name: "@UFBots on X",
-      url: "https://x.com/UFBots",
-      region: "Worldwide",
-      orderIndex: 1,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("ufb"),
-      name: "ultimatebots.com/schedule",
-      url: "https://ultimatebots.com/schedule",
-      region: "Worldwide",
-      note: "The league's own fixture list.",
-      orderIndex: 2,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("rek"),
-      name: "rek.com",
-      url: "https://rek.com",
-      region: "Worldwide",
-      orderIndex: 0,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("rek"),
-      name: "@REKrobot",
-      url: "https://x.com/REKrobot",
-      region: "Worldwide",
-      orderIndex: 1,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("cyberhero"),
-      name: "Hero Esports channels",
-      region: "Worldwide",
-      note: "No live stream was confirmed for the Riyadh launch, and the event was invite-only. Whatever footage exists is whatever Hero Esports chooses to release.",
-      orderIndex: 0,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("robowar"),
-      name: "Live only — no broadcast",
-      url: "https://www.ticketsource.com/robowar",
-      region: "Detroit",
-      note: "Tickets from about $50. There is no stream; the show is the room.",
-      orderIndex: 0,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("nhrl"),
-      name: "DAZN",
-      region: "Worldwide",
-      orderIndex: 0,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("nhrl"),
-      name: "ESPN",
-      region: "US",
-      orderIndex: 1,
-      confidence: "reported",
-    },
-    {
-      competitionId: C("nhrl"),
-      name: "Cheddar",
-      region: "US",
-      orderIndex: 2,
-      confidence: "reported",
-    },
-  ];
-  await db.insert(watchChannels).values(CHANNELS);
+  /*
+   * Watch channels are NOT seeded here any more.
+   *
+   * scripts/seed-watch-channels.ts owns them, because every row on that page
+   * has to carry a working link and the links have to be fetched and checked
+   * before they are written. That is a different job from seeding facts, and
+   * mixing the two meant a re-run of this file could silently replace verified
+   * URLs with the linkless rows it used to write.
+   */
 
   /* ---------------------------------------------------------------------- */
   /* 9. How to enter                                                         */

@@ -21,10 +21,10 @@ export const NAV_ITEMS: NavItem[] = [
    * It was pulled because it promised "live events play here" on a site that
    * holds no broadcast rights and almost never carries the video -- a nav item
    * leading to a page that could not deliver. It is now a directory of where
-   * somebody ELSE streams each league: CCTV-10 and CGTN for the Chinese events,
-   * Luma for UFB, a ticket link for Robowar, which has no stream at all. That
-   * is a question this site can actually answer, and one a visitor genuinely
-   * arrives with.
+   * somebody ELSE streams each league: CCTV-10 and CGTN for the Chinese
+   * events, play.ufb.gg for UFB, Hero Esports' own YouTube for CyberHero.
+   * Every row is a link. That is a question this site can actually answer,
+   * and one a visitor genuinely arrives with.
    */
   { href: "/watch", label: "Watch" },
   { href: "/competitions", label: "Leagues" },

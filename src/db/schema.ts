@@ -67,18 +67,24 @@ export const confidence = pgEnum("confidence", [
 ]);
 
 /**
- * What KIND of fighting a competition is, so unlike things never share a table.
+ * What KIND of fighting a competition is.
  *
- * - `humanoid`     — bipedal humanoid robots. The sport this site is about.
- * - `piloted_mech` — a human inside the machine (Robowar, Unitree's GD01).
- *                    Spectacular, related, and not the same sport.
- * - `adjacent`     — wheeled//destructive combat (BattleBots, NHRL). Carried
- *                    for context and for "where to watch", never for standings.
+ * - `humanoid`     — bipedal humanoid robots. The sport this site is about,
+ *                    and as of September 2026 the only thing it carries.
+ * - `piloted_mech` — a human inside the machine.
+ * - `adjacent`     — wheeled//destructive combat.
  *
- * The reason this is a column and not a tag: standings. A piloted mech league
- * whose bouts land in the same table as URKL's produces a cross-league machine
- * record in which a 500 kg vehicle with a person inside has a win rate against
- * a 35 kg G1. That table would be worse than no table.
+ * THE SITE IS HUMANOID ONLY. It briefly carried a piloted mech league and a
+ * wheeled one, each walled off in its own section and excluded from every
+ * standings table, and they were removed — a wall is not the same as a promise
+ * kept, and "the record of humanoid robot fighting" has to mean what it says.
+ *
+ * The other two values survive on purpose, with no rows in them. They are the
+ * guard: every page filters on `humanoid`, so a non-humanoid row added by hand
+ * or by an importer cannot reach a standings table, where it would produce a
+ * machine record in which a 500 kg vehicle with a person inside has a win rate
+ * against a 35 kg G1. An unused enum value costs nothing; re-deriving that rule
+ * after it is forgotten costs a wrong table.
  */
 export const competitionClass = pgEnum("competition_class", [
   "humanoid",

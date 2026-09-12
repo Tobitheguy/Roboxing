@@ -26,12 +26,15 @@ export const metadata: Metadata = {
  * actually is: whole leagues share one standardised platform. URKL hands every
  * team an identical T800 and lets them differentiate on software alone.
  *
- * Two things changed here when the record was built out. Platform rows no
- * longer belong to a team — they belong to a MAKER, which is what stopped
- * Unitree appearing on the site as a competitor fighting itself. And piloted
- * mechs are separated out below: a 2.7 m, 500 kg machine with a person inside
- * is genuinely interesting and must never sit in a spec comparison beside a
- * 35 kg G1, because a reader scanning a table does not check the class column.
+ * One thing changed when the record was built out: platform rows no longer
+ * belong to a team — they belong to a MAKER, which is what stopped Unitree
+ * appearing on the site as a competitor fighting itself.
+ *
+ * Humanoid only. Unitree's GD01 — 2.7 m, 500 kg, a person inside — was listed
+ * here under a separate class for a while and is gone with the rest of the
+ * non-humanoid coverage. The class filter below stays as a guard: a piloted
+ * mech must never appear in a spec table beside a 35 kg G1, because a reader
+ * scanning rows does not check a class column.
  */
 export default async function MachinesPage() {
   const [allRows, makers] = await Promise.all([
@@ -49,7 +52,6 @@ export default async function MachinesPage() {
   );
 
   const humanoids = rows.filter(({ robot }) => robot.class === "humanoid");
-  const mechs = rows.filter(({ robot }) => robot.class !== "humanoid");
 
   return (
     <PageShell>
@@ -75,25 +77,6 @@ export default async function MachinesPage() {
             ))}
           </div>
 
-          {mechs.length > 0 ? (
-            <>
-              <h2 className="font-display text-title text-ink mt-12 mb-2 uppercase">
-                Piloted mechs
-              </h2>
-              <p className="text-ink-muted mb-4 max-w-2xl text-sm leading-relaxed">
-                A separate class, listed apart on purpose. These carry a human
-                inside rather than being driven from outside, and they never
-                appear in humanoid standings or spec comparisons — half a tonne
-                with a pilot in it is not the same sport as 35 kg on a
-                controller.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {mechs.map((row) => (
-                  <MachineCard key={row.robot.id} row={row} />
-                ))}
-              </div>
-            </>
-          ) : null}
         </>
       )}
 

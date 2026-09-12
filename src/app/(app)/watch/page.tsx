@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, MonitorPlay, Tv } from "lucide-react";
+import { ChevronRight, ExternalLink, MonitorPlay, Tv } from "lucide-react";
 
-import { Badge } from "@/components/badge";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { EventDate } from "@/components/event-date";
@@ -72,9 +71,9 @@ export default async function WatchIndexPage() {
    * CCTV-10, CCTV Sports and CGTN whether or not anyone has announced a
    * particular card yet.
    *
-   * Humanoid leagues first, then piloted mech, then the wheeled-combat shows
-   * that are carried for context — the ordering says which of these is the
-   * sport this site is about.
+   * Every league here is humanoid; the class sort is kept only as a guard, so
+   * that a non-humanoid row added by hand would sort last rather than lead the
+   * page.
    */
   const byLeague = new Map<string, typeof channels>();
   for (const row of channels) {
@@ -123,9 +122,8 @@ export default async function WatchIndexPage() {
             The standing answer, and the reason this page leads with it: for
             most of these leagues the broadcaster does not change per event.
             CMG&rsquo;s nights are on CCTV whether or not a particular card has
-            been announced. Where a league has no stream at all — Robowar sells
-            a seat and streams nothing — that is stated rather than left blank,
-            because it is the more useful fact.
+            been announced. Every row is a link — one click to the channel, the
+            stream or the signup.
           </p>
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -140,56 +138,11 @@ export default async function WatchIndexPage() {
                       {group[0].competitionName}
                     </Link>
                   }
-                  action={
-                    group[0].competitionClass !== "humanoid" ? (
-                      <Badge variant="outline" size="sm">
-                        {group[0].competitionClass === "piloted_mech"
-                          ? "Piloted mech"
-                          : "Adjacent"}
-                      </Badge>
-                    ) : null
-                  }
                 />
                 <CardBodyFlush>
                   <ul>
                     {group.map(({ channel }) => (
-                      <li
-                        key={channel.id}
-                        className="border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-3 last:border-b-0 sm:px-6"
-                      >
-                        <div className="min-w-0">
-                          {channel.url ? (
-                            <a
-                              href={channel.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-ink hover:text-volt text-sm font-medium transition-colors"
-                            >
-                              {channel.name}
-                            </a>
-                          ) : (
-                            <span className="text-ink text-sm font-medium">
-                              {channel.name}
-                            </span>
-                          )}
-                          {channel.note ? (
-                            <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
-                              {channel.note}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {channel.region ? (
-                            <span className="text-ink-dim text-xs">
-                              {channel.region}
-                            </span>
-                          ) : null}
-                          <ConfidenceBadge
-                            level={channel.confidence}
-                            showLabel={false}
-                          />
-                        </div>
-                      </li>
+                      <ChannelRow key={channel.id} channel={channel} />
                     ))}
                   </ul>
                 </CardBodyFlush>
@@ -321,5 +274,71 @@ export default async function WatchIndexPage() {
         </Card>
       )}
     </PageShell>
+  );
+}
+
+
+/**
+ * One channel, and the whole row is the link.
+ *
+ * The point of this page is that a reader gets to a platform in one click, so
+ * the target is the row rather than the four words of its name — a 14px link in
+ * a list is a small thing to hit on a phone, and the rest of the row looked
+ * inert.
+ *
+ * `ExternalLink` on every row is not decoration either: almost nothing here is
+ * ours, and a reader deserves to know a click leaves the site before they make
+ * it.
+ */
+function ChannelRow({
+  channel,
+}: {
+  channel: Awaited<ReturnType<typeof getAllWatchChannels>>[number]["channel"];
+}) {
+  const body = (
+    <>
+      <div className="min-w-0">
+        <span className="text-ink group-hover:text-volt text-sm font-medium transition-colors">
+          {channel.name}
+        </span>
+        {channel.note ? (
+          <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
+            {channel.note}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {channel.region ? (
+          <span className="text-ink-dim text-xs">{channel.region}</span>
+        ) : null}
+        <ConfidenceBadge level={channel.confidence} showLabel={false} />
+        {channel.url ? (
+          <ExternalLink className="text-ink-dim group-hover:text-volt size-3.5 transition-colors" />
+        ) : null}
+      </div>
+    </>
+  );
+
+  const className =
+    "border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b last:border-b-0";
+
+  // A row with no link still renders — it just is not a link. That case should
+  // not exist any more (the channel seed refuses to write one), and rendering
+  // it as a dead anchor would be worse than rendering it as text.
+  if (!channel.url) {
+    return <li className={`${className} px-4 py-3 sm:px-6`}>{body}</li>;
+  }
+
+  return (
+    <li className={className}>
+      <a
+        href={channel.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:bg-surface-2 group flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors sm:px-6"
+      >
+        {body}
+      </a>
+    </li>
   );
 }
