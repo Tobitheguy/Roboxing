@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, ExternalLink, ListOrdered } from "lucide-react";
+import { CalendarClock, ListOrdered } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
+import { ChannelPill } from "@/components/channel-pill";
 import { ConfidenceBadge, SourceLink } from "@/components/confidence-badge";
 import { EventDate } from "@/components/event-date";
 import { EmptyState } from "@/components/empty-state";
@@ -275,43 +276,37 @@ export default async function CompetitionPage(
           {channels.length > 0 ? (
             <Card>
               <CardHeader title="Where to watch" />
-              <CardBodyFlush>
-                <ul>
+              <CardBody>
+                {/* Pills first — that is what a reader is here for — with the
+                    caveats underneath, which is the half that does not fit on
+                    the /watch grid. */}
+                <div className="flex flex-wrap gap-2">
                   {channels.map((channel) => (
-                    <li
+                    <ChannelPill
                       key={channel.id}
-                      className="border-line/60 border-b last:border-b-0"
-                    >
-                      {/* Whole row, same as /watch: one click to the platform. */}
-                      <a
-                        href={channel.url ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:bg-surface-2 group flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors sm:px-6"
-                      >
-                        <span className="min-w-0">
-                          <span className="text-ink group-hover:text-volt text-sm font-medium transition-colors">
-                            {channel.name}
-                          </span>
-                          {channel.note ? (
-                            <span className="text-ink-dim mt-1 block max-w-md text-xs leading-relaxed">
-                              {channel.note}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          {channel.region ? (
-                            <span className="text-ink-dim text-xs">
-                              {channel.region}
-                            </span>
-                          ) : null}
-                          <ExternalLink className="text-ink-dim group-hover:text-volt size-3.5 transition-colors" />
-                        </span>
-                      </a>
-                    </li>
+                      name={channel.name}
+                      url={channel.url}
+                    />
                   ))}
-                </ul>
-              </CardBodyFlush>
+                </div>
+                {channels.some((c) => c.note) ? (
+                  <ul className="mt-4 space-y-2">
+                    {channels
+                      .filter((c) => c.note)
+                      .map((channel) => (
+                        <li
+                          key={channel.id}
+                          className="text-ink-dim text-xs leading-relaxed"
+                        >
+                          <span className="text-ink-muted font-medium">
+                            {channel.name}
+                          </span>{" "}
+                          — {channel.note}
+                        </li>
+                      ))}
+                  </ul>
+                ) : null}
+              </CardBody>
             </Card>
           ) : null}
 

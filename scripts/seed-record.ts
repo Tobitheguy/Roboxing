@@ -143,6 +143,9 @@ async function main() {
       city: "San Francisco",
       foundedYear: 2025,
       websiteUrl: "https://ultimatebots.com",
+      // UFB's own app icon, fetched from ultimatebots.com. A real mark rather
+      // than a redraw -- the rule is real verified logos only.
+      logoUrl: "/leagues/ufb.png",
       confidence: "confirmed" as const,
       description: `Ultimate Fighting Bots, trading as Ultimate Bots, is the largest American humanoid fighting league and the one this site was missing.
 
@@ -179,6 +182,9 @@ The finals date and venue have not been published.`,
       class: "humanoid" as const,
       country: "CN",
       city: "Shenzhen",
+      // EngineAI's own competition, so the organiser's mark is the right one --
+      // the same convention as Iron Fist King carrying Unitree's.
+      logoUrl: "/leagues/engineai.png",
       confidence: "reported" as const,
       description: `机甲王 — billed as the first full-size humanoid free-combat championship, staged by EngineAI in Shenzhen on 24 December 2025.
 

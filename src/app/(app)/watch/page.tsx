@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, ExternalLink, MonitorPlay, Tv } from "lucide-react";
+import { ChevronRight, MonitorPlay, Tv } from "lucide-react";
 
-import { Card, CardBodyFlush, CardHeader } from "@/components/card";
-import { ConfidenceBadge } from "@/components/confidence-badge";
+import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
+import { ChannelPill } from "@/components/channel-pill";
 import { EventDate } from "@/components/event-date";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
@@ -119,33 +119,33 @@ export default async function WatchIndexPage() {
             Channels by league
           </h2>
           <p className="text-ink-muted mb-5 max-w-2xl text-sm leading-relaxed">
-            The standing answer, and the reason this page leads with it: for
-            most of these leagues the broadcaster does not change per event.
-            CMG&rsquo;s nights are on CCTV whether or not a particular card has
-            been announced. Every row is a link — one click to the channel, the
-            stream or the signup.
+            Every link here goes to a stream or to the organiser&rsquo;s own
+            video channel — where the footage actually is. Not to a
+            broadcaster&rsquo;s homepage, which answers a different question.
           </p>
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {leagueGroups.map((group) => (
               <Card key={group[0].competitionSlug}>
-                <CardHeader
-                  title={
-                    <Link
-                      href={`/competitions/${group[0].competitionSlug}`}
-                      className="hover:text-volt transition-colors"
-                    >
-                      {group[0].competitionName}
-                    </Link>
-                  }
-                />
-                <CardBodyFlush>
-                  <ul>
+                <CardBody>
+                  <Link
+                    href={`/competitions/${group[0].competitionSlug}`}
+                    className="font-display text-ink hover:text-volt text-sm font-semibold uppercase transition-colors"
+                  >
+                    {group[0].competitionName}
+                  </Link>
+                  {/* Icons, not rows. The notes live on the league page where
+                      there is room; here the reader is hunting for a glyph. */}
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {group.map(({ channel }) => (
-                      <ChannelRow key={channel.id} channel={channel} />
+                      <ChannelPill
+                        key={channel.id}
+                        name={channel.name}
+                        url={channel.url}
+                      />
                     ))}
-                  </ul>
-                </CardBodyFlush>
+                  </div>
+                </CardBody>
               </Card>
             ))}
           </div>
@@ -274,71 +274,5 @@ export default async function WatchIndexPage() {
         </Card>
       )}
     </PageShell>
-  );
-}
-
-
-/**
- * One channel, and the whole row is the link.
- *
- * The point of this page is that a reader gets to a platform in one click, so
- * the target is the row rather than the four words of its name — a 14px link in
- * a list is a small thing to hit on a phone, and the rest of the row looked
- * inert.
- *
- * `ExternalLink` on every row is not decoration either: almost nothing here is
- * ours, and a reader deserves to know a click leaves the site before they make
- * it.
- */
-function ChannelRow({
-  channel,
-}: {
-  channel: Awaited<ReturnType<typeof getAllWatchChannels>>[number]["channel"];
-}) {
-  const body = (
-    <>
-      <div className="min-w-0">
-        <span className="text-ink group-hover:text-volt text-sm font-medium transition-colors">
-          {channel.name}
-        </span>
-        {channel.note ? (
-          <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
-            {channel.note}
-          </p>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {channel.region ? (
-          <span className="text-ink-dim text-xs">{channel.region}</span>
-        ) : null}
-        <ConfidenceBadge level={channel.confidence} showLabel={false} />
-        {channel.url ? (
-          <ExternalLink className="text-ink-dim group-hover:text-volt size-3.5 transition-colors" />
-        ) : null}
-      </div>
-    </>
-  );
-
-  const className =
-    "border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b last:border-b-0";
-
-  // A row with no link still renders — it just is not a link. That case should
-  // not exist any more (the channel seed refuses to write one), and rendering
-  // it as a dead anchor would be worse than rendering it as text.
-  if (!channel.url) {
-    return <li className={`${className} px-4 py-3 sm:px-6`}>{body}</li>;
-  }
-
-  return (
-    <li className={className}>
-      <a
-        href={channel.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:bg-surface-2 group flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 transition-colors sm:px-6"
-      >
-        {body}
-      </a>
-    </li>
   );
 }

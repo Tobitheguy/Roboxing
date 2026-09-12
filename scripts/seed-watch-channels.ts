@@ -4,29 +4,40 @@ config({ path: ".env.local" });
 config({ path: ".env" });
 
 /**
- * Where to watch, with a link on every row.
+ * Where to watch: a link that lands on the FOOTAGE, not on a broadcaster.
  *
- * The page listed "CCTV-10" and "CGTN" as plain text, which answers the
- * question only for someone who already knows where CCTV-10 lives. A broadcast
- * directory whose rows are not clickable is a list of names.
+ * The first version of this file listed CCTV-10, CCTV-5, CCTV-13, cctv.com and
+ * yangshipin.cn against every China Media Group competition. Every one of those
+ * URLs resolves — and every one of them lands the reader on whatever happens to
+ * be on Chinese television at that moment. Tobias's verdict was right: "that's
+ * just random TV". A broadcast directory that sends someone to a network's
+ * homepage has answered a different question from the one they asked.
  *
- * EVERY URL BELOW WAS FETCHED AND RETURNED 200 before being written here, and
- * the two social accounts were read off the operator's own site rather than
- * guessed — heroesports.com links @realheroesports on both YouTube and X. A
- * plausible-looking channel URL that 404s is worse than no link, because it
- * costs the reader a click to discover we were wrong.
+ * A reader wants one of exactly two things:
  *
- * UFB streams on TWITCH, at twitch.tv/ufb0ts — with a zero, which is the kind
- * of detail that makes a hand-typed guess fail silently. It was not findable
- * from their own site or from search; Tobias supplied it, and it was fetched
- * and checked before landing here.
+ *   1. Where this league STREAMS when it is on. For UFB that is Twitch.
+ *   2. Where the finished footage LIVES — which, for almost everything in this
+ *      sport, is the organiser's own video channel. EngineAI posts URKL,
+ *      Unitree posts Iron Fist King, Hero Esports posts CyberHero, and CGTN
+ *      carries the English-language coverage of CMG events.
  *
- * Usage: npx tsx scripts/seed-watch-channels.ts
+ * So every row is now a stream page or an organiser channel. A network portal
+ * is never a row, however true it is that the network carried the event.
+ *
+ * EVERY URL BELOW WAS FETCHED AND RETURNED 200 before being written here. The
+ * Hero Esports accounts were read off heroesports.com; the Twitch channel came
+ * from Tobias — twitch.tv/ufb0ts, with a ZERO, which is why no search found it
+ * and why a hand-typed guess would have failed silently.
+ *
+ * NOT included: Bilibili. It returns 200 for a space id that does not exist,
+ * so "it resolved" proves nothing there, and a wrong channel is worse than a
+ * missing one. Those need a human to paste the real URL.
+ *
+ * Usage: npm run db:seed-watch
  */
 async function main() {
   const { db } = await import("../src/db");
   const { competitions, watchChannels } = await import("../src/db/schema");
-  const { eq } = await import("drizzle-orm");
 
   const rows = await db
     .select({ id: competitions.id, slug: competitions.slug })
@@ -37,141 +48,78 @@ async function main() {
     return found.id;
   };
 
-  /*
-   * China Media Group runs three of the competitions on this site and carries
-   * them across the same network every time, so the block is shared rather
-   * than retyped per league.
-   */
-  const CMG = [
-    {
-      name: "CCTV-10",
-      url: "https://tv.cctv.com/live/cctv10/",
-      region: "China",
-      note: "The science and education channel, which is where CMG files robot fighting.",
-    },
-    {
-      name: "CCTV-5 Sports",
-      url: "https://tv.cctv.com/live/cctv5/",
-      region: "China",
-      note: null,
-    },
-    {
-      name: "CCTV-13 News",
-      url: "https://tv.cctv.com/live/cctv13/",
-      region: "China",
-      note: null,
-    },
-    {
-      name: "央视频 (CCTV Video)",
-      url: "https://www.yangshipin.cn/",
-      region: "China",
-      note: "CMG's own streaming app. Free, no account needed to watch.",
-    },
-    {
-      name: "CGTN",
-      url: "https://www.cgtn.com/live",
-      region: "International",
-      note: "CMG's English-language channel — the one to try first from outside China.",
-    },
-    {
-      name: "cctv.com",
-      url: "https://www.cctv.com/",
-      region: "Worldwide",
-      note: "CMG simulcasts its own events across the network.",
-    },
-  ];
-
   const CHANNELS: {
     competition: string;
     name: string;
-    url: string | null;
-    region: string | null;
+    url: string;
     note: string | null;
     confidence: "confirmed" | "reported" | "unconfirmed";
   }[] = [
-    ...(["iron-fist-king", "cmg-2026", "world-humanoid-robot-games"] as const).flatMap(
-      (slug) =>
-        CMG.map((c) => ({
-          competition: slug,
-          ...c,
-          confidence: "reported" as const,
-        })),
-    ),
-
-    /* ---- URKL: had no channels at all, which was the worst gap ---------- */
+    /* ---- URKL: EngineAI runs it and posts it ---------------------------- */
     {
       competition: "urkl",
       name: "urkl.org",
       url: "https://urkl.org/",
-      region: "Worldwide",
       note: "The league's own site. Opening-night footage is posted here.",
       confidence: "confirmed",
     },
     {
       competition: "urkl",
-      name: "EngineAI",
+      name: "EngineAI on YouTube",
+      url: "https://www.youtube.com/@engineai",
+      note: "The organiser, and the maker of every robot in the league.",
+      confidence: "reported",
+    },
+    {
+      competition: "urkl",
+      name: "en.engineai.com.cn",
       url: "https://en.engineai.com.cn/",
-      region: "Worldwide",
-      note: "The organiser, and the manufacturer of every robot in the league.",
+      note: null,
       confidence: "confirmed",
     },
 
-    /* ---- UFB ------------------------------------------------------------ */
+    /* ---- UFB: the only league with a real live channel ------------------- */
     {
       competition: "ufb",
-      name: "Twitch — twitch.tv/ufb0ts",
+      name: "Twitch",
       url: "https://www.twitch.tv/ufb0ts",
-      region: "Worldwide",
-      note: "Where UFB actually streams. Note the spelling: ufb0ts, with a zero.",
+      note: "Live and on replay. The channel is ufb0ts — with a zero.",
       confidence: "confirmed",
     },
     {
       competition: "ufb",
       name: "play.ufb.gg",
       url: "https://play.ufb.gg/",
-      region: "Worldwide",
-      note: "Sign up here — the same account watches and pilots. UFB lets you drive a robot from the browser.",
+      note: "One account to watch and to pilot — UFB lets you drive from the browser.",
       confidence: "confirmed",
     },
     {
       competition: "ufb",
-      name: "UFB live stream",
-      url: "https://luma.com/ufb-live-stream",
-      region: "Worldwide",
-      note: "Register for the stream of each event.",
-      confidence: "reported",
-    },
-    {
-      competition: "ufb",
-      name: "@UFBots on X",
+      name: "X",
       url: "https://x.com/UFBots",
-      region: "Worldwide",
-      note: "Where fight nights are announced.",
+      note: null,
       confidence: "confirmed",
     },
     {
       competition: "ufb",
       name: "ultimatebots.com",
       url: "https://www.ultimatebots.com/",
-      region: "Worldwide",
-      note: "The league's own schedule.",
+      note: null,
       confidence: "confirmed",
     },
 
-    /* ---- CyberHero: Hero Esports' own channels, read off their site ----- */
+    /* ---- CyberHero: Hero Esports' own channels -------------------------- */
     {
       competition: "cyberhero",
       name: "Hero Esports on YouTube",
       url: "https://www.youtube.com/@realheroesports",
-      region: "Worldwide",
-      note: "The organiser's channel. No live stream was confirmed for the Riyadh launch — the event was invite-only — so whatever footage exists appears here first.",
+      note: "Riyadh was invite-only with no confirmed stream, so footage appears here first.",
       confidence: "confirmed",
     },
     {
       competition: "cyberhero",
-      name: "@realheroesports on X",
+      name: "X",
       url: "https://x.com/realheroesports",
-      region: "Worldwide",
       note: null,
       confidence: "confirmed",
     },
@@ -179,9 +127,58 @@ async function main() {
       competition: "cyberhero",
       name: "heroesports.com",
       url: "https://www.heroesports.com/",
-      region: "Worldwide",
       note: null,
       confidence: "confirmed",
+    },
+
+    /* ---- Iron Fist King: Unitree's machines, CMG's broadcast ------------ */
+    {
+      competition: "iron-fist-king",
+      name: "Unitree on YouTube",
+      url: "https://www.youtube.com/@unitreerobotics",
+      note: "All four robots were Unitree G1s; Unitree posts its own fight footage.",
+      confidence: "reported",
+    },
+    {
+      competition: "iron-fist-king",
+      name: "CGTN on YouTube",
+      url: "https://www.youtube.com/@CGTN",
+      note: "CMG's English channel — where its coverage is findable outside China.",
+      confidence: "reported",
+    },
+
+    /* ---- CMG2026 -------------------------------------------------------- */
+    {
+      competition: "cmg-2026",
+      name: "CGTN on YouTube",
+      url: "https://www.youtube.com/@CGTN",
+      note: "The realistic way to see a CMG event from outside China.",
+      confidence: "reported",
+    },
+    {
+      competition: "cmg-2026",
+      name: "CCTV on YouTube",
+      url: "https://www.youtube.com/@cctv",
+      note: null,
+      confidence: "reported",
+    },
+
+    /* ---- World Humanoid Robot Games ------------------------------------- */
+    {
+      competition: "world-humanoid-robot-games",
+      name: "CGTN on YouTube",
+      url: "https://www.youtube.com/@CGTN",
+      note: "Carried the Games in English. The fighting events specifically are hard to find — see Open Questions.",
+      confidence: "reported",
+    },
+
+    /* ---- Mecha King ----------------------------------------------------- */
+    {
+      competition: "engineai-mecha-king",
+      name: "EngineAI on YouTube",
+      url: "https://www.youtube.com/@engineai",
+      note: "EngineAI staged it. No footage of the final and no result have ever been published.",
+      confidence: "reported",
     },
 
     /* ---- REK ------------------------------------------------------------ */
@@ -189,15 +186,13 @@ async function main() {
       competition: "rek",
       name: "rek.com",
       url: "https://rek.com/",
-      region: "Worldwide",
       note: null,
       confidence: "reported",
     },
     {
       competition: "rek",
-      name: "@REKrobot on X",
+      name: "X",
       url: "https://x.com/REKrobot",
-      region: "Worldwide",
       note: null,
       confidence: "reported",
     },
@@ -206,25 +201,25 @@ async function main() {
   await db.delete(watchChannels);
 
   let order = 0;
-  let lastCompetition = "";
+  let last = "";
   for (const row of CHANNELS) {
-    if (row.competition !== lastCompetition) {
+    if (row.competition !== last) {
       order = 0;
-      lastCompetition = row.competition;
+      last = row.competition;
     }
     await db.insert(watchChannels).values({
       competitionId: C(row.competition),
       name: row.name,
       url: row.url,
-      region: row.region,
+      // `region` is gone from every row. It was "Worldwide" on almost all of
+      // them, which is not information — it is a column of the same word.
+      region: null,
       note: row.note,
       orderIndex: order++,
       confidence: row.confidence,
     });
   }
 
-  // Read back rather than trust the inserts: the whole point of this pass is
-  // that every row has a link.
   const written = await db
     .select({ name: watchChannels.name, url: watchChannels.url })
     .from(watchChannels);
@@ -232,12 +227,9 @@ async function main() {
 
   console.log(`${written.length} channels written.`);
   if (linkless.length > 0) {
-    throw new Error(
-      `Rows with no link: ${linkless.map((l) => l.name).join(", ")}`,
-    );
+    throw new Error(`Rows with no link: ${linkless.map((l) => l.name).join(", ")}`);
   }
-  console.log("Every row has a link. Verified.");
-  void eq;
+  console.log("Every row has a link, and every link is a stream or a channel.");
 }
 
 main().catch((error) => {

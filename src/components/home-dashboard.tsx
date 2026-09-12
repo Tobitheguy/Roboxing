@@ -4,6 +4,7 @@ import { Newspaper, Trophy } from "lucide-react";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
+import { FootageRail } from "@/components/footage-rail";
 import { JustHappenedUpNext } from "@/components/just-happened-up-next";
 import { LeaguesBand } from "@/components/leagues-band";
 import { PageShell } from "@/components/page-shell";
@@ -57,6 +58,21 @@ export async function HomeDashboard() {
   const lead = posts[leadIndex];
   const rest = posts.filter((_, index) => index !== leadIndex);
   const gridPosts = rest.slice(0, 4);
+
+  /*
+   * Everything with a playable clip, newest first. Drawn from the same nine
+   * posts already fetched above rather than a second query — the rail is a
+   * different view of the feed, not different content.
+   */
+  const footage = posts
+    .filter(({ post }) => post.embedUrl)
+    .slice(0, 3)
+    .map(({ post }) => ({
+      slug: post.slug,
+      title: post.title,
+      embedUrl: post.embedUrl,
+      credit: null,
+    }));
 
   return (
     <PageShell>
@@ -113,6 +129,28 @@ export async function HomeDashboard() {
               ) : null}
             </div>
           )}
+
+          {/* Footage as an entrance, not a footnote.
+              The kick that took Matador's head off is the most-seen thing this
+              sport has produced, and until now it was a thumbnail in a list.
+              Poster frames only until a click — see the note in FootageRail on
+              why four iframes do not belong on a front page. */}
+          {footage.length > 0 ? (
+            <div className="mt-10">
+              <div className="mb-4 flex items-baseline justify-between gap-4">
+                <h2 className="font-display text-title text-ink uppercase">
+                  Watch
+                </h2>
+                <Link
+                  href="/watch"
+                  className="text-volt shrink-0 text-xs font-medium underline underline-offset-4"
+                >
+                  Where to watch
+                </Link>
+              </div>
+              <FootageRail items={footage} />
+            </div>
+          ) : null}
 
           <div className="mt-8">
             <Card>

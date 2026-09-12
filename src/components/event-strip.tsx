@@ -7,6 +7,7 @@ import { dateZone, formatRange } from "@/components/event-date";
 import { EventTime } from "@/components/event-time";
 import { getFeaturedEvent } from "@/lib/queries";
 import { rethrowControlFlow } from "@/lib/next-errors";
+import { getLiveChannels } from "@/lib/twitch";
 
 /**
  * The bar under the header naming whatever is next.
@@ -28,12 +29,83 @@ import { rethrowControlFlow } from "@/lib/next-errors";
  * One difference from F1, and it is the point Tobias made: F1 has ONE
  * championship, so its bar never has to say which. This one always names the
  * league, because "the next event" is meaningless across five of them.
+ *
+ * THREE STATES, in priority order:
+ *   1. A league is live on its own channel (Twitch) — outranks everything,
+ *      because it is happening now and it is the only thing here that changes
+ *      on a day nothing was scheduled.
+ *   2. One of OUR events is flagged live in the database.
+ *   3. The next fixture, dated ones first.
  */
 export async function EventStrip() {
   // Request-time, not build-time. Without this the strip is prerendered into
   // static HTML and freezes on whatever was next at deploy — which on a site
   // whose whole job is "what is on" is worse than having no strip.
   await connection();
+
+  /*
+   * Somebody else's stream, checked first.
+   *
+   * A league going live on its own channel outranks our calendar: it is
+   * happening NOW, and it is the only thing on this site that changes on a day
+   * nothing was scheduled. Returns an empty list without credentials, so an
+   * unconfigured deployment simply falls through to the fixture below.
+   */
+  let live: Awaited<ReturnType<typeof getLiveChannels>> = [];
+  try {
+    live = await getLiveChannels();
+  } catch (error) {
+    rethrowControlFlow(error);
+    console.error("[EventStrip] live check failed:", error);
+  }
+
+  if (live.length > 0) {
+    const channel = live[0];
+    return (
+      <div className="border-line bg-surface/60 border-b">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 text-xs md:px-6">
+          <Link
+            href={`/competitions/${channel.competitionSlug}`}
+            className="text-ink-dim hover:text-ink-muted font-display shrink-0 font-semibold tracking-wide uppercase transition-colors"
+          >
+            {/* The one place red is allowed. See the token note in
+                globals.css: --color-live means broadcasting and nothing else,
+                so this strip is the whole reason it exists. */}
+            <span className="text-live inline-flex items-center gap-1.5">
+              <span className="bg-live size-1.5 animate-pulse rounded-full" />
+              Live
+            </span>
+            <span className="text-ink-dim/60"> · </span>
+            {channel.competitionName}
+          </Link>
+
+          <a
+            href={channel.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink hover:text-volt min-w-0 truncate font-medium transition-colors"
+          >
+            {channel.title}
+          </a>
+
+          <div className="ml-auto flex items-center gap-4">
+            <span className="text-ink-dim tabular hidden sm:inline">
+              {`${channel.viewers.toLocaleString("en-US")} watching`}
+            </span>
+            <a
+              href={channel.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink-muted hover:text-volt inline-flex shrink-0 items-center gap-1 font-medium transition-colors"
+            >
+              <Tv className="size-3.5" />
+              {channel.name.replace(/^Twitch — /, "")}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   let featured;
   try {

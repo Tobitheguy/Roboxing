@@ -8,9 +8,12 @@ import { formatDaysUntil } from "@/lib/format";
 import { leagueIdentity } from "@/lib/league-identity";
 import { cn } from "@/lib/utils";
 import {
+  getEventOutcome,
   getFeaturedEvent,
   getMostRecentCompletedEvent,
 } from "@/lib/queries";
+import { ConfidenceBadge } from "@/components/confidence-badge";
+import type { ConfidenceValue } from "@/db/schema";
 
 /**
  * Two panels: the last event and the next one.
@@ -38,6 +41,8 @@ type Panel = {
   broadcastUrl: string | null;
   broadcastName: string | null;
   isLive: boolean;
+  /** What happened, for a completed event. Null while nobody has published it. */
+  outcome: { line: string; confidence: ConfidenceValue } | null;
 };
 
 function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
@@ -101,6 +106,28 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
           {panel.eventName}
         </Link>
       </h3>
+
+      {/* WHAT happened, not just that it did.
+          This panel named the event and withheld the result, which is the
+          wrong half — a reader who knows the event happened is here to find
+          out how it went. The confidence badge comes along because the outcome
+          is a claim, and on this site a claim carries how well it is sourced. */}
+      {panel.outcome ? (
+        <p
+          className={cn(
+            "relative mt-3 flex flex-wrap items-center gap-2 text-base",
+            featured ? "text-white" : "text-ink",
+          )}
+        >
+          <span className="font-medium">{panel.outcome.line}</span>
+          {panel.outcome.confidence !== "confirmed" ? (
+            <ConfidenceBadge
+              level={panel.outcome.confidence}
+              className={featured ? "border-white/30 text-white/70" : undefined}
+            />
+          ) : null}
+        </p>
+      ) : null}
 
       <p
         className={cn(
@@ -171,6 +198,8 @@ export async function JustHappenedUpNext() {
     getFeaturedEvent(),
   ]);
 
+  const outcome = last ? await getEventOutcome(last.event.id) : null;
+
   const panels: Panel[] = [];
 
   if (last) {
@@ -187,6 +216,7 @@ export async function JustHappenedUpNext() {
       broadcastUrl: last.event.broadcastUrl,
       broadcastName: last.event.broadcastName,
       isLive: false,
+      outcome,
     });
   }
 
@@ -204,6 +234,8 @@ export async function JustHappenedUpNext() {
       broadcastUrl: featured.event.broadcastUrl,
       broadcastName: featured.event.broadcastName,
       isLive: featured.isLive,
+      // An event that has not been fought has no outcome, by definition.
+      outcome: null,
     });
   }
 

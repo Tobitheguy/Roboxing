@@ -424,6 +424,81 @@ export const getMostRecentCompletedEvent = cache(async () => {
 });
 
 /**
+ * What actually happened at an event, in one line.
+ *
+ * "Matador beat White Eagle 3-2" rather than "URKL Opening Round". The home
+ * page's "just happened" panel named the event and not the outcome, which is
+ * the wrong half: a reader who already knows the event happened is there to
+ * find out how it went, and a panel that withholds that is a link dressed as
+ * information.
+ *
+ * Falls back through three levels of knowledge, because this sport supplies
+ * all three:
+ *   1. A decided bout on the card — the real answer.
+ *   2. `results_summary` — the result is known but not enterable as a card,
+ *      which is the normal case when a league names no robots.
+ *   3. Null. The event ran and nobody has published what happened.
+ */
+export const getEventOutcome = cache(
+  async (
+    eventId: number,
+  ): Promise<{ line: string; confidence: ConfidenceValue } | null> => {
+    const rows = (await boutQuery().where(eq(bouts.eventId, eventId))) as Record<
+      string,
+      unknown
+    >[];
+    const decided = rows
+      .map(toBoutDetail)
+      .filter((bout) => bout.result !== null);
+
+    // The LAST decided bout, not the first: a card is built to finish on its
+    // biggest fight, so bout one is the opener.
+    const headline = decided[decided.length - 1];
+    if (headline?.result) {
+      const winner =
+        headline.result.winnerRobotId === headline.robotA.id
+          ? headline.robotA
+          : headline.result.winnerRobotId === headline.robotB.id
+            ? headline.robotB
+            : null;
+      const loser =
+        winner === null
+          ? null
+          : winner.id === headline.robotA.id
+            ? headline.robotB
+            : headline.robotA;
+
+      if (winner && loser) {
+        return {
+          line: `${winner.name} beat ${loser.name}`,
+          confidence: headline.result.confidence,
+        };
+      }
+    }
+
+    const [event] = await db
+      .select({
+        summary: events.resultsSummary,
+        confidence: events.confidence,
+      })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1);
+
+    const summary = event?.summary?.trim();
+    if (!summary) return null;
+
+    // The first sentence of the prose, which is written to lead with the
+    // result for exactly this reason.
+    const firstSentence = summary.split("\n")[0].split(/(?<=\.)\s/)[0];
+    return {
+      line: firstSentence,
+      confidence: event.confidence,
+    };
+  },
+);
+
+/**
  * Every league, with its next fixture and how many events it has staged.
  *
  * This is the query the site is actually for, and it has no equivalent on
