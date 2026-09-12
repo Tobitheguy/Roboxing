@@ -82,7 +82,23 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
               {formatDateLong(post.publishedAt, "UTC")}
             </time>
           ) : null}
+          {post.autoPublished ? (
+            <Badge variant="outline">Automated brief</Badge>
+          ) : null}
         </div>
+
+        {/* Above the headline's fold, not in a footer.
+            This post was written by the morning cron from the one source linked
+            at the end, and no person read it before it went live. A reader who
+            learns that after finishing the piece has already decided how much to
+            trust it. The whole value of this site is that its results are right,
+            which means being loud about the copy nobody checked. */}
+        {post.autoPublished ? (
+          <p className="border-line text-ink-dim mt-4 border-l-2 pl-4 text-sm leading-relaxed">
+            Written automatically from the source linked below, and not reviewed
+            by an editor before publication. Corrections are welcome.
+          </p>
+        ) : null}
 
         <h1 className="font-display text-hero text-ink uppercase">
           {post.title}

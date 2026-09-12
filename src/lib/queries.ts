@@ -698,6 +698,31 @@ export const getPostBySlug = cache(async (slug: string) => {
 });
 
 /** Coverage attached to one event, for the event page. */
+/**
+ * Everything published about a league, found through its events.
+ *
+ * The league page had no coverage section at all, and the cost of that was
+ * concrete: CyberHero's first result was reported in two posts, both attached
+ * to the Riyadh event, and `/competitions/cyberhero` showed an empty standings
+ * table with no hint that the result was known — three clicks away through the
+ * event. A league page that says "no standings yet" while the site carries the
+ * score is the site contradicting itself.
+ *
+ * Joined through `events`, not through a competition column on `posts`: a post
+ * is about an event, and which league that event belongs to is the event's
+ * business. The consequence is that a general piece with no event (the
+ * five-leagues explainer) does not appear on any league page, which is correct
+ * — it belongs to all five.
+ */
+export const getPostsForCompetition = cache(async (competitionId: number) => {
+  return db
+    .select({ post: posts, eventSlug: events.slug, eventName: events.name })
+    .from(posts)
+    .innerJoin(events, eq(posts.eventId, events.id))
+    .where(and(eq(events.competitionId, competitionId), isPublic()))
+    .orderBy(desc(posts.publishedAt));
+});
+
 export const getPostsForEvent = cache(async (eventId: number) => {
   return db
     .select()

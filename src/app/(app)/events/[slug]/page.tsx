@@ -17,6 +17,7 @@ import { WatchExperience } from "@/components/watch-experience";
 import { checkEventAccess } from "@/lib/access";
 import { getAppUrl } from "@/lib/app-url";
 import { getViewer } from "@/lib/auth";
+import { toParagraphs } from "@/lib/embeds";
 import { arePicksOpen, gradePrediction, picksClosedReason } from "@/lib/predictions";
 import { PostCard } from "@/components/post-card";
 import {
@@ -308,6 +309,31 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
           external ? { url: external, name: event.broadcastName } : undefined
         }
       />
+
+      {/* The result, when it is known but not enterable as a card.
+          Immediately under the player because it IS the card for this event —
+          WatchExperience above renders an empty bout list, and a visitor who
+          reads that as "no result" has been misinformed. See
+          `events.results_summary`. */}
+      {event.resultsSummary?.trim() ? (
+        <div className="border-line bg-surface mt-6 rounded-lg border p-4 sm:p-6">
+          <h2 className="font-display text-ink mb-3 text-sm font-semibold uppercase">
+            Reported result
+          </h2>
+          <div className="max-w-2xl space-y-3">
+            {toParagraphs(event.resultsSummary).map((paragraph, i) => (
+              <p key={i} className="text-ink-muted text-sm leading-relaxed">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+          <p className="text-ink-dim mt-4 text-xs">
+            Recorded as prose because this site&rsquo;s table pairs two named
+            robots, and the machines in this one were not named. The card goes in
+            when they are.
+          </p>
+        </div>
+      ) : null}
 
       {isScheduled ? (
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">

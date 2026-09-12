@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/empty-state";
 import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
+import { PostCard } from "@/components/post-card";
 import { StandingsTable } from "@/components/standings-table";
 import { StatRow, StatTile } from "@/components/stat-tile";
 import { LeagueMarkBadge } from "@/components/league-mark";
@@ -19,6 +20,7 @@ import {
   getCompetitionBySlug,
   getEventsForCompetition,
   getLastResultRecordedAt,
+  getPostsForCompetition,
 } from "@/lib/queries";
 import { getStandings } from "@/lib/standings";
 
@@ -37,11 +39,24 @@ export default async function CompetitionPage(
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
-  const [standings, events, lastRecordedAt] = await Promise.all([
+  const [standings, events, lastRecordedAt, coverage] = await Promise.all([
     getStandings(competition.id),
     getEventsForCompetition(competition.id),
     getLastResultRecordedAt(competition.id),
+    getPostsForCompetition(competition.id),
   ]);
+
+  /*
+   * Results we know about but cannot put in the table.
+   *
+   * Newest first, because the one a visitor came for is the last one that
+   * happened. See `events.results_summary` for why these exist at all: a bout
+   * needs two named robots, and a league that reports "yellow corner beat blue
+   * corner 4-3" gives us a fact the standings cannot hold.
+   */
+  const reported = events
+    .filter(({ event }) => event.resultsSummary?.trim())
+    .sort((a, b) => b.event.startsAt.getTime() - a.event.startsAt.getTime());
 
   const upcoming = events.filter(
     (e) => e.event.status === "scheduled" || e.event.status === "live",
@@ -114,11 +129,63 @@ export default async function CompetitionPage(
           <StatTile label="Events on record" value={events.length} emphasis />
           <StatTile
             label="Verified results"
-            value="—"
-            sub="No full cards published yet"
+            value={reported.length > 0 ? reported.length : "—"}
+            sub={
+              reported.length > 0
+                ? "Reported, not yet a full card"
+                : "No full cards published yet"
+            }
           />
         </StatRow>
       )}
+
+      {/* Before the standings, deliberately. When a league has a result we know
+          and a table we cannot fill, the result is the more honest thing to lead
+          with — a visitor who scrolls past "No standings yet" and leaves has
+          been told we do not know, which is false. */}
+      {reported.length > 0 ? (
+        <Card className="mb-6">
+          <CardHeader
+            title="Reported results"
+            action={
+              <span className="text-ink-dim text-xs">
+                Not in the table below
+              </span>
+            }
+          />
+          <CardBodyFlush>
+            <ul>
+              {reported.map(({ event }) => (
+                <li
+                  key={event.id}
+                  className="border-line/60 border-b px-4 py-4 last:border-b-0 sm:px-6"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <Link
+                      href={`/events/${event.slug}`}
+                      className="font-display text-ink hover:text-volt text-sm font-semibold uppercase transition-colors"
+                    >
+                      {event.name}
+                    </Link>
+                    <span className="text-ink-dim tabular text-xs">
+                      {formatDateLong(event.startsAt, event.timezone)}
+                    </span>
+                  </div>
+                  {/* Several sentences, so the same plain-text renderer the
+                      posts and the league description use. */}
+                  <div className="mt-2 max-w-2xl space-y-2">
+                    {toParagraphs(event.resultsSummary ?? "").map((p, i) => (
+                      <p key={i} className="text-ink-muted text-sm leading-relaxed">
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardBodyFlush>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader
@@ -177,6 +244,27 @@ export default async function CompetitionPage(
           </CardBodyFlush>
         </Card>
       </div>
+
+      {/* The writing about this league, on the league. Found through its events,
+          so a general piece about all five leagues correctly appears on none of
+          them. */}
+      {coverage.length > 0 ? (
+        <div className="mt-10">
+          <h2 className="font-display text-title text-ink mb-4 uppercase">
+            Coverage
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {coverage.map(({ post, eventSlug, eventName }) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                eventSlug={eventSlug}
+                eventName={eventName}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </PageShell>
   );
 }

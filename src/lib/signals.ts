@@ -35,7 +35,43 @@ export type SignalSource = {
   url: string;
   kind: "news" | "video";
   language: "en" | "zh";
+  /**
+   * True when the feed IS a query, so its items are pre-scoped.
+   *
+   * Exists to be asserted on: a publisher feed added without a `match` filter
+   * silently sends a whole newsroom's daily output to the paid classifier, and
+   * the test that catches that needs to know which sources are legitimately
+   * unfiltered rather than inferring it from the id.
+   */
+  search?: true;
+  /**
+   * Title filter, for feeds that are not already a search.
+   *
+   * A Google News source IS its query, so it arrives pre-scoped. A publisher's
+   * own feed is everything they published today — New Atlas alone is 60 items
+   * of motorcycles and telescopes. Without a filter those rows land in the
+   * inbox and then go to the classifier, which is the one stage that costs
+   * money per row; the filter is what keeps a dozen publisher feeds from
+   * multiplying the daily bill by ten to find the same handful of stories.
+   *
+   * Titles only, deliberately. It is a coarse net on purpose — the classifier
+   * is the judge of relevance, and this just stops it being handed the obvious
+   * no. A story whose headline mentions neither robots nor fighting is one we
+   * would rather miss here than pay to reject every morning.
+   */
+  match?: RegExp;
 };
+
+/**
+ * The net for publisher feeds. Anything a humanoid-fight story is likely to
+ * say in its headline, and little else.
+ *
+ * Two groups joined by AND would be stricter and wrong: "Unitree G1 spars
+ * autonomously" names no fight word, and "EngineAI T800 enters the octagon"
+ * names no robot word. Either group alone is enough to be worth scoring.
+ */
+export const RELEVANT_TITLE =
+  /\b(robot|robots|robotic|humanoid|humanoids|android|unitree|engineai|agibot|booster|cyberhero|urkl|\bREK\b|battlebots|mech|mecha)\b|\b(fight|fights|fighting|boxing|kickbox|kickboxing|combat|bout|bouts|brawl|spar|sparring|knockout|octagon|ring|martial arts|mma|ufc|wrestl)/i;
 
 const GOOGLE_NEWS_EN =
   "https://news.google.com/rss/search?q=" +
@@ -49,9 +85,125 @@ const GOOGLE_NEWS_ZH =
   encodeURIComponent("人形机器人 格斗 OR 机器人格斗 OR 机甲格斗") +
   "&hl=zh-CN&gl=CN&ceid=CN:zh-Hans";
 
+/**
+ * Why the publisher feeds below exist, when Google News already finds more.
+ *
+ * A Google News RSS `<link>` is not a link to the article. It is
+ * `news.google.com/rss/articles/CBMi…`, which serves a 580 KB interstitial that
+ * redirects in JavaScript — no Location header, and the publisher's URL appears
+ * nowhere in the HTML (verified: the only non-Google URL in the page is
+ * Angular's licence). Recovering it means an undocumented batchexecute RPC that
+ * Google can change on any afternoon.
+ *
+ * Which is fine for discovery — a headline and a publisher name are all the
+ * classifier needs to score a row, and that is what the inbox is for. It is
+ * fatal for publishing: a brief written from a headline alone is a brief
+ * written from nothing, and this site's only asset is being right.
+ *
+ * So the two jobs get two kinds of source. Google News stays as the wide net,
+ * including the Chinese sweep that caught the first verified result two months
+ * before anyone wrote about it in English. These feeds carry real URLs the
+ * auto-publisher can actually fetch and read.
+ */
+const PUBLISHER_FEEDS: SignalSource[] = [
+  {
+    id: "the-robot-report",
+    url: "https://www.therobotreport.com/feed/",
+    kind: "news",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "interesting-engineering",
+    url: "https://interestingengineering.com/feed",
+    kind: "news",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "ieee-spectrum-robotics",
+    url: "https://spectrum.ieee.org/feeds/topic/robotics.rss",
+    kind: "news",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "techcrunch-robotics",
+    url: "https://techcrunch.com/category/robotics/feed/",
+    kind: "news",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "new-atlas",
+    url: "https://newatlas.com/index.rss",
+    kind: "news",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+];
+
+/**
+ * The same searches on Bing, and the reason this file has two search engines in
+ * it.
+ *
+ * Google News wins on recall — it is the only one of the two that indexes the
+ * Chinese city media where the first verified result appeared — and it is
+ * useless for anything but discovery, because its links are JS interstitials
+ * (see PUBLISHER_FEEDS). Bing's news RSS carries the same stories a few hours
+ * later behind an `apiclick.aspx?…&url=…` redirect whose target is RIGHT THERE
+ * in the query string, no RPC and nothing to reverse-engineer.
+ *
+ * So Bing is what makes stage 3 possible at all. Without it the auto-publisher
+ * can only see general robotics feeds, which on an ordinary day carry no
+ * humanoid-fighting story whatsoever — verified: on 11 September the best
+ * fetchable row scored 35, while six Google News rows scored 85 or higher.
+ *
+ * Both engines are kept because they fail differently. If Bing's redirect
+ * format changes, discovery continues and only publishing stops.
+ */
+const BING_NEWS_EN =
+  "https://www.bing.com/news/search?q=" +
+  encodeURIComponent(
+    '"humanoid robot" (fight OR boxing OR kickboxing OR combat OR CyberHero OR URKL)',
+  ) +
+  "&format=RSS";
+
+const BING_NEWS_ZH =
+  "https://www.bing.com/news/search?q=" +
+  encodeURIComponent("人形机器人 格斗") +
+  "&format=RSS&setlang=zh-hans";
+
 export const SOURCES: SignalSource[] = [
-  { id: "google-news-en", url: GOOGLE_NEWS_EN, kind: "news", language: "en" },
-  { id: "google-news-zh", url: GOOGLE_NEWS_ZH, kind: "news", language: "zh" },
+  {
+    id: "google-news-en",
+    url: GOOGLE_NEWS_EN,
+    kind: "news",
+    language: "en",
+    search: true,
+  },
+  {
+    id: "google-news-zh",
+    url: GOOGLE_NEWS_ZH,
+    kind: "news",
+    language: "zh",
+    search: true,
+  },
+  {
+    id: "bing-news-en",
+    url: BING_NEWS_EN,
+    kind: "news",
+    language: "en",
+    search: true,
+  },
+  {
+    id: "bing-news-zh",
+    url: BING_NEWS_ZH,
+    kind: "news",
+    language: "zh",
+    search: true,
+  },
+  ...PUBLISHER_FEEDS,
   // YouTube channel feeds and Bilibili/RSSHub slots get added here as their
   // channel ids are collected — same shape, zero code.
 ];
@@ -120,12 +272,71 @@ export function parseFeed(xml: string): FeedItem[] {
   return items;
 }
 
+/**
+ * Turn a search engine's redirect into the publisher's own URL.
+ *
+ * Bing news RSS links look like
+ *   http://www.bing.com/news/apiclick.aspx?ref=FexRss&tid=…&url=https%3A%2F%2F…
+ * and the target is simply the `url` parameter. Unwrapping it at ingest rather
+ * than at publish time means the stored row IS the article: the URL that the
+ * unique index dedupes on, that the auto-publisher fetches, and that the inbox
+ * links a human to. A tracking wrapper in the database would be all three of
+ * those things wrong.
+ *
+ * Anything it does not recognise passes through untouched, including Google
+ * News interstitials — those cannot be unwrapped, and pretending otherwise by
+ * half-decoding them would be worse than leaving them honest.
+ */
+export function unwrapTrackingUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (host !== "bing.com" && host !== "bing.net") return url;
+
+  const target = parsed.searchParams.get("url");
+  if (!target) return url;
+
+  // Validate before trusting it. A `url` parameter that is not an absolute
+  // http(s) URL is not something to store as an article link.
+  try {
+    const inner = new URL(target);
+    if (inner.protocol !== "https:" && inner.protocol !== "http:") return url;
+    return inner.toString();
+  } catch {
+    return url;
+  }
+}
+
 export type SweepResult = {
   source: string;
   fetched: number;
+  /** Dropped by the source's title filter before ever reaching the database. */
+  skipped?: number;
   inserted: number;
   error?: string;
 };
+
+/**
+ * Apply a source's title filter. No filter means keep everything, because a
+ * search feed has already done this job.
+ *
+ * Pure and exported so the test can assert the net's shape directly — that
+ * "Unitree G1 spars with a human" survives and "Best robot vacuum deals"
+ * does not. Getting this wrong is silent in both directions: too tight loses
+ * stories, too loose costs money.
+ */
+export function filterItems(
+  items: FeedItem[],
+  match: RegExp | undefined,
+): FeedItem[] {
+  if (!match) return items;
+  return items.filter((item) => match.test(item.title));
+}
 
 /**
  * Run every source and land what is new.
@@ -153,7 +364,8 @@ export async function sweepSignals(): Promise<SweepResult[]> {
         continue;
       }
 
-      const items = parseFeed(await response.text());
+      const all = parseFeed(await response.text());
+      const items = filterItems(all, source.match);
       let inserted = 0;
       for (const item of items) {
         const rows = await db
@@ -163,14 +375,19 @@ export async function sweepSignals(): Promise<SweepResult[]> {
             kind: source.kind,
             language: source.language,
             title: item.title.slice(0, 500),
-            url: item.url.slice(0, 1000),
+            url: unwrapTrackingUrl(item.url).slice(0, 1000),
             publishedAt: item.publishedAt,
           })
           .onConflictDoNothing({ target: signals.url })
           .returning({ id: signals.id });
         inserted += rows.length;
       }
-      results.push({ source: source.id, fetched: items.length, inserted });
+      results.push({
+        source: source.id,
+        fetched: all.length,
+        skipped: all.length - items.length,
+        inserted,
+      });
     } catch (error) {
       results.push({
         source: source.id,

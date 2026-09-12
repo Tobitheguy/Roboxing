@@ -1,3 +1,4 @@
+import { autoPublish } from "@/lib/autopublish";
 import { classifySignals } from "@/lib/classify";
 import { sweepSignals } from "@/lib/signals";
 
@@ -11,14 +12,30 @@ import { sweepSignals } from "@/lib/signals";
  * spends money on stage 2, that guard is the difference between a free button
  * and a billable one.
  *
- * Two stages, in order and in one invocation:
+ * Three stages, in order and in one invocation:
  *   1. sweepSignals()    — keyless RSS, costs nothing
  *   2. classifySignals() — scores what stage 1 landed, costs a few cents a day
+ *   3. autoPublish()     — reads the top-scoring sources and writes briefs
  *
- * Stage 2 never fails the run on its own. Collection is the product; scoring is
- * an enhancement, and a missing API key or a bad afternoon at the model
- * provider must not cost us the morning's headlines. Only a broken FEED turns
- * the run red.
+ * Stage 3 is off unless AUTOPUBLISH=on, and publishes at most a couple of
+ * briefs a run. See lib/autopublish.ts for why it refuses to work from a
+ * headline alone.
+ *
+ * What "failed" means here, and why it changed
+ * -------------------------------------------
+ * It used to mean a broken feed and nothing else: stage 2's errors were put in
+ * the response body and the run still returned 200, on the reasoning that
+ * collection is the product and scoring is an enhancement.
+ *
+ * That reasoning cost us two days. Classification stopped on 9 September and
+ * the cron kept reporting success; 44 rows sat unscored, and because the inbox
+ * sorts by score they sat at the bottom of it, invisible. Nobody looks at a
+ * green cron's response body.
+ *
+ * So a stage that was ASKED to run and could not now turns the run red. A stage
+ * that is switched off, or has no key, is not an error and still returns 200 —
+ * the difference between "you did not ask for this" and "you asked and it
+ * broke" is the whole signal.
  */
 
 /*
@@ -35,18 +52,42 @@ export async function GET(request: Request) {
   }
 
   const results = await sweepSignals();
-  const ok = results.every((r) => !r.error);
+  const sweepOk = results.every((r) => !r.error);
 
-  // Deliberately after the sweep and deliberately not awaited into the status:
-  // a classifier outage is reported in the body and left visible, but the cron
-  // run is judged on collection alone.
   const classification = await classifySignals();
+  const publishing = await autoPublish();
+
+  /*
+   * "Skipped" is not failure. classifySignals() and autoPublish() both report a
+   * missing key or a closed switch as a single string in `errors` and do no
+   * work, which is the correct outcome on a deployment that has not been given
+   * those things — returning 500 for it would mean a permanently red cron and a
+   * signal nobody reads. Anything else in `errors` is a stage that tried.
+   */
+  const skipped = (message: string) => /\bskipped$/.test(message);
+  const classifyBroke = classification.errors.some((e) => !skipped(e));
+  const publishBroke = publishing.errors.some((e) => !skipped(e));
+
+  const ok = sweepOk && !classifyBroke && !publishBroke;
 
   return Response.json(
-    { results, classification },
-    // 500 on any SOURCE failure so the cron run is MARKED failed and shows
-    // red in the Vercel dashboard — a sweep that silently half-runs is how a
-    // dead feed goes unnoticed for a month.
+    {
+      results,
+      classification,
+      publishing,
+      // Named so the dashboard's one-line preview says which stage went wrong
+      // without anyone expanding the body.
+      failed: ok
+        ? null
+        : {
+            sweep: !sweepOk,
+            classify: classifyBroke,
+            publish: publishBroke,
+          },
+    },
+    // 500 so the cron run is MARKED failed and shows red in Vercel — a sweep
+    // that silently half-runs is how a dead feed goes unnoticed for a month,
+    // and a silent classifier is how two days of headlines went unscored.
     { status: ok ? 200 : 500 },
   );
 }

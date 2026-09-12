@@ -300,6 +300,25 @@ export const events = pgTable(
      * disputes it.
      */
     sourceUrl: text("source_url"),
+    /**
+     * The outcome in prose, for a result that is KNOWN but not enterable.
+     *
+     * A `bouts` row needs two named robots. Real leagues do not always give us
+     * that: CyberHero's first event was a team best-of-seven decided 4–3, and
+     * the machines were identified by corner colour alone in every account of
+     * it. The score, the round count and the method were reported by two
+     * newsrooms — so the fact exists and the schema cannot hold it.
+     *
+     * Before this column the only options were to invent seven robots or to
+     * show an empty league page, and the league page won. That reads as "we
+     * don't know", which is false and is the worst thing a system of record
+     * can say about a result it does know.
+     *
+     * Not a substitute for a card. When names appear the bouts go in, the
+     * standings compute, and this text stays as the note on how the result
+     * was first learned.
+     */
+    resultsSummary: text("results_summary"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -609,6 +628,20 @@ export const posts = pgTable(
       onDelete: "set null",
     }),
     /**
+     * True when the morning cron wrote this, not a person.
+     *
+     * Rendered on the post as a standing disclosure, and that is the entire
+     * reason the column exists. An automated brief is written from one fetched
+     * source by a model nobody reviewed before it went live; a reader who
+     * cannot tell that apart from reported copy has been misled about how much
+     * the page is worth trusting. The flag never changes back — an auto brief
+     * a human later rewrites should have its body replaced and this cleared
+     * deliberately, which is a decision, not a side effect.
+     */
+    autoPublished: boolean("auto_published").notNull().default(false),
+    /** The article the brief was written from. Null for anything hand-written. */
+    sourceUrl: text("source_url"),
+    /**
      * When it goes live. Null while drafting.
      *
      * A separate gate from `status` so a post can be finished and scheduled —
@@ -732,6 +765,18 @@ export const signals = pgTable(
     language: text("language"),
     /** Triage state: new | kept | dismissed. */
     status: text("status").notNull().default("new"),
+    /**
+     * The post this signal became, if it became one.
+     *
+     * `set null` on delete: deleting a bad auto brief must not delete the
+     * signal, or the next run finds the same story again and republishes it.
+     * The null means "never published", so the column IS the auto-publisher's
+     * idempotency guard — and it survives the post being thrown away, which is
+     * exactly when a retry would be most unwelcome.
+     */
+    postId: integer("post_id").references(() => posts.id, {
+      onDelete: "set null",
+    }),
 
     /*
      * Stage 2 — what the classifier made of the row. See lib/classify.ts.
