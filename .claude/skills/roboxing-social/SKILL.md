@@ -6,10 +6,13 @@ user-invocable: true
 
 # Roboxing Design
 
-Read `readme.md` in this skill first — it is the full guide: what the site is,
-the voice, the visual foundations, the approved image library, every card
-format and what each card must contain. Then read the source files it points
-at.
+Read **`design.md`** first — it is the machine-readable source of truth:
+literal, copy-pasteable values for colour, type, shape, card formats, the
+retired values, and the accuracy rules. Then `readme.md` for the full
+reference and the reasoning behind them.
+
+Where `design.md` and `src/app/globals.css` disagree, **globals.css wins** —
+it is compiled, `design.md` is transcribed. Fix the transcription and note it.
 
 **Roboxing is the English-language record of humanoid robot fighting — every
 league, every event, full cards, results and standings.** It is not a
