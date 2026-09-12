@@ -16,11 +16,10 @@ config({ path: ".env" });
  * plausible-looking channel URL that 404s is worse than no link, because it
  * costs the reader a click to discover we were wrong.
  *
- * What is deliberately NOT here: a Discord invite for UFB. There is a UFB
- * Discord — their signup offers Discord as an identity provider and a server
- * is listed in community directories — but no invite link appears on any page
- * this script could verify, and an invented `discord.gg/xxxx` is exactly the
- * kind of link that quietly rots. See the note in the run output.
+ * UFB streams on TWITCH, at twitch.tv/ufb0ts — with a zero, which is the kind
+ * of detail that makes a hand-typed guess fail silently. It was not findable
+ * from their own site or from search; Tobias supplied it, and it was fetched
+ * and checked before landing here.
  *
  * Usage: npx tsx scripts/seed-watch-channels.ts
  */
@@ -118,6 +117,14 @@ async function main() {
     },
 
     /* ---- UFB ------------------------------------------------------------ */
+    {
+      competition: "ufb",
+      name: "Twitch — twitch.tv/ufb0ts",
+      url: "https://www.twitch.tv/ufb0ts",
+      region: "Worldwide",
+      note: "Where UFB actually streams. Note the spelling: ufb0ts, with a zero.",
+      confidence: "confirmed",
+    },
     {
       competition: "ufb",
       name: "play.ufb.gg",
@@ -230,12 +237,6 @@ async function main() {
     );
   }
   console.log("Every row has a link. Verified.");
-  console.log(
-    "\nNOT added: a UFB Discord invite. A server exists but no invite URL is " +
-      "published on any page that could be checked — ask UFB for it rather " +
-      "than guessing a discord.gg slug.",
-  );
-
   void eq;
 }
 
