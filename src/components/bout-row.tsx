@@ -76,6 +76,27 @@ function Corner({
             {robot.teamName}
           </Link>
         </div>
+        {/* The human, where the league published one.
+            This is the line that separates what actually happened from what a
+            reader assumes happened. Almost every bout in this sport was driven
+            by a person, and the operator is named far less often than the
+            machine -- so on the rare occasions it IS named, it belongs on the
+            card and not in a footnote. */}
+        {robot.pilotName && robot.pilotSlug ? (
+          <div
+            className={cn(
+              "mt-0.5 flex min-w-0 items-center",
+              align === "right" && "justify-end",
+            )}
+          >
+            <Link
+              href={`/pilots/${robot.pilotSlug}`}
+              className="text-ink-dim hover:text-ink-muted block truncate text-xs transition-colors"
+            >
+              Piloted by {robot.pilotName}
+            </Link>
+          </div>
+        ) : null}
       </div>
     </div>
   );

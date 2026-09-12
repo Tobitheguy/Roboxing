@@ -5,9 +5,10 @@ import { CalendarClock, ListOrdered } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
 import { Badge } from "@/components/badge";
-import { Card, CardBodyFlush, CardHeader } from "@/components/card";
+import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
+import { ConfidenceBadge, SourceLink } from "@/components/confidence-badge";
+import { EventDate } from "@/components/event-date";
 import { EmptyState } from "@/components/empty-state";
-import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { PostCard } from "@/components/post-card";
@@ -18,9 +19,11 @@ import { toParagraphs } from "@/lib/embeds";
 import { formatDateLong } from "@/lib/format";
 import {
   getCompetitionBySlug,
+  getEntryRoutes,
   getEventsForCompetition,
   getLastResultRecordedAt,
   getPostsForCompetition,
+  getWatchChannelsFor,
 } from "@/lib/queries";
 import { getStandings } from "@/lib/standings";
 
@@ -39,12 +42,19 @@ export default async function CompetitionPage(
   const competition = await getCompetitionBySlug(slug);
   if (!competition) notFound();
 
-  const [standings, events, lastRecordedAt, coverage] = await Promise.all([
-    getStandings(competition.id),
-    getEventsForCompetition(competition.id),
-    getLastResultRecordedAt(competition.id),
-    getPostsForCompetition(competition.id),
-  ]);
+  const [standings, events, lastRecordedAt, coverage, channels, allRoutes] =
+    await Promise.all([
+      getStandings(competition.id),
+      getEventsForCompetition(competition.id),
+      getLastResultRecordedAt(competition.id),
+      getPostsForCompetition(competition.id),
+      getWatchChannelsFor(competition.id),
+      getEntryRoutes(),
+    ]);
+
+  const routes = allRoutes.filter(
+    (r) => r.route.competitionId === competition.id,
+  );
 
   /*
    * Results we know about but cannot put in the table.
@@ -95,9 +105,23 @@ export default async function CompetitionPage(
         // paragraphs — HTML would collapse the blank lines and serve one
         // unreadable block. The prose renders below instead.
         action={
-          <Badge variant={competition.status === "active" ? "volt" : "outline"}>
-            {competition.status}
-          </Badge>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant={competition.status === "active" ? "volt" : "outline"}>
+              {competition.status}
+            </Badge>
+            <ConfidenceBadge level={competition.confidence} />
+            {competition.websiteUrl ? (
+              <a
+                href={competition.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="text-ink-dim hover:text-ink text-xs underline underline-offset-2"
+              >
+                {competition.websiteUrl.replace(/^https?:\/\/(www\.)?/, "")}
+              </a>
+            ) : null}
+            <SourceLink url={competition.sourceUrl} />
+          </div>
         }
       />
 
@@ -245,6 +269,108 @@ export default async function CompetitionPage(
         </Card>
       </div>
 
+      {/* ---- Where to watch and how to enter ----------------------------- */}
+      {channels.length > 0 || routes.length > 0 ? (
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {channels.length > 0 ? (
+            <Card>
+              <CardHeader title="Where to watch" />
+              <CardBodyFlush>
+                <ul>
+                  {channels.map((channel) => (
+                    <li
+                      key={channel.id}
+                      className="border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-3 last:border-b-0 sm:px-6"
+                    >
+                      <div className="min-w-0">
+                        {channel.url ? (
+                          <a
+                            href={channel.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-ink hover:text-volt text-sm font-medium transition-colors"
+                          >
+                            {channel.name}
+                          </a>
+                        ) : (
+                          <span className="text-ink text-sm font-medium">
+                            {channel.name}
+                          </span>
+                        )}
+                        {channel.note ? (
+                          <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
+                            {channel.note}
+                          </p>
+                        ) : null}
+                      </div>
+                      {channel.region ? (
+                        <span className="text-ink-dim shrink-0 text-xs">
+                          {channel.region}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </CardBodyFlush>
+            </Card>
+          ) : null}
+
+          {/* The league page is where a reader decides they want in. Putting the
+              entry route three clicks away on another page is how that impulse
+              dies. */}
+          {routes.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="How to enter"
+                action={
+                  <Link
+                    href="/get-in-the-ring"
+                    className="text-volt text-xs font-medium underline underline-offset-4"
+                  >
+                    All routes
+                  </Link>
+                }
+              />
+              <CardBody className="space-y-4">
+                {routes.map(({ route }) => (
+                  <div key={route.id}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-display text-ink text-sm font-semibold uppercase">
+                        {route.role}
+                      </span>
+                      {route.hardwareProvided ? (
+                        <Badge variant="volt" size="sm">
+                          Robot supplied
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="text-ink-muted mt-1.5 text-sm leading-relaxed">
+                      {route.howToEnter}
+                    </p>
+                    {route.url ? (
+                      <p className="text-ink-dim mt-1.5 text-xs">
+                        <a
+                          href={route.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-ink underline underline-offset-2"
+                        >
+                          {route.url.replace(/^https?:\/\/(www\.)?/, "")}
+                        </a>
+                      </p>
+                    ) : route.contact ? (
+                      <p className="text-ink-dim mt-1.5 text-xs">
+                        <code>{route.contact}</code>
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* The writing about this league, on the league. Found through its events,
           so a general piece about all five leagues correctly appears on none of
           them. */}
@@ -285,11 +411,14 @@ function EventList({ events }: { events: EventRow[] }) {
                 {event.name}
               </p>
               <p className="text-ink-dim mt-1 text-xs">
-                <EventTime
-                  startsAt={event.startsAt.toISOString()}
+                <EventDate
+                  startsAt={event.startsAt}
+                  endsAt={event.endsAt}
                   timeZone={event.timezone}
                   city={event.city}
-                  timeTbd={event.startTimeTbd}
+                  dateTbd={event.dateTbd}
+                  dateLabel={event.dateLabel}
+                  startTimeTbd={event.startTimeTbd}
                 />
               </p>
             </div>

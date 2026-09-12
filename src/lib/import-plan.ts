@@ -236,7 +236,7 @@ export type FixtureImport = {
 export function planFixtureImport(
   records: Record<string, string>[],
   events: { id: number; slug: string; competitionId: number }[],
-  robots: { id: number; slug: string; teamId: number }[],
+  robots: { id: number; slug: string; teamId: number | null }[],
   existingBouts: { id: number; eventId: number; orderIndex: number }[],
 ): ImportPlan<FixtureImport & { competitionId: number }> {
   const eventBySlug = new Map(events.map((e) => [e.slug, e]));
@@ -287,7 +287,32 @@ export function planFixtureImport(
       }
       if (slot) seenSlots.add(slot);
 
-      if (errors.length > 0 || !event || !robotA || !robotB) {
+      /*
+       * A robot with no team cannot be entered into a bout.
+       *
+       * `robots.team_id` became nullable when the Machines page started
+       * carrying platform models — a Unitree H2 or a Booster T1 is a product,
+       * not a competitor, and belongs to nobody. Those rows must never reach a
+       * card: `bouts.team_a_id` is NOT NULL precisely so the standings always
+       * know who earned a result, and importing a teamless robot would either
+       * fail at the database with an opaque error or, worse, invite somebody to
+       * invent a team to get past it.
+       */
+      if (robotA && robotA.teamId === null) {
+        errors.push(`Robot "${data.robotaslug}" has no team, so it cannot fight.`);
+      }
+      if (robotB && robotB.teamId === null) {
+        errors.push(`Robot "${data.robotbslug}" has no team, so it cannot fight.`);
+      }
+
+      if (
+        errors.length > 0 ||
+        !event ||
+        !robotA ||
+        !robotB ||
+        robotA.teamId === null ||
+        robotB.teamId === null
+      ) {
         return { line, action: "error", slugOrLabel: label, errors };
       }
 

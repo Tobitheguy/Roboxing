@@ -29,7 +29,13 @@ export function PostCard({
 }: {
   post: Pick<
     Post,
-    "slug" | "title" | "summary" | "kind" | "publishedAt" | "embedUrl"
+    | "slug"
+    | "title"
+    | "summary"
+    | "kind"
+    | "publishedAt"
+    | "embedUrl"
+    | "evergreen"
   >;
   eventSlug?: string | null;
   eventName?: string | null;
@@ -76,7 +82,11 @@ export function PostCard({
             <Icon className="mr-1 inline size-3 align-[-1px]" />
             {post.kind === "clip" ? "Clip" : "Analysis"}
           </Badge>
-          {post.publishedAt ? (
+          {/* Explainers show no date, for the same reason as on the post page:
+              the date on a piece about what URKL is records when this site was
+              built, not when anything happened, and a feed of identical dates
+              reads as a content dump rather than a body of work. */}
+          {post.publishedAt && !post.evergreen ? (
             <time
               dateTime={post.publishedAt.toISOString()}
               className="text-ink-dim tabular text-xs"
@@ -86,6 +96,9 @@ export function PostCard({
                   per-viewer would make it a hydration mismatch for no gain. */}
               {formatDateLong(post.publishedAt, "UTC")}
             </time>
+          ) : null}
+          {post.evergreen ? (
+            <span className="text-ink-dim text-xs">Explainer</span>
           ) : null}
         </div>
 

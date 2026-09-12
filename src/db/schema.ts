@@ -47,6 +47,64 @@ export const eventStatus = pgEnum("event_status", [
   "cancelled",
 ]);
 
+/**
+ * How well a fact is sourced. The site's whole claim is to be the record, and
+ * a record that cannot say how it knows something is a blog.
+ *
+ * - `confirmed`   — the promoter said it, or two independent outlets agree
+ * - `reported`    — one source, credible, uncorroborated
+ * - `unconfirmed` — circulating, or an inference, or the source contradicts
+ *                   itself
+ *
+ * Defaults to `reported` rather than `confirmed`, deliberately. A default that
+ * overstates is a default that silently launders every row somebody forgot to
+ * label, and the rows people forget to label are exactly the thin ones.
+ */
+export const confidence = pgEnum("confidence", [
+  "confirmed",
+  "reported",
+  "unconfirmed",
+]);
+
+/**
+ * What KIND of fighting a competition is, so unlike things never share a table.
+ *
+ * - `humanoid`     — bipedal humanoid robots. The sport this site is about.
+ * - `piloted_mech` — a human inside the machine (Robowar, Unitree's GD01).
+ *                    Spectacular, related, and not the same sport.
+ * - `adjacent`     — wheeled//destructive combat (BattleBots, NHRL). Carried
+ *                    for context and for "where to watch", never for standings.
+ *
+ * The reason this is a column and not a tag: standings. A piloted mech league
+ * whose bouts land in the same table as URKL's produces a cross-league machine
+ * record in which a 500 kg vehicle with a person inside has a win rate against
+ * a 35 kg G1. That table would be worse than no table.
+ */
+export const competitionClass = pgEnum("competition_class", [
+  "humanoid",
+  "piloted_mech",
+  "adjacent",
+]);
+
+/**
+ * Whether an event's outcomes count.
+ *
+ * An exhibition is a real event that happened and is worth recording — the UFC
+ * Shanghai demo refereed by Dana White is a genuine milestone — but it is not a
+ * sanctioned bout, usually has no declared winner, and must never reach a
+ * standings table.
+ */
+export const eventKind = pgEnum("event_kind", ["competition", "exhibition"]);
+
+/** What a person did, on a site that until now had no people on it at all. */
+export const pilotRole = pgEnum("pilot_role", [
+  "pilot",
+  "founder",
+  "referee",
+  "executive",
+  "engineer",
+]);
+
 export const boutStatus = pgEnum("bout_status", [
   "scheduled",
   "live",
@@ -124,6 +182,66 @@ export const competitions = pgTable("competitions", {
   status: competitionStatus("status").notNull().default("upcoming"),
   description: text("description"),
   logoUrl: text("logo_url"),
+  /**
+   * Humanoid, piloted mech or adjacent. Defaults to humanoid because that is
+   * what this site is, and because a league whose class nobody set should show
+   * up in the main list rather than vanish from it.
+   */
+  class: competitionClass("class").notNull().default("humanoid"),
+  /** ISO 3166-1 alpha-2 of the organizer's base, e.g. "US", "CN". */
+  country: text("country"),
+  city: text("city"),
+  foundedYear: integer("founded_year"),
+  /** The league's own site. */
+  websiteUrl: text("website_url"),
+  /** Where we learned what this page says. */
+  sourceUrl: text("source_url"),
+  confidence: confidence("confidence").notNull().default("reported"),
+  /**
+   * False for a container that is not a league.
+   *
+   * `events.competition_id` is NOT NULL, and some events belong to no league at
+   * all: the Shanghai UFC demonstration was Unitree and the UFC, and the H2-vs-G1
+   * sparring video was a manufacturer's marketing. Those need somewhere to live
+   * that is not a fabricated competition, so they hang off a container row that
+   * the leagues index filters out. Making the FK nullable instead would push a
+   * null check into every query that renders an event.
+   */
+  isLeague: boolean("is_league").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/* -------------------------------------------------------------------------- */
+/* Manufacturers                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Who BUILDS the machines, which is not who fights.
+ *
+ * This table exists because the site had Unitree listed as a team, which meant
+ * a page on which Unitree appeared to be fighting itself. A maker supplies the
+ * platform; a team enters it; a pilot drives it. Three different things that
+ * were one table.
+ *
+ * The distinction is load-bearing for the standings, not cosmetic: URKL hands
+ * every team an identical EngineAI T800, so "EngineAI" as a competitor would
+ * have a record against itself in every bout of the tournament.
+ */
+export const manufacturers = pgTable("manufacturers", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  /** The name in its own script, e.g. "宇树科技". Rendered alongside, never instead. */
+  nameLocal: text("name_local"),
+  country: text("country"),
+  foundedYear: integer("founded_year"),
+  websiteUrl: text("website_url"),
+  logoUrl: text("logo_url"),
+  bio: text("bio"),
+  sourceUrl: text("source_url"),
+  confidence: confidence("confidence").notNull().default("reported"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -186,11 +304,27 @@ export const robots = pgTable(
   {
     id: serial("id").primaryKey(),
     slug: text("slug").notNull().unique(),
-    teamId: integer("team_id")
-      // restrict, not cascade: deleting a team must not silently delete the
-      // robots whose bout history the standings are computed from.
-      .notNull()
-      .references(() => teams.id, { onDelete: "restrict" }),
+    /**
+     * The team that fights it — NULLABLE since the Machines page grew up.
+     *
+     * It was NOT NULL when every row was a named fighter with an owner. Half
+     * this table is now platform models (Unitree H2, Booster T1, the G1 Combat
+     * Edition) that no single team owns: URKL issues an identical T800 to all
+     * sixteen. Forcing a team onto those rows meant inventing one, and the
+     * invented one was the manufacturer — which is how Unitree came to look
+     * like a competitor.
+     *
+     * Still `restrict` on delete: removing a team must not silently delete the
+     * robots whose bout history the standings are computed from.
+     */
+    teamId: integer("team_id").references(() => teams.id, {
+      onDelete: "restrict",
+    }),
+    /** Who built it. A platform row has this and no team. */
+    manufacturerId: integer("manufacturer_id").references(
+      () => manufacturers.id,
+      { onDelete: "restrict" },
+    ),
     name: text("name").notNull(),
     /** Manufacturer model, e.g. "PM01". Distinct from the fighting name. */
     model: text("model"),
@@ -202,12 +336,94 @@ export const robots = pgTable(
     weightGrams: integer("weight_grams"),
     specsJson: jsonb("specs_json"),
     bio: text("bio"),
+    /** Degrees of freedom — the spec sheet number buyers actually compare. */
+    degreesOfFreedom: integer("degrees_of_freedom"),
+    /**
+     * Whole US dollars, not cents.
+     *
+     * These are list prices in the hundreds of thousands quoted in press
+     * releases and converted from RMB at whatever rate the outlet used. Storing
+     * cents would imply a precision that the source does not have.
+     */
+    priceUsd: integer("price_usd"),
+    /** "¥3.9M, converted at the September 2026 rate" — the caveat on the number. */
+    priceNote: text("price_note"),
+    /** Where a reader can actually buy one. */
+    purchaseUrl: text("purchase_url"),
+    /**
+     * Whether an American can get one, in prose.
+     *
+     * Prose and not a boolean because the real answer is never yes or no: the
+     * FCC's July 2026 Covered List notice grandfathers existing authorizations
+     * while catching future models, so the honest answer for most machines is a
+     * sentence about which units and when.
+     */
+    usAvailability: text("us_availability"),
+    /**
+     * Humanoid or piloted mech. A 2.7 m, 500 kg vehicle with a person inside
+     * belongs on the Machines page and must never share a comparison table with
+     * a 35 kg G1.
+     */
+    class: competitionClass("class").notNull().default("humanoid"),
+    sourceUrl: text("source_url"),
+    confidence: confidence("confidence").notNull().default("reported"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("robots_team_id_idx").on(t.teamId)],
+  (t) => [
+    index("robots_team_id_idx").on(t.teamId),
+    index("robots_manufacturer_id_idx").on(t.manufacturerId),
+  ],
 );
+
+/* -------------------------------------------------------------------------- */
+/* Pilots                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The humans.
+ *
+ * The site had none, which for a sport whose entire appeal is that a person is
+ * driving was the largest hole in it. Almost every bout on this site was
+ * remote-piloted by a named individual, and until now the record said the
+ * robots did it themselves.
+ *
+ * `role` is wider than "pilot" because the people who matter are not only the
+ * ones holding a controller: a league founder, and the UFC president who
+ * refereed a humanoid exhibition in Shanghai, both belong in the same index.
+ */
+export const pilots = pgTable("pilots", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  /** The name in its own script, e.g. "陆鑫". Rendered alongside, never instead. */
+  nameLocal: text("name_local"),
+  role: pilotRole("role").notNull().default("pilot"),
+  /** ISO 3166-1 alpha-2. */
+  nationality: text("nationality"),
+  /** The league they are associated with, when there is exactly one. */
+  competitionId: integer("competition_id").references(() => competitions.id, {
+    onDelete: "set null",
+  }),
+  /** Job title or affiliation in prose — "CTO, REK" — where a league link is too blunt. */
+  affiliation: text("affiliation"),
+  photoUrl: text("photo_url"),
+  bio: text("bio"),
+  /**
+   * What they are known for, in one line, for the index page.
+   *
+   * Stored rather than derived from bouts: the people who matter most to this
+   * sport's story mostly have no bout rows at all, and a person whose
+   * achievement only exists as prose still belongs in the index.
+   */
+  notableResult: text("notable_result"),
+  sourceUrl: text("source_url"),
+  confidence: confidence("confidence").notNull().default("reported"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 /* -------------------------------------------------------------------------- */
 /* Events                                                                      */
@@ -252,6 +468,50 @@ export const events = pgTable(
      * cannot survive doing.
      */
     startTimeTbd: boolean("start_time_tbd").notNull().default(false),
+    /**
+     * True when the DATE itself is ours, not theirs.
+     *
+     * One step further than `startTimeTbd`, which says the clock is a guess.
+     * This says the calendar is: CyberHero has announced a six-stop world
+     * circuit and named none of the cities or dates, and URKL's grand final is
+     * confirmed for "December or January" in Dubai.
+     *
+     * `startsAt` still carries an instant — ordering needs one and a nullable
+     * start date would infect every query that sorts — but with this set, the
+     * UI must print the window ("December 2026 / January 2027"), never the
+     * instant. An announced event rendered as a precise date is the same
+     * fabrication as a countdown to an unannounced time, and these rows are the
+     * ones a reader is most likely to plan around.
+     */
+    dateTbd: boolean("date_tbd").notNull().default(false),
+    /** How the date should read when `dateTbd` is set: "Dec 2026 / Jan 2027". */
+    dateLabel: text("date_label"),
+    /**
+     * The last day, for anything that is not a single night.
+     *
+     * UFB's Season 2 runs 1 October to 31 March and the World Humanoid Robot
+     * Games run over five days. Modelling those as an instant made the schedule
+     * claim a season was an evening.
+     */
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    /**
+     * Competition or exhibition.
+     *
+     * An exhibition happened and is worth recording — the Shanghai UFC demo
+     * refereed by Dana White is a real milestone — but nothing in it is a
+     * sanctioned result, and the standings query excludes it by this column.
+     */
+    kind: eventKind("kind").notNull().default("competition"),
+    confidence: confidence("confidence").notNull().default("reported"),
+    /**
+     * The caveat that belongs beside the date.
+     *
+     * "Six stops announced, cities unnamed." "The promoter's own site shows
+     * 2027, believed a typo." These are the most valuable sentences on a
+     * schedule page and there was nowhere to put them — a row that renders as a
+     * clean date is a row claiming a precision the announcement never had.
+     */
+    note: text("note"),
     /**
      * IANA timezone of the VENUE, e.g. "Asia/Shanghai". Not the viewer's.
      * Stored so the site can print "8:00 AM ET · 8:00 PM Shenzhen" from one
@@ -374,6 +634,21 @@ export const bouts = pgTable(
     teamBId: integer("team_b_id")
       .notNull()
       .references(() => teams.id, { onDelete: "restrict" }),
+    /**
+     * Who was driving each side.
+     *
+     * Nullable because it is very often not reported: Chinese coverage of a
+     * team tournament names the team and not the operator. Where it IS known —
+     * the first Iron Fist King final was Lu Xin against Hu Yunqian — leaving it
+     * out made the record say two robots fought each other unaided, which is
+     * the single most common misconception about this sport.
+     */
+    pilotAId: integer("pilot_a_id").references(() => pilots.id, {
+      onDelete: "set null",
+    }),
+    pilotBId: integer("pilot_b_id").references(() => pilots.id, {
+      onDelete: "set null",
+    }),
     scheduledRounds: integer("scheduled_rounds").notNull().default(3),
     status: boutStatus("status").notNull().default("scheduled"),
     startedAt: timestamp("started_at", { withTimezone: true }),
@@ -429,6 +704,19 @@ export const boutResults = pgTable(
      */
     statsJson: jsonb("stats_json"),
     notes: text("notes"),
+    /**
+     * How well the OUTCOME is sourced, which is frequently not as well as the
+     * fact that the bout happened.
+     *
+     * The single most common shape in this sport: a promoter announces a card,
+     * the event runs, and the winner reaches the world through one newsroom in
+     * a language the promoter does not publish in. That result is real and it
+     * is `reported`, not `confirmed`, and a table that renders the two
+     * identically is lying by omission.
+     */
+    confidence: confidence("confidence").notNull().default("reported"),
+    /** The report this outcome rests on. */
+    sourceUrl: text("source_url"),
     recordedAt: timestamp("recorded_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -639,6 +927,17 @@ export const posts = pgTable(
      * deliberately, which is a decision, not a side effect.
      */
     autoPublished: boolean("auto_published").notNull().default(false),
+    /**
+     * True for an explainer that is not tied to a day.
+     *
+     * Eight of the first ten posts carry 8 September, because that is when the
+     * site was built rather than when anything happened — which reads as a
+     * content dump and undersells pieces that are still accurate. Backdating
+     * them would be inventing a publication history, so the honest fix is to
+     * stop printing a date on the pieces where the date means nothing. The feed
+     * still orders by it.
+     */
+    evergreen: boolean("evergreen").notNull().default(false),
     /** The article the brief was written from. Null for anything hand-written. */
     sourceUrl: text("source_url"),
     /**
@@ -848,6 +1147,146 @@ export const signals = pgTable(
  * dispute that cannot arise until mail is actually sent. Add it with the
  * sending provider, not before.
  */
+
+/* -------------------------------------------------------------------------- */
+/* Where to watch                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Which channel carries which league.
+ *
+ * Separate from `streams`, which is our OWN Cloudflare playback and applies to
+ * one event. This is the standing answer to "where do I watch URKL" — a set of
+ * broadcasters attached to a competition, most of them Chinese state channels
+ * that will never have a per-event page here.
+ *
+ * `competitionId` rather than `eventId` because the question is asked about a
+ * league far more often than about a night, and because the honest answer for
+ * most leagues ("CCTV-10, CCTV Sports, CGTN, and a global CMG simulcast") does
+ * not vary per event.
+ */
+export const watchChannels = pgTable(
+  "watch_channels",
+  {
+    id: serial("id").primaryKey(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id, { onDelete: "cascade" }),
+    /** "CCTV-10", "DAZN", "@UFBots on X". */
+    name: text("name").notNull(),
+    url: text("url"),
+    /** "China", "Worldwide", "US only" — prose, because rights maps are prose. */
+    region: text("region"),
+    /** "Live only, no stream" and similar caveats worth more than the link. */
+    note: text("note"),
+    /** Ordering on the page. Lower first. */
+    orderIndex: integer("order_index").notNull().default(0),
+    sourceUrl: text("source_url"),
+    confidence: confidence("confidence").notNull().default("reported"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("watch_channels_competition_id_idx").on(t.competitionId)],
+);
+
+/* -------------------------------------------------------------------------- */
+/* How to enter                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How a reader actually gets into a league.
+ *
+ * The most useful thing on this site and the one nobody else publishes: three
+ * of the four active leagues will hand you a robot for free, and two of them
+ * have no English-language entry portal at all. That is a fact a person can act
+ * on, which is more than a results table can say.
+ *
+ * A table rather than a page of prose because it has to stay true. Entry
+ * addresses, prize pools and deadlines change per season, and a hard-coded page
+ * is one that quietly sends people to a dead mailbox a year from now.
+ */
+export const entryRoutes = pgTable(
+  "entry_routes",
+  {
+    id: serial("id").primaryKey(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id, { onDelete: "cascade" }),
+    /** "Pilot", "Ghost (engineering)", "Individual operator, no robot". */
+    role: text("role").notNull(),
+    /** What you actually do to enter, in prose. */
+    howToEnter: text("how_to_enter").notNull(),
+    /** The link or address. `contact` when it is an email or a WeChat keyword. */
+    url: text("url"),
+    contact: text("contact"),
+    /** True when the league supplies the machine — the headline fact. */
+    hardwareProvided: boolean("hardware_provided").notNull().default(false),
+    hardwareNote: text("hardware_note"),
+    prize: text("prize"),
+    /** Null means none published, which is itself worth printing. */
+    deadline: text("deadline"),
+    /** Language, visa, entity and export barriers a reader will hit. */
+    barriers: text("barriers"),
+    orderIndex: integer("order_index").notNull().default(0),
+    sourceUrl: text("source_url"),
+    confidence: confidence("confidence").notNull().default("reported"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("entry_routes_competition_id_idx").on(t.competitionId)],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Open questions                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What is NOT known, published deliberately.
+ *
+ * The counter-intuitive page and probably the most defensible one: two World
+ * Humanoid Robot Games have now been held with kickboxing as a scored event and
+ * NOBODY has published the medallists. EngineAI ran a full-size championship in
+ * December 2025 and never released a winner.
+ *
+ * A site that omits those looks complete and is wrong. A site that lists them
+ * is the only place tracking them, which is what a record is for. It also
+ * doubles as this project's own work queue — every row is a story if it ever
+ * resolves.
+ */
+export const openQuestions = pgTable(
+  "open_questions",
+  {
+    id: serial("id").primaryKey(),
+    slug: text("slug").notNull().unique(),
+    /** The question as a question. "Who won the WHRG 2026 martial arts event?" */
+    question: text("question").notNull(),
+    /** What IS known, what was checked, and why it is still open. */
+    detail: text("detail").notNull(),
+    /** Which league it belongs to, when it belongs to one. */
+    competitionId: integer("competition_id").references(() => competitions.id, {
+      onDelete: "set null",
+    }),
+    eventId: integer("event_id").references(() => events.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * Null while open. Set with `answer` when it resolves — the row stays,
+     * because "this was unknown for eight months and then Xinhua published it"
+     * is a more useful record than a silently deleted question.
+     */
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    answer: text("answer"),
+    sourceUrl: text("source_url"),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("open_questions_answered_at_idx").on(t.answeredAt)],
+);
+
 export const subscribers = pgTable(
   "subscribers",
   {
@@ -959,6 +1398,46 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 
 export const robotsRelations = relations(robots, ({ one }) => ({
   team: one(teams, { fields: [robots.teamId], references: [teams.id] }),
+  manufacturer: one(manufacturers, {
+    fields: [robots.manufacturerId],
+    references: [manufacturers.id],
+  }),
+}));
+
+export const manufacturersRelations = relations(manufacturers, ({ many }) => ({
+  robots: many(robots),
+}));
+
+export const pilotsRelations = relations(pilots, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [pilots.competitionId],
+    references: [competitions.id],
+  }),
+}));
+
+export const watchChannelsRelations = relations(watchChannels, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [watchChannels.competitionId],
+    references: [competitions.id],
+  }),
+}));
+
+export const entryRoutesRelations = relations(entryRoutes, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [entryRoutes.competitionId],
+    references: [competitions.id],
+  }),
+}));
+
+export const openQuestionsRelations = relations(openQuestions, ({ one }) => ({
+  competition: one(competitions, {
+    fields: [openQuestions.competitionId],
+    references: [competitions.id],
+  }),
+  event: one(events, {
+    fields: [openQuestions.eventId],
+    references: [events.id],
+  }),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -989,6 +1468,8 @@ export const boutsRelations = relations(bouts, ({ one }) => ({
   // The teams as of this bout, not the robots' current teams.
   teamA: one(teams, { fields: [bouts.teamAId], references: [teams.id] }),
   teamB: one(teams, { fields: [bouts.teamBId], references: [teams.id] }),
+  pilotA: one(pilots, { fields: [bouts.pilotAId], references: [pilots.id] }),
+  pilotB: one(pilots, { fields: [bouts.pilotBId], references: [pilots.id] }),
   result: one(boutResults, {
     fields: [bouts.id],
     references: [boutResults.boutId],
@@ -1047,8 +1528,17 @@ export type Subscriber = typeof subscribers.$inferSelect;
 export type Prediction = typeof predictions.$inferSelect;
 export type Post = typeof posts.$inferSelect;
 export type Signal = typeof signals.$inferSelect;
+export type Manufacturer = typeof manufacturers.$inferSelect;
+export type Pilot = typeof pilots.$inferSelect;
+export type WatchChannel = typeof watchChannels.$inferSelect;
+export type EntryRoute = typeof entryRoutes.$inferSelect;
+export type OpenQuestion = typeof openQuestions.$inferSelect;
 export type PostKindValue = (typeof postKind.enumValues)[number];
 export type PostStatusValue = (typeof postStatus.enumValues)[number];
 export type BoutMethodValue = (typeof boutMethod.enumValues)[number];
 export type EventAccessValue = (typeof eventAccess.enumValues)[number];
 export type EntitlementKindValue = (typeof entitlementKind.enumValues)[number];
+export type ConfidenceValue = (typeof confidence.enumValues)[number];
+export type CompetitionClassValue = (typeof competitionClass.enumValues)[number];
+export type EventKindValue = (typeof eventKind.enumValues)[number];
+export type PilotRoleValue = (typeof pilotRole.enumValues)[number];

@@ -192,11 +192,26 @@ async function main() {
    * created. The bout stores its own team columns rather than relying on the
    * robots' current team, so a later transfer cannot rewrite a finished result.
    */
+  /*
+   * `robots.team_id` is nullable now that the Machines page carries platform
+   * models nobody owns, but a BOUT still requires both teams — that is what
+   * makes a result attributable. Every robot this seed creates has a team, so a
+   * null here means the seed itself is inconsistent, and failing loudly beats
+   * inserting a bout the standings cannot place.
+   */
+  const teamOf = (slug: string) => {
+    const teamId = robotBySlug.get(slug)?.teamId;
+    if (teamId == null) {
+      throw new Error(`Seed robot "${slug}" has no team — cannot build a bout.`);
+    }
+    return teamId;
+  };
+
   const matchup = (aSlug: string, bSlug: string) => ({
     robotAId: R(aSlug),
     robotBId: R(bSlug),
-    teamAId: robotBySlug.get(aSlug)!.teamId,
-    teamBId: robotBySlug.get(bSlug)!.teamId,
+    teamAId: teamOf(aSlug),
+    teamBId: teamOf(bSlug),
   });
 
   console.log("Inserting events…");

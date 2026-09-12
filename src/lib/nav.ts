@@ -15,6 +15,16 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/schedule", label: "Schedule" },
   { href: "/results", label: "Results" },
   { href: "/competitions", label: "Leagues" },
+  /*
+   * The fifth, and the only one that breaks the four-item rule above.
+   *
+   * Every other header item points at something to read. This one points at
+   * something to do, and the thing it says is genuinely surprising: three of
+   * the four active leagues will assign you a robot. A reader who bounces off
+   * the news is a reader lost; a reader who finds out they could enter is the
+   * one who comes back. It earns the slot the way Teams and Watch did not.
+   */
+  { href: "/get-in-the-ring", label: "Get in the ring" },
 ];
 
 /**
@@ -24,6 +34,9 @@ export const NAV_ITEMS: NavItem[] = [
 export const FOOTER_ITEMS: NavItem[] = [
   ...NAV_ITEMS,
   { href: "/watch", label: "Where to watch" },
+  { href: "/pilots", label: "Pilots" },
   { href: "/teams", label: "Teams" },
   { href: "/robots", label: "Machines" },
+  { href: "/open-questions", label: "Open questions" },
+  { href: "/context", label: "Context" },
 ];

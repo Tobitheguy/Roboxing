@@ -8,13 +8,19 @@ import {
   bouts,
   competitions,
   entitlements,
+  entryRoutes,
   events,
+  manufacturers,
+  openQuestions,
+  pilots,
   posts,
   predictions,
   robots,
   streams,
   teams,
+  watchChannels,
   type BoutMethodValue,
+  type ConfidenceValue,
 } from "@/db/schema";
 
 /**
@@ -41,6 +47,14 @@ export type BoutParticipant = {
   teamSlug: string;
   /** ISO 3166-1 alpha-2, for the flag beside the corner. Null when unknown. */
   teamCountry: string | null;
+  /**
+   * Who drove it. Null far more often than not — most leagues publish the team
+   * and never the operator — and printed wherever it IS known, because "a robot
+   * won" and "a person won driving a robot" are different claims and this sport
+   * is almost always the second one.
+   */
+  pilotName: string | null;
+  pilotSlug: string | null;
 };
 
 export type BoutDetail = {
@@ -72,6 +86,8 @@ export type BoutDetail = {
     knockdownsA: number;
     knockdownsB: number;
     notes: string | null;
+    confidence: ConfidenceValue;
+    sourceUrl: string | null;
   } | null;
 };
 
@@ -79,6 +95,8 @@ const robotA = alias(robots, "robot_a");
 const robotB = alias(robots, "robot_b");
 const teamA = alias(teams, "team_a");
 const teamB = alias(teams, "team_b");
+const pilotA = alias(pilots, "pilot_a");
+const pilotB = alias(pilots, "pilot_b");
 
 /**
  * One selection shape for every bout query on the site.
@@ -114,6 +132,8 @@ const boutSelection = {
   aTeamName: teamA.name,
   aTeamSlug: teamA.slug,
   aTeamCountry: teamA.country,
+  aPilotName: pilotA.name,
+  aPilotSlug: pilotA.slug,
 
   bId: robotB.id,
   bSlug: robotB.slug,
@@ -124,6 +144,8 @@ const boutSelection = {
   bTeamName: teamB.name,
   bTeamSlug: teamB.slug,
   bTeamCountry: teamB.country,
+  bPilotName: pilotB.name,
+  bPilotSlug: pilotB.slug,
 
   winnerRobotId: boutResults.winnerRobotId,
   method: boutResults.method,
@@ -132,6 +154,8 @@ const boutSelection = {
   knockdownsA: boutResults.knockdownsA,
   knockdownsB: boutResults.knockdownsB,
   notes: boutResults.notes,
+  resultConfidence: boutResults.confidence,
+  resultSourceUrl: boutResults.sourceUrl,
 };
 
 type BoutRow = {
@@ -168,6 +192,8 @@ function toBoutDetail(r: Record<string, unknown>): BoutDetail {
       teamName: r.aTeamName as string,
       teamSlug: r.aTeamSlug as string,
       teamCountry: r.aTeamCountry as string | null,
+      pilotName: r.aPilotName as string | null,
+      pilotSlug: r.aPilotSlug as string | null,
     },
     robotB: {
       id: r.bId as number,
@@ -179,6 +205,8 @@ function toBoutDetail(r: Record<string, unknown>): BoutDetail {
       teamName: r.bTeamName as string,
       teamSlug: r.bTeamSlug as string,
       teamCountry: r.bTeamCountry as string | null,
+      pilotName: r.bPilotName as string | null,
+      pilotSlug: r.bPilotSlug as string | null,
     },
     // Explicit null check, not truthiness: a falsy-but-present method would
     // silently turn a resolved bout into an unresolved one.
@@ -192,6 +220,8 @@ function toBoutDetail(r: Record<string, unknown>): BoutDetail {
             knockdownsA: (r.knockdownsA as number) ?? 0,
             knockdownsB: (r.knockdownsB as number) ?? 0,
             notes: r.notes as string | null,
+            confidence: (r.resultConfidence as ConfidenceValue) ?? "reported",
+            sourceUrl: r.resultSourceUrl as string | null,
           }
         : null,
   };
@@ -207,6 +237,11 @@ function boutQuery() {
     .innerJoin(robotB, eq(bouts.robotBId, robotB.id))
     .innerJoin(teamA, eq(bouts.teamAId, teamA.id))
     .innerJoin(teamB, eq(bouts.teamBId, teamB.id))
+    // LEFT on both pilots: a named operator is the exception, not the rule, and
+    // an inner join here would delete every bout whose driver was never
+    // reported -- which is almost all of them.
+    .leftJoin(pilotA, eq(bouts.pilotAId, pilotA.id))
+    .leftJoin(pilotB, eq(bouts.pilotBId, pilotB.id))
     // LEFT so unresolved bouts survive with a null result.
     .leftJoin(boutResults, eq(boutResults.boutId, bouts.id));
 }
@@ -219,6 +254,22 @@ export const getCompetitions = cache(async () => {
   return db
     .select()
     .from(competitions)
+    .orderBy(desc(competitions.seasonYear), asc(competitions.name));
+});
+
+/**
+ * The leagues index: real competitions only.
+ *
+ * Excludes the `exhibitions` container, which exists so that a manufacturer's
+ * sparring video has somewhere to hang without inventing a league for it. It is
+ * a row in `competitions` and it is not a league, and the difference has to be
+ * enforced somewhere — here, once, rather than in every page that lists them.
+ */
+export const getLeagues = cache(async () => {
+  return db
+    .select()
+    .from(competitions)
+    .where(eq(competitions.isLeague, true))
     .orderBy(desc(competitions.seasonYear), asc(competitions.name));
 });
 
@@ -236,7 +287,9 @@ export const getPrimaryCompetition = cache(async () => {
   const active = await db
     .select()
     .from(competitions)
-    .where(eq(competitions.status, "active"))
+    // isLeague, so the exhibitions container can never become the season the
+    // home page leads with.
+    .where(and(eq(competitions.status, "active"), eq(competitions.isLeague, true)))
     .orderBy(desc(competitions.seasonYear))
     .limit(1);
   if (active[0]) return active[0];
@@ -244,6 +297,7 @@ export const getPrimaryCompetition = cache(async () => {
   const any = await db
     .select()
     .from(competitions)
+    .where(eq(competitions.isLeague, true))
     .orderBy(desc(competitions.seasonYear))
     .limit(1);
   return any[0] ?? null;
@@ -432,6 +486,7 @@ export const getUpcomingEvents = cache(async (competitionSlug?: string) => {
       event: events,
       competitionSlug: competitions.slug,
       competitionName: competitions.name,
+      competitionClass: competitions.class,
       boutCount: sql<number>`(select count(*) from ${bouts} where ${bouts.eventId} = ${events.id})::int`,
     })
     .from(events)
@@ -916,3 +971,225 @@ export const getSitemapContent = cache(async () => {
 });
 
 export type { BoutRow };
+
+/* -------------------------------------------------------------------------- */
+/* People, makers, channels, entry routes and open questions                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everyone on the site, pilots first.
+ *
+ * Ordered by role rather than alphabetically: a visitor arriving at /pilots is
+ * looking for the people who drive, and putting the league founders and the UFC
+ * president above them because their surnames sort earlier would bury the point
+ * of the page.
+ */
+export const getPilots = cache(async () => {
+  return db
+    .select({
+      pilot: pilots,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+    })
+    .from(pilots)
+    .leftJoin(competitions, eq(pilots.competitionId, competitions.id))
+    .orderBy(
+      sql`case ${pilots.role} when 'pilot' then 0 when 'founder' then 1 when 'engineer' then 2 when 'executive' then 3 else 4 end`,
+      asc(pilots.name),
+    );
+});
+
+export const getPilotBySlug = cache(async (slug: string) => {
+  const rows = await db
+    .select({
+      pilot: pilots,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+    })
+    .from(pilots)
+    .leftJoin(competitions, eq(pilots.competitionId, competitions.id))
+    .where(eq(pilots.slug, slug))
+    .limit(1);
+  return rows[0] ?? null;
+});
+
+/**
+ * The bouts a person actually drove.
+ *
+ * Usually none, and that is expected rather than a bug — Chinese coverage of a
+ * team tournament names the team and not the operator, so most of this sport's
+ * pilots are known only through prose. The profile page leads with
+ * `notableResult` for that reason and treats this list as a bonus.
+ */
+export const getBoutsForPilot = cache(async (pilotId: number) => {
+  const rows = await boutQuery().where(
+    or(eq(bouts.pilotAId, pilotId), eq(bouts.pilotBId, pilotId)),
+  );
+  return (rows as Record<string, unknown>[]).map(toBoutDetail);
+});
+
+export const getManufacturers = cache(async () => {
+  return db
+    .select({
+      maker: manufacturers,
+      machineCount: sql<number>`(select count(*) from ${robots} where ${robots.manufacturerId} = ${manufacturers}.id)::int`,
+    })
+    .from(manufacturers)
+    .orderBy(asc(manufacturers.name));
+});
+
+/**
+ * The Machines page.
+ *
+ * Platform models and fighting machines in one list, each carrying its maker
+ * and, where it has one, its team. The page separates them by class so a 500 kg
+ * piloted mech never sits in a comparison table beside a 35 kg G1.
+ */
+export const getMachines = cache(async () => {
+  return db
+    .select({
+      robot: robots,
+      makerName: manufacturers.name,
+      makerSlug: manufacturers.slug,
+      teamName: teams.name,
+      teamSlug: teams.slug,
+      boutCount: sql<number>`(select count(*) from ${bouts} where ${bouts.robotAId} = ${robots}.id or ${bouts.robotBId} = ${robots}.id)::int`,
+    })
+    .from(robots)
+    .leftJoin(manufacturers, eq(robots.manufacturerId, manufacturers.id))
+    .leftJoin(teams, eq(robots.teamId, teams.id))
+    .orderBy(asc(robots.class), asc(robots.name));
+});
+
+/** Broadcast channels for one league. */
+export const getWatchChannelsFor = cache(async (competitionId: number) => {
+  return db
+    .select()
+    .from(watchChannels)
+    .where(eq(watchChannels.competitionId, competitionId))
+    .orderBy(asc(watchChannels.orderIndex));
+});
+
+/** Every channel, grouped by league, for the Where to watch page. */
+export const getAllWatchChannels = cache(async () => {
+  return db
+    .select({
+      channel: watchChannels,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+      competitionClass: competitions.class,
+      competitionStatus: competitions.status,
+    })
+    .from(watchChannels)
+    .innerJoin(competitions, eq(watchChannels.competitionId, competitions.id))
+    .orderBy(asc(competitions.name), asc(watchChannels.orderIndex));
+});
+
+/** How to enter, grouped by league. Hardware-provided routes first. */
+export const getEntryRoutes = cache(async () => {
+  return db
+    .select({
+      route: entryRoutes,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+      competitionCountry: competitions.country,
+      competitionClass: competitions.class,
+    })
+    .from(entryRoutes)
+    .innerJoin(competitions, eq(entryRoutes.competitionId, competitions.id))
+    .orderBy(
+      desc(entryRoutes.hardwareProvided),
+      asc(competitions.name),
+      asc(entryRoutes.orderIndex),
+    );
+});
+
+/**
+ * What is not known.
+ *
+ * Open first, then answered — a resolved question stays on the page, because
+ * "this was unknown for eight months and then Xinhua published it" is a more
+ * useful record than a silently deleted row.
+ */
+export const getOpenQuestions = cache(async () => {
+  return db
+    .select({
+      question: openQuestions,
+      competitionSlug: competitions.slug,
+      competitionName: competitions.name,
+      eventSlug: events.slug,
+      eventName: events.name,
+    })
+    .from(openQuestions)
+    .leftJoin(competitions, eq(openQuestions.competitionId, competitions.id))
+    .leftJoin(events, eq(openQuestions.eventId, events.id))
+    .orderBy(
+      sql`case when ${openQuestions.answeredAt} is null then 0 else 1 end`,
+      asc(openQuestions.orderIndex),
+    );
+});
+
+/**
+ * Cross-league record per MACHINE MODEL, which is a different question from the
+ * team table and the one this sport keeps asking.
+ *
+ * Grouped by model rather than by robot row: "how does the T800 do" is about
+ * the platform, and every URKL entry is a T800 under a different fighting name.
+ *
+ * Excludes exhibitions and anything that is not `humanoid` class. A
+ * demonstration with no declared winner and a piloted mech with a person inside
+ * both produce numbers that look like a record and are not one.
+ */
+export const getMachineRecords = cache(async () => {
+  const rows = await db
+    .select({
+      model: robots.model,
+      makerName: manufacturers.name,
+      robotId: robots.id,
+      boutId: bouts.id,
+      isA: sql<boolean>`${bouts.robotAId} = ${robots}.id`,
+      winnerRobotId: boutResults.winnerRobotId,
+      method: boutResults.method,
+    })
+    .from(bouts)
+    .innerJoin(events, eq(bouts.eventId, events.id))
+    .innerJoin(competitions, eq(bouts.competitionId, competitions.id))
+    .innerJoin(
+      robots,
+      or(eq(bouts.robotAId, robots.id), eq(bouts.robotBId, robots.id)),
+    )
+    .leftJoin(manufacturers, eq(robots.manufacturerId, manufacturers.id))
+    .innerJoin(boutResults, eq(boutResults.boutId, bouts.id))
+    .where(
+      and(
+        eq(events.kind, "competition"),
+        eq(competitions.class, "humanoid"),
+        isNotNull(robots.model),
+      ),
+    );
+
+  const byModel = new Map<
+    string,
+    { model: string; maker: string | null; wins: number; losses: number; draws: number; bouts: number }
+  >();
+
+  for (const row of rows) {
+    const key = row.model as string;
+    const entry =
+      byModel.get(key) ??
+      { model: key, maker: row.makerName, wins: 0, losses: 0, draws: 0, bouts: 0 };
+    entry.bouts += 1;
+    if (row.method === "draw" || row.method === "no_contest") {
+      entry.draws += 1;
+    } else if (row.winnerRobotId === row.robotId) {
+      entry.wins += 1;
+    } else {
+      entry.losses += 1;
+    }
+    byModel.set(key, entry);
+  }
+
+  return [...byModel.values()].sort(
+    (a, b) => b.bouts - a.bouts || b.wins - a.wins || a.model.localeCompare(b.model),
+  );
+});

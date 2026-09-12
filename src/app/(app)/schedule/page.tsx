@@ -5,9 +5,10 @@ import { CalendarClock, Tv } from "lucide-react";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { CompetitionFilter } from "@/components/competition-filter";
+import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
-import { EventTime } from "@/components/event-time";
+import { EventDate } from "@/components/event-date";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { safeTimeZone } from "@/lib/timezones";
@@ -40,6 +41,24 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
     boutsByEvent.set(bout.event.id, list);
   }
 
+  /*
+   * Two lists, and the split is the point of this page.
+   *
+   * `dated` is a calendar: things with a day on them, in order, which is what a
+   * schedule normally is. `announced` is everything a promoter has committed to
+   * without saying when or where — six CyberHero circuit cities, a URKL grand
+   * final that is "December or January" in Dubai, a CMG final with no published
+   * date at all.
+   *
+   * Mixing them would be the easy thing and the wrong one. Sorted into the
+   * calendar by their placeholder instants, those rows read as fixtures; left
+   * out entirely, the schedule under-reports what is actually coming. They are
+   * their own section because "announced, unscheduled" is a real status in this
+   * sport and nobody else is publishing it.
+   */
+  const dated = events.filter((e) => !e.event.dateTbd);
+  const announced = events.filter((e) => e.event.dateTbd);
+
   return (
     <PageShell>
       <PageHeading
@@ -54,7 +73,7 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
         basePath="/schedule"
       />
 
-      {events.length === 0 ? (
+      {dated.length === 0 && announced.length === 0 ? (
         <Card>
           <EmptyState
             icon={<CalendarClock />}
@@ -66,7 +85,7 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
             }
           />
         </Card>
-      ) : (
+      ) : dated.length === 0 ? null : (
         <div className="space-y-6">
           {/* Grouped by month, in the VENUE's calendar. A month-grid calendar
               was considered and rejected: at roughly one event a month it
@@ -75,16 +94,16 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
               Ticketmaster actually show for exactly this density of calendar —
               the grid only earns its place when most weeks have something in
               them. */}
-          {events.map(({ event, competitionName, boutCount }, index) => {
-            const monthOf = (e: (typeof events)[number]) =>
+          {dated.map(({ event, competitionName, boutCount }, index) => {
+            const monthOf = (e: (typeof dated)[number]) =>
               new Intl.DateTimeFormat("en-US", {
                 month: "long",
                 year: "numeric",
                 timeZone: safeTimeZone(e.event.timezone),
               }).format(e.event.startsAt);
-            const monthLabel = monthOf(events[index]);
+            const monthLabel = monthOf(dated[index]);
             const isNewMonth =
-              index === 0 || monthOf(events[index - 1]) !== monthLabel;
+              index === 0 || monthOf(dated[index - 1]) !== monthLabel;
             const eventBouts = boutsByEvent.get(event.id) ?? [];
             return (
               <div key={event.id}>
@@ -97,7 +116,10 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
                 <CardHeader
                   title={competitionName}
                   action={
-                    event.status === "live" ? <LivePill status="live" /> : null
+                    <span className="flex items-center gap-2">
+                      {event.status === "live" ? <LivePill status="live" /> : null}
+                      <ConfidenceBadge level={event.confidence} />
+                    </span>
                   }
                 />
                 <div className="border-line/60 border-b px-4 py-5 sm:px-6">
@@ -112,13 +134,23 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
                         </Link>
                       </h2>
                       <p className="text-ink-muted mt-2 text-sm">
-                        <EventTime
-                          startsAt={event.startsAt.toISOString()}
+                        <EventDate
+                          startsAt={event.startsAt}
+                          endsAt={event.endsAt}
                           timeZone={event.timezone}
                           city={event.city}
-                          timeTbd={event.startTimeTbd}
+                          dateTbd={event.dateTbd}
+                          dateLabel={event.dateLabel}
+                          startTimeTbd={event.startTimeTbd}
                         />
                       </p>
+                      {/* The caveat beside the date, which on this schedule is
+                          frequently worth more than the date. */}
+                      {event.note ? (
+                        <p className="text-ink-dim mt-2 max-w-xl text-xs leading-relaxed">
+                          {event.note}
+                        </p>
+                      ) : null}
                       {event.venue ? (
                         <p className="text-ink-dim mt-1 text-xs">
                           {[event.venue, event.city, event.country]
@@ -140,9 +172,9 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
                     </div>
                     <div className="text-right">
                       {/* No countdown to a time nobody announced. */}
-                      {event.startTimeTbd ? (
+                      {event.startTimeTbd || event.endsAt ? (
                         <p className="font-display text-ink-muted text-lg font-bold">
-                          TBA
+                          {event.endsAt ? "Season" : "TBA"}
                         </p>
                       ) : (
                         <Countdown
@@ -172,6 +204,65 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
           })}
         </div>
       )}
+
+      {/* Announced, unscheduled. The section no other site publishes.
+          A promoter saying "eight cities across four regions" and naming one of
+          them is a commitment, and tracking the seven that have not arrived is
+          the difference between a calendar and a record. */}
+      {announced.length > 0 ? (
+        <div className="mt-12">
+          <h2 className="font-display text-title text-ink uppercase">
+            Announced, not yet scheduled
+          </h2>
+          <p className="text-ink-muted mt-2 max-w-2xl text-sm leading-relaxed">
+            Events a promoter has committed to without publishing a date, a city
+            or both. They are listed apart from the calendar above because
+            nothing here is a fixture yet — and listed at all because an
+            announcement with nothing behind it is still the best available
+            answer to what is coming next.
+          </p>
+
+          <Card className="mt-5">
+            <CardBodyFlush>
+              <ul>
+                {announced.map(({ event, competitionName }) => (
+                  <li
+                    key={event.id}
+                    className="border-line/60 border-b px-4 py-4 last:border-b-0 sm:px-6"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+                      <div className="min-w-0">
+                        <p className="text-ink-dim text-xs tracking-widest uppercase">
+                          {competitionName}
+                        </p>
+                        <h3 className="font-display text-ink mt-1 text-sm font-semibold uppercase">
+                          <Link
+                            href={`/events/${event.slug}`}
+                            className="hover:text-volt transition-colors"
+                          >
+                            {event.name}
+                          </Link>
+                        </h3>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="font-display text-ink-muted text-sm font-bold">
+                          {event.dateLabel?.trim() || "Date TBA"}
+                        </span>
+                        <ConfidenceBadge level={event.confidence} />
+                      </div>
+                    </div>
+                    {event.note ? (
+                      <p className="text-ink-dim mt-2 max-w-2xl text-xs leading-relaxed">
+                        {event.note}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </CardBodyFlush>
+          </Card>
+        </div>
+      ) : null}
     </PageShell>
   );
 }

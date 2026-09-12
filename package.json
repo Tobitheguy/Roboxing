@@ -19,7 +19,8 @@
     "signals:classify": "tsx scripts/classify-signals.ts",
     "set-test-stream": "tsx scripts/set-test-stream.ts",
     "stripe:setup": "tsx scripts/stripe-setup.ts",
-    "signals:publish": "tsx scripts/autopublish.ts"
+    "signals:publish": "tsx scripts/autopublish.ts",
+    "db:seed-record": "tsx scripts/seed-record.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

@@ -2,17 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, MonitorPlay, Tv } from "lucide-react";
 
+import { Badge } from "@/components/badge";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
+import { ConfidenceBadge } from "@/components/confidence-badge";
+import { EventDate } from "@/components/event-date";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
-import { EventTime } from "@/components/event-time";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
 import { youtubeThumbnailUrl } from "@/lib/embeds";
 import { getLiveNow } from "@/lib/live";
-import { getPublishedPosts, getUpcomingEvents } from "@/lib/queries";
+import {
+  getAllWatchChannels,
+  getPublishedPosts,
+  getUpcomingEvents,
+} from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Where to watch",
@@ -37,13 +43,40 @@ export const metadata: Metadata = {
  * top comes from the same getLiveNow() the header uses.
  */
 export default async function WatchIndexPage() {
-  const [live, upcoming, posts] = await Promise.all([
+  const [live, upcoming, posts, channels] = await Promise.all([
     getLiveNow(),
     getUpcomingEvents(),
     getPublishedPosts(),
+    getAllWatchChannels(),
   ]);
 
   const videoPosts = posts.filter((p) => youtubeThumbnailUrl(p.post.embedUrl));
+
+  /*
+   * Channels grouped by league.
+   *
+   * This is the half of the page that was missing. "Broadcast TBA" on every row
+   * was technically true per EVENT and useless as an answer, because for most
+   * of these leagues the broadcaster does not vary by night: CMG's events are on
+   * CCTV-10, CCTV Sports and CGTN whether or not anyone has announced a
+   * particular card yet.
+   *
+   * Humanoid leagues first, then piloted mech, then the wheeled-combat shows
+   * that are carried for context — the ordering says which of these is the
+   * sport this site is about.
+   */
+  const byLeague = new Map<string, typeof channels>();
+  for (const row of channels) {
+    const list = byLeague.get(row.competitionSlug) ?? [];
+    list.push(row);
+    byLeague.set(row.competitionSlug, list);
+  }
+  const CLASS_RANK = { humanoid: 0, piloted_mech: 1, adjacent: 2 } as const;
+  const leagueGroups = [...byLeague.values()].sort(
+    (a, b) =>
+      CLASS_RANK[a[0].competitionClass] - CLASS_RANK[b[0].competitionClass] ||
+      a[0].competitionName.localeCompare(b[0].competitionName),
+  );
 
   return (
     <PageShell>
@@ -90,17 +123,20 @@ export default async function WatchIndexPage() {
                       <p className="text-ink-dim mt-1 text-xs">
                         {competitionName}
                         <span className="text-ink-dim"> · </span>
-                        <EventTime
-                          startsAt={event.startsAt.toISOString()}
+                        <EventDate
+                          startsAt={event.startsAt}
+                          endsAt={event.endsAt}
                           timeZone={event.timezone}
                           city={event.city}
-                          timeTbd={event.startTimeTbd}
+                          dateTbd={event.dateTbd}
+                          dateLabel={event.dateLabel}
+                          startTimeTbd={event.startTimeTbd}
                         />
                       </p>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-4">
-                      {event.startTimeTbd ? null : (
+                      {event.startTimeTbd || event.dateTbd || event.endsAt ? null : (
                         <Countdown
                           startsAt={event.startsAt.toISOString()}
                           className="font-display text-ink hidden text-sm font-bold sm:block"
@@ -142,6 +178,90 @@ export default async function WatchIndexPage() {
           )}
         </CardBodyFlush>
       </Card>
+
+      {/* ---- The standing answer, per league ----------------------------- */}
+      {leagueGroups.length > 0 ? (
+        <div className="mb-12">
+          <h2 className="font-display text-title text-ink mb-2 uppercase">
+            Channels by league
+          </h2>
+          <p className="text-ink-muted mb-5 max-w-2xl text-sm leading-relaxed">
+            Most of this sport is broadcast by somebody else, and for most
+            leagues the answer does not change per event. Where a league has no
+            stream at all, that is stated rather than left blank — it is usually
+            the more useful fact.
+          </p>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            {leagueGroups.map((group) => (
+              <Card key={group[0].competitionSlug}>
+                <CardHeader
+                  title={
+                    <Link
+                      href={`/competitions/${group[0].competitionSlug}`}
+                      className="hover:text-volt transition-colors"
+                    >
+                      {group[0].competitionName}
+                    </Link>
+                  }
+                  action={
+                    group[0].competitionClass !== "humanoid" ? (
+                      <Badge variant="outline" size="sm">
+                        {group[0].competitionClass === "piloted_mech"
+                          ? "Piloted mech"
+                          : "Adjacent"}
+                      </Badge>
+                    ) : null
+                  }
+                />
+                <CardBodyFlush>
+                  <ul>
+                    {group.map(({ channel }) => (
+                      <li
+                        key={channel.id}
+                        className="border-line/60 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-3 last:border-b-0 sm:px-6"
+                      >
+                        <div className="min-w-0">
+                          {channel.url ? (
+                            <a
+                              href={channel.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-ink hover:text-volt text-sm font-medium transition-colors"
+                            >
+                              {channel.name}
+                            </a>
+                          ) : (
+                            <span className="text-ink text-sm font-medium">
+                              {channel.name}
+                            </span>
+                          )}
+                          {channel.note ? (
+                            <p className="text-ink-dim mt-1 max-w-md text-xs leading-relaxed">
+                              {channel.note}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {channel.region ? (
+                            <span className="text-ink-dim text-xs">
+                              {channel.region}
+                            </span>
+                          ) : null}
+                          <ConfidenceBadge
+                            level={channel.confidence}
+                            showLabel={false}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </CardBodyFlush>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 className="font-display text-title text-ink uppercase">Footage</h2>

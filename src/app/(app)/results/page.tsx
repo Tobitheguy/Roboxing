@@ -7,7 +7,11 @@ import { CompetitionFilter } from "@/components/competition-filter";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { StatRow, StatTile } from "@/components/stat-tile";
-import { getAllResults, getCompetitions } from "@/lib/queries";
+import {
+  getAllResults,
+  getCompetitions,
+  getMachineRecords,
+} from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Results" };
 
@@ -16,9 +20,10 @@ export default async function ResultsPage(props: PageProps<"/results">) {
   const raw = params.competition;
   const competition = Array.isArray(raw) ? raw[0] : raw;
 
-  const [competitions, results] = await Promise.all([
+  const [competitions, results, machineRecords] = await Promise.all([
     getCompetitions(),
     getAllResults(competition),
+    getMachineRecords(),
   ]);
 
   const finishes = results.filter(
@@ -97,6 +102,72 @@ export default async function ResultsPage(props: PageProps<"/results">) {
           </div>
         </>
       )}
+
+      {/* ---- Cross-league machine record ---------------------------------- */}
+      {machineRecords.length > 0 ? (
+        <div className="mt-12">
+          <h2 className="font-display text-title text-ink uppercase">
+            Machine record
+          </h2>
+          <p className="text-ink-muted mt-2 mb-5 max-w-2xl text-sm leading-relaxed">
+            How each platform performs across every humanoid league, grouped by
+            model rather than by fighting name — URKL&rsquo;s entrants are all
+            T800s under different names, so the interesting question is about the
+            machine, not the entry.
+          </p>
+          <p className="text-ink-dim mb-5 max-w-2xl text-xs leading-relaxed">
+            Exhibitions are excluded, and so is anything outside the humanoid
+            class. A demonstration with no declared winner and a piloted mech
+            with a person inside both produce numbers that look like a record and
+            are not one. This table is small because the sport has published very
+            few complete cards — four honest rows beat forty invented ones.
+          </p>
+
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-line text-ink-dim border-b text-left text-xs uppercase">
+                    <th className="px-4 py-3 font-semibold sm:px-6">Model</th>
+                    <th className="px-4 py-3 font-semibold">Maker</th>
+                    <th className="px-4 py-3 text-right font-semibold">Bouts</th>
+                    <th className="px-4 py-3 text-right font-semibold">W</th>
+                    <th className="px-4 py-3 text-right font-semibold">L</th>
+                    <th className="px-4 py-3 text-right font-semibold sm:px-6">D</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {machineRecords.map((row) => (
+                    <tr
+                      key={row.model}
+                      className="border-line/60 border-b last:border-b-0"
+                    >
+                      <td className="text-ink px-4 py-3 font-semibold sm:px-6">
+                        {row.model}
+                      </td>
+                      <td className="text-ink-muted px-4 py-3">
+                        {row.maker ?? "\u2014"}
+                      </td>
+                      <td className="text-ink-muted tabular px-4 py-3 text-right">
+                        {row.bouts}
+                      </td>
+                      <td className="text-ink tabular px-4 py-3 text-right font-semibold">
+                        {row.wins}
+                      </td>
+                      <td className="text-ink-muted tabular px-4 py-3 text-right">
+                        {row.losses}
+                      </td>
+                      <td className="text-ink-muted tabular px-4 py-3 text-right sm:px-6">
+                        {row.draws}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </PageShell>
   );
 }

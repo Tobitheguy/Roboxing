@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDaysUntil } from "./format";
+import { formatDaysUntil, formatUsd } from "./format";
 
 describe("formatDaysUntil", () => {
   const now = new Date("2026-09-07T12:00:00Z");
@@ -137,5 +137,35 @@ describe("formatWeight", () => {
 
   it("returns null when unknown", () => {
     expect(formatWeight(null)).toBeNull();
+  });
+});
+
+/**
+ * Machine prices.
+ *
+ * Every number on the Machines page is a press-release figure or an RMB
+ * conversion at whatever rate an outlet used that day, so rendering cents would
+ * claim precision the source does not have. And "not published" is a fact about
+ * the manufacturer, not a hole in our data — it must not render as a dash.
+ */
+describe("formatUsd", () => {
+  it("renders whole dollars with separators", () => {
+    expect(formatUsd(63_900)).toBe("$63,900");
+    expect(formatUsd(574_000)).toBe("$574,000");
+  });
+
+  it("never shows cents", () => {
+    expect(formatUsd(33_949)).not.toContain(".");
+  });
+
+  it("says so when there is no published price", () => {
+    expect(formatUsd(null)).toBe("Not published");
+    expect(formatUsd(undefined)).toBe("Not published");
+  });
+
+  it("renders a free machine as $0, not as missing", () => {
+    // URKL supplies the T800 at no cost. Zero and null mean different things
+    // and a falsy check would collapse them.
+    expect(formatUsd(0)).toBe("$0");
   });
 });

@@ -243,3 +243,23 @@ export const METHOD_LABELS: Record<BoutMethodValue, string> = {
   dq: "DQ",
   no_contest: "No contest",
 };
+
+/**
+ * A machine's price, or an honest blank.
+ *
+ * No cents, because none of these numbers have that precision: they are list
+ * prices quoted in press releases and RMB conversions at whatever rate the
+ * outlet used that day. `$574,000` is already claiming more than the source
+ * supports; `$574,000.00` would be absurd.
+ *
+ * Null renders as "Not published" rather than "—", because for these machines
+ * an unpublished price is a fact about the manufacturer, not a gap in our data.
+ */
+export function formatUsd(amount: number | null | undefined): string {
+  if (amount == null) return "Not published";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}

@@ -74,13 +74,23 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
           <Badge variant="outline">
             {post.kind === "clip" ? "Clip" : "Analysis"}
           </Badge>
-          {post.publishedAt ? (
+          {/* No date on an explainer.
+              Eight of the first ten posts carry 8 September, because that is
+              when the site was built rather than when anything happened. On a
+              piece explaining what URKL is, that date is not information -- it
+              is a timestamp that makes durable writing look like a stale news
+              item. Backdating them would invent a publication history, so the
+              honest fix is to print nothing. The feed still orders by it. */}
+          {post.publishedAt && !post.evergreen ? (
             <time
               dateTime={post.publishedAt.toISOString()}
               className="text-ink-dim tabular text-xs"
             >
               {formatDateLong(post.publishedAt, "UTC")}
             </time>
+          ) : null}
+          {post.evergreen ? (
+            <span className="text-ink-dim text-xs">Explainer</span>
           ) : null}
           {post.autoPublished ? (
             <Badge variant="outline">Automated brief</Badge>
