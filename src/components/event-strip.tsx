@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { ChevronRight, Tv } from "lucide-react";
 
 import { Countdown } from "@/components/countdown";
+import { dateZone, formatRange } from "@/components/event-date";
 import { EventTime } from "@/components/event-time";
 import { getFeaturedEvent } from "@/lib/queries";
 import { rethrowControlFlow } from "@/lib/next-errors";
@@ -84,7 +85,37 @@ export async function EventStrip() {
 
         {/* Pushed right on wide screens, wraps underneath on a phone. */}
         <div className="ml-auto flex items-center gap-4">
-          {isLive ? null : event.startTimeTbd ? (
+          {isLive ? null : event.dateTbd ? (
+            /*
+             * Announced, not scheduled.
+             *
+             * This slot used to read "Date set, time TBA" for anything with a
+             * TBA time -- which became a lie the moment the schedule started
+             * carrying announced-only fixtures, because for those the date is
+             * NOT set. `starts_at` on those rows is a placeholder we invented
+             * so the calendar can sort. Print the label the announcement
+             * actually gave and nothing else.
+             */
+            <span className="text-ink-muted">
+              {event.dateLabel?.trim() || "Date TBA"}
+            </span>
+          ) : event.endsAt ? (
+            /*
+             * A season, not a night.
+             *
+             * UFB's Season 2 runs 1 October to 31 March. Counting down to its
+             * first day is meaningless and "Date set, time TBA" is worse -- it
+             * describes a six-month window as though it were an evening whose
+             * start time had not been announced. Print the window.
+             */
+            <span className="text-ink-muted">
+              {formatRange(
+                event.startsAt,
+                event.endsAt,
+                dateZone(event.timezone, event.startTimeTbd),
+              )}
+            </span>
+          ) : event.startTimeTbd ? (
             // No countdown to an hour nobody announced. The date still reads,
             // via EventTime below.
             <span className="text-ink-muted">Date set, time TBA</span>
@@ -95,14 +126,19 @@ export async function EventStrip() {
             />
           )}
 
-          <EventTime
-            startsAt={event.startsAt.toISOString()}
-            timeZone={event.timezone}
-            city={event.city}
-            timeTbd={event.startTimeTbd}
-            showDate={false}
-            className="text-ink-dim hidden sm:inline"
-          />
+          {/* Suppressed entirely for an announced-only fixture: this converts a
+              stored instant between two timezones, and converting a placeholder
+              produces a confident wrong answer in two clocks instead of one. */}
+          {event.dateTbd || event.endsAt ? null : (
+            <EventTime
+              startsAt={event.startsAt.toISOString()}
+              timeZone={event.timezone}
+              city={event.city}
+              timeTbd={event.startTimeTbd}
+              showDate={false}
+              className="text-ink-dim hidden sm:inline"
+            />
+          )}
 
           {/* The where-to-watch link, promoted out of the event page. UFC
               gives this its own button in the nav and on every event row

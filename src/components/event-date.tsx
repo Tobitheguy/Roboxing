@@ -1,6 +1,25 @@
 import { EventTime } from "@/components/event-time";
-import { formatDateLong } from "@/lib/format";
 import { safeTimeZone } from "@/lib/timezones";
+
+/**
+ * Which calendar a date-only event's date should be read in.
+ *
+ * THE BUG THIS EXISTS TO STOP: UFB's Season 2 is announced as starting
+ * 1 October 2026. It is stored as `2026-10-01T00:00:00Z` with `startTimeTbd`,
+ * because the clock part is ours and not theirs. Rendered in the venue's zone
+ * — America/Los_Angeles — that instant is 5pm on 30 SEPTEMBER, and the site
+ * announced a season starting a day before the promoter said it did.
+ *
+ * When the time was never published there is nothing to convert. The date is
+ * the date somebody typed, and the zone it was typed in is UTC. Converting it
+ * anywhere else invents a fact in the one direction nobody checks.
+ *
+ * A real instant — an event with an announced start time — still converts
+ * normally. That conversion is the whole point of the dual clock.
+ */
+export function dateZone(timeZone: string, timeTbd: boolean): string {
+  return timeTbd ? "UTC" : timeZone;
+}
 
 /**
  * When an event is, for the three cases that actually occur.
@@ -47,7 +66,7 @@ export function EventDate({
   if (endsAt) {
     return (
       <span className={className}>
-        {formatRange(startsAt, endsAt, timeZone)}
+        {formatRange(startsAt, endsAt, dateZone(timeZone, startTimeTbd))}
       </span>
     );
   }
@@ -84,5 +103,9 @@ export function formatRange(start: Date, end: Date, timeZone: string): string {
   if (sameYear) {
     return `${part(start, { month: "short", day: "numeric" })} – ${part(end, { month: "short", day: "numeric" })}, ${part(end, { year: "numeric" })}`;
   }
-  return `${formatDateLong(start, zone)} – ${formatDateLong(end, zone)}`;
+  // Across a year boundary: full dates, no weekday. A season running October
+  // to March is not something anyone plans around by day of the week, and
+  // "Wed," in front of each end is the noisiest possible way to say it.
+  const full = { month: "long", day: "numeric", year: "numeric" } as const;
+  return `${part(start, full)} – ${part(end, full)}`;
 }

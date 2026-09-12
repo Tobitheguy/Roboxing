@@ -1,19 +1,32 @@
 export type NavItem = { href: string; label: string };
 
 /**
- * Primary navigation: FOUR items, deliberately.
+ * Primary navigation.
  *
- * It was six, and two of them (Teams, Watch) led to the thinnest pages on the
- * site — a nav item is a promise, and promising your weakest content in the
- * header is how a first visit ends. UFC runs four content items with far more
- * inventory than this site has. Teams and Watch stay reachable through the
- * footer, league pages and the event strip; they rejoin the header when their
- * pages deserve it.
+ * It was six, then four: a nav item is a promise, and Teams and Watch were
+ * promising the thinnest pages on the site. The rule was that they rejoin the
+ * header when their pages deserve it, and Watch now does — it carries 28
+ * broadcast channels across nine leagues instead of one event reading
+ * "Broadcast TBA".
+ *
+ * Teams stays out. It is still a list of names with little behind it.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/news", label: "News" },
   { href: "/schedule", label: "Schedule" },
   { href: "/results", label: "Results" },
+  /*
+   * Back in the header, and on different terms than last time.
+   *
+   * It was pulled because it promised "live events play here" on a site that
+   * holds no broadcast rights and almost never carries the video -- a nav item
+   * leading to a page that could not deliver. It is now a directory of where
+   * somebody ELSE streams each league: CCTV-10 and CGTN for the Chinese events,
+   * Luma for UFB, a ticket link for Robowar, which has no stream at all. That
+   * is a question this site can actually answer, and one a visitor genuinely
+   * arrives with.
+   */
+  { href: "/watch", label: "Watch" },
   { href: "/competitions", label: "Leagues" },
   /*
    * The fifth, and the only one that breaks the four-item rule above.
@@ -33,7 +46,6 @@ export const NAV_ITEMS: NavItem[] = [
  */
 export const FOOTER_ITEMS: NavItem[] = [
   ...NAV_ITEMS,
-  { href: "/watch", label: "Where to watch" },
   { href: "/pilots", label: "Pilots" },
   { href: "/teams", label: "Teams" },
   { href: "/robots", label: "Machines" },

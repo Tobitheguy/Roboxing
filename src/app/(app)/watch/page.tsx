@@ -53,6 +53,17 @@ export default async function WatchIndexPage() {
   const videoPosts = posts.filter((p) => youtubeThumbnailUrl(p.post.embedUrl));
 
   /*
+   * Dated events only.
+   *
+   * The schedule carries twelve upcoming rows and half of them are announced
+   * with no date and no city — six unnamed CyberHero circuit stops among them.
+   * Those belong on a calendar, where tracking an unfulfilled announcement is
+   * the point. They do not belong here: you cannot watch an event nobody has
+   * scheduled, and listing them pushes the answerable rows off the screen.
+   */
+  const watchable = upcoming.filter((e) => !e.event.dateTbd);
+
+  /*
    * Channels grouped by league.
    *
    * This is the half of the page that was missing. "Broadcast TBA" on every row
@@ -83,7 +94,7 @@ export default async function WatchIndexPage() {
       <PageHeading
         eyebrow="Broadcast"
         title="Where to watch"
-        description="Which channel carries each event — and the footage from the ones already fought."
+        description="This sport is broadcast by other people. Here is every channel that carries it, which event is next and who is showing it, and the footage from the nights already fought."
       />
 
       {live ? (
@@ -102,83 +113,6 @@ export default async function WatchIndexPage() {
         </Card>
       ) : null}
 
-      <Card className="mb-10">
-        <CardHeader title="Upcoming" />
-        <CardBodyFlush>
-          {upcoming.length > 0 ? (
-            <ul>
-              {upcoming.map(({ event, competitionName }) => (
-                <li
-                  key={event.id}
-                  className="border-line/60 border-b last:border-b-0"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/events/${event.slug}`}
-                        className="font-display text-ink hover:text-volt block truncate text-sm font-semibold uppercase transition-colors"
-                      >
-                        {event.name}
-                      </Link>
-                      <p className="text-ink-dim mt-1 text-xs">
-                        {competitionName}
-                        <span className="text-ink-dim"> · </span>
-                        <EventDate
-                          startsAt={event.startsAt}
-                          endsAt={event.endsAt}
-                          timeZone={event.timezone}
-                          city={event.city}
-                          dateTbd={event.dateTbd}
-                          dateLabel={event.dateLabel}
-                          startTimeTbd={event.startTimeTbd}
-                        />
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-4">
-                      {event.startTimeTbd || event.dateTbd || event.endsAt ? null : (
-                        <Countdown
-                          startsAt={event.startsAt.toISOString()}
-                          className="font-display text-ink hidden text-sm font-bold sm:block"
-                        />
-                      )}
-                      {/* The whole point of the page. Three honest states: a
-                          channel we can link, an announced no-stream, or
-                          simply not announced yet. */}
-                      {event.broadcastUrl ? (
-                        <Button asChild size="sm">
-                          <a
-                            href={event.broadcastUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Tv />
-                            {event.broadcastName?.trim() || "Where to watch"}
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/events/${event.slug}`}>
-                            Broadcast TBA
-                            <ChevronRight />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              icon={<MonitorPlay />}
-              title="Nothing scheduled"
-              description="When the next event is announced it appears here with its broadcaster."
-            />
-          )}
-        </CardBodyFlush>
-      </Card>
-
       {/* ---- The standing answer, per league ----------------------------- */}
       {leagueGroups.length > 0 ? (
         <div className="mb-12">
@@ -186,10 +120,12 @@ export default async function WatchIndexPage() {
             Channels by league
           </h2>
           <p className="text-ink-muted mb-5 max-w-2xl text-sm leading-relaxed">
-            Most of this sport is broadcast by somebody else, and for most
-            leagues the answer does not change per event. Where a league has no
-            stream at all, that is stated rather than left blank — it is usually
-            the more useful fact.
+            The standing answer, and the reason this page leads with it: for
+            most of these leagues the broadcaster does not change per event.
+            CMG&rsquo;s nights are on CCTV whether or not a particular card has
+            been announced. Where a league has no stream at all — Robowar sells
+            a seat and streams nothing — that is stated rather than left blank,
+            because it is the more useful fact.
           </p>
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -262,6 +198,97 @@ export default async function WatchIndexPage() {
           </div>
         </div>
       ) : null}
+
+      <h2 className="font-display text-title text-ink mb-2 uppercase">
+        Next up
+      </h2>
+      <p className="text-ink-muted mb-5 max-w-2xl text-sm leading-relaxed">
+        Scheduled events only. Announced fixtures with no date yet are on the{" "}
+        <Link
+          href="/schedule"
+          className="hover:text-ink underline underline-offset-2"
+        >
+          schedule
+        </Link>{" "}
+        — you cannot watch what nobody has scheduled.
+      </p>
+
+      <Card className="mb-10">
+        <CardHeader title="Upcoming" />
+        <CardBodyFlush>
+          {watchable.length > 0 ? (
+            <ul>
+              {watchable.map(({ event, competitionName }) => (
+                <li
+                  key={event.id}
+                  className="border-line/60 border-b last:border-b-0"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/events/${event.slug}`}
+                        className="font-display text-ink hover:text-volt block truncate text-sm font-semibold uppercase transition-colors"
+                      >
+                        {event.name}
+                      </Link>
+                      <p className="text-ink-dim mt-1 text-xs">
+                        {competitionName}
+                        <span className="text-ink-dim"> · </span>
+                        <EventDate
+                          startsAt={event.startsAt}
+                          endsAt={event.endsAt}
+                          timeZone={event.timezone}
+                          city={event.city}
+                          dateTbd={event.dateTbd}
+                          dateLabel={event.dateLabel}
+                          startTimeTbd={event.startTimeTbd}
+                        />
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-4">
+                      {event.startTimeTbd || event.dateTbd || event.endsAt ? null : (
+                        <Countdown
+                          startsAt={event.startsAt.toISOString()}
+                          className="font-display text-ink hidden text-sm font-bold sm:block"
+                        />
+                      )}
+                      {/* The whole point of the page. Three honest states: a
+                          channel we can link, an announced no-stream, or
+                          simply not announced yet. */}
+                      {event.broadcastUrl ? (
+                        <Button asChild size="sm">
+                          <a
+                            href={event.broadcastUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Tv />
+                            {event.broadcastName?.trim() || "Where to watch"}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/events/${event.slug}`}>
+                            Broadcast TBA
+                            <ChevronRight />
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<MonitorPlay />}
+              title="Nothing scheduled"
+              description="When the next event is announced it appears here with its broadcaster."
+            />
+          )}
+        </CardBodyFlush>
+      </Card>
 
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 className="font-display text-title text-ink uppercase">Footage</h2>

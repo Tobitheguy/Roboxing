@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRange } from "./event-date";
+import { dateZone, formatRange } from "./event-date";
 
 /**
  * Date windows.
@@ -51,5 +51,46 @@ describe("formatRange", () => {
     const instant = new Date("2026-12-31T18:00:00Z");
     expect(formatRange(instant, instant, "Asia/Shanghai")).toContain("2027");
     expect(formatRange(instant, instant, "UTC")).toContain("2026");
+  });
+});
+
+/**
+ * The date-only rule.
+ *
+ * The bug: UFB's Season 2 is announced as starting 1 October 2026, stored as
+ * 2026-10-01T00:00:00Z with no announced time. Rendered in the venue's zone
+ * that instant is 5pm on 30 SEPTEMBER, so the site announced the season a day
+ * before the promoter did — in the one direction nobody checks.
+ */
+describe("dateZone", () => {
+  it("reads a date-only event in UTC, whatever the venue", () => {
+    expect(dateZone("America/Los_Angeles", true)).toBe("UTC");
+    expect(dateZone("Asia/Shanghai", true)).toBe("UTC");
+  });
+
+  it("leaves a real instant in the venue's zone", () => {
+    expect(dateZone("Asia/Shanghai", false)).toBe("Asia/Shanghai");
+  });
+
+  it("keeps 1 October on 1 October", () => {
+    const start = new Date("2026-10-01T00:00:00Z");
+    const end = new Date("2027-03-31T00:00:00Z");
+    const zone = "America/Los_Angeles";
+
+    // What the bug produced.
+    expect(formatRange(start, end, zone)).toContain("September 30");
+    // What the fix produces.
+    expect(formatRange(start, end, dateZone(zone, true))).toContain("October 1");
+  });
+
+  it("drops the weekday across a year boundary", () => {
+    // "Wed, Sep 30, 2026 – Wed, Mar 31, 2027" on a six-month season is noise.
+    expect(
+      formatRange(
+        new Date("2026-10-01T00:00:00Z"),
+        new Date("2027-03-31T00:00:00Z"),
+        "UTC",
+      ),
+    ).toBe("October 1, 2026 – March 31, 2027");
   });
 });

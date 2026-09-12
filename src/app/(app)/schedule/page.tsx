@@ -8,7 +8,7 @@ import { CompetitionFilter } from "@/components/competition-filter";
 import { ConfidenceBadge } from "@/components/confidence-badge";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
-import { EventDate } from "@/components/event-date";
+import { dateZone, EventDate } from "@/components/event-date";
 import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { safeTimeZone } from "@/lib/timezones";
@@ -95,11 +95,16 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
               the grid only earns its place when most weeks have something in
               them. */}
           {dated.map(({ event, competitionName, boutCount }, index) => {
+            // Grouped in the venue's calendar — except for date-only rows,
+            // where there is no announced time to convert and the venue's zone
+            // would file a 1 October season under September. See dateZone().
             const monthOf = (e: (typeof dated)[number]) =>
               new Intl.DateTimeFormat("en-US", {
                 month: "long",
                 year: "numeric",
-                timeZone: safeTimeZone(e.event.timezone),
+                timeZone: safeTimeZone(
+                  dateZone(e.event.timezone, e.event.startTimeTbd),
+                ),
               }).format(e.event.startsAt);
             const monthLabel = monthOf(dated[index]);
             const isNewMonth =

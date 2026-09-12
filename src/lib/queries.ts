@@ -375,12 +375,26 @@ export const getFeaturedEvent = cache(async () => {
     .limit(1);
   if (live[0]) return { ...live[0], isLive: true as const };
 
+  /*
+   * Dated events first, announced-only ones as a fallback.
+   *
+   * `starts_at` on a `date_tbd` row is a placeholder we invented so the
+   * calendar can sort — URKL's later rounds carry 15 September because the
+   * window is "September-October", not because anything happens that day.
+   * Ordering the strip purely by `starts_at` put that placeholder ahead of
+   * every real fixture and the bar under the header announced it as the next
+   * event, on every page of the site.
+   *
+   * It is still a legitimate answer to "what is next" when nothing dated is
+   * coming, so it is not excluded — just sorted behind. The strip renders its
+   * label instead of a date. See the EventDate note.
+   */
   const next = await db
     .select(select)
     .from(events)
     .innerJoin(competitions, eq(events.competitionId, competitions.id))
     .where(and(eq(events.status, "scheduled"), sql`${events.startsAt} > now()`))
-    .orderBy(asc(events.startsAt))
+    .orderBy(asc(events.dateTbd), asc(events.startsAt))
     .limit(1);
   return next[0] ? { ...next[0], isLive: false as const } : null;
 });

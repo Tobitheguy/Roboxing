@@ -4,7 +4,7 @@ import { ArrowUpRight, Check, Mail, X } from "lucide-react";
 
 import { Badge } from "@/components/badge";
 import { Card, CardBody, CardHeader } from "@/components/card";
-import { ConfidenceBadge, SourceLink } from "@/components/confidence-badge";
+import { ConfidenceBadge } from "@/components/confidence-badge";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { formatUsd } from "@/lib/format";
 import { getEntryRoutes, getMachines } from "@/lib/queries";
@@ -18,18 +18,22 @@ export const metadata: Metadata = {
 /**
  * The page that answers "could I do this?"
  *
- * Every other page here reports on the sport. This one is the only page that
- * asks the reader to join it, and it exists because the answer is genuinely
- * surprising: three of the four active leagues hand you a machine. The barrier
- * is not the $63,900 combat-edition G1 that every article about this sport
- * quotes — it is knowing that UFB's signup form IS the registration, and that
- * CMG's individual-operator route runs through a Chinese-language WeChat
- * keyword with no English portal anywhere.
+ * Every other page here reports on the sport. This one asks the reader to join
+ * it, and it exists because the answer is genuinely surprising: three of the
+ * four active leagues hand you a machine.
  *
- * The barriers are printed as prominently as the invitations. A page that sells
- * a reader on entering and lets them discover the visa, the language and the
- * location problems on their own is a marketing page; this is supposed to be a
- * record.
+ * WHY IT IS SHAPED LIKE THIS
+ * --------------------------
+ * The first version was one card per ROUTE, which meant UFB appeared twice and
+ * CMG twice, each repeating the league name, the prize and the same barriers —
+ * and then a separate section listed the barriers again. Six cards for four
+ * leagues, with the important line ("they give you the robot") buried under a
+ * deadline field that mostly says "none published".
+ *
+ * Now: one card per LEAGUE, roles as rows inside it, the hardware answer as the
+ * headline of each card, and barriers stated once — on the league they belong
+ * to. Everything a reader can act on is in the first screen; the cost table is
+ * for the minority who want to own a machine rather than be lent one.
  */
 export default async function GetInTheRingPage() {
   const [routes, machines] = await Promise.all([
@@ -37,11 +41,18 @@ export default async function GetInTheRingPage() {
     getMachines(),
   ]);
 
-  const free = routes.filter((r) => r.route.hardwareProvided);
-  const bringYourOwn = routes.filter((r) => !r.route.hardwareProvided);
+  // Group by league, preserving the hardware-provided-first order the query
+  // already applied — so the leagues that lend you a robot lead the page.
+  const byLeague = new Map<string, typeof routes>();
+  for (const row of routes) {
+    const list = byLeague.get(row.competitionSlug) ?? [];
+    list.push(row);
+    byLeague.set(row.competitionSlug, list);
+  }
+  const leagues = [...byLeague.values()];
 
-  // What it costs if you do want to own one. Ordered cheapest first, because
-  // the useful fact is the floor, not the ceiling.
+  // What it costs if you do want to own one. Cheapest first: the useful fact is
+  // the floor, not the ceiling.
   const forSale = machines
     .filter((m) => m.robot.priceUsd !== null)
     .sort((a, b) => (a.robot.priceUsd ?? 0) - (b.robot.priceUsd ?? 0));
@@ -51,116 +62,45 @@ export default async function GetInTheRingPage() {
       <PageHeading
         eyebrow="For competitors"
         title="Get in the ring"
-        description="Humanoid fighting is the rare sport where the equipment is the obstacle — except that it mostly isn't. Three of the four active leagues will assign you a robot. Here is every route in, what it costs, and what will actually stop you."
+        description="You do not need to buy a robot. UFB assigns every Season 2 team a Unitree G1, URKL gives every entrant an identical T800 and lets the top sixteen keep it, and China Media Group runs a whole entry track for people with no machine at all. The hardware is the part that has been solved — the access is not."
       />
 
-      {/* The headline, stated once and early. */}
-      <Card className="border-volt/30 mb-10">
-        <CardBody>
-          <p className="text-ink text-lg leading-relaxed">
-            You do not need to buy a robot to compete.
-          </p>
-          <p className="text-ink-muted mt-3 max-w-3xl text-sm leading-relaxed">
-            UFB assigns every Season 2 team a Unitree G1. URKL gives every
-            entrant an identical EngineAI T800 free of charge and lets the top
-            sixteen keep theirs. China Media Group runs an entire entry track for
-            individual operators with no machine at all, competing by remote,
-            voice or motion-sensing control. The hardware is the part that has
-            been solved; the access is not.
-          </p>
-        </CardBody>
-      </Card>
-
-      <h2 className="font-display text-title text-ink mb-4 uppercase">
-        Routes in that supply the robot
-      </h2>
       <div className="grid gap-5 lg:grid-cols-2">
-        {free.map(({ route, competitionSlug, competitionName }) => (
-          <RouteCard
-            key={route.id}
-            route={route}
-            competitionSlug={competitionSlug}
-            competitionName={competitionName}
-          />
+        {leagues.map((group) => (
+          <LeagueCard key={group[0].competitionSlug} group={group} />
         ))}
       </div>
 
-      {bringYourOwn.length > 0 ? (
-        <>
-          <h2 className="font-display text-title text-ink mt-12 mb-4 uppercase">
-            Routes in that need your own machine
-          </h2>
-          <div className="grid gap-5 lg:grid-cols-2">
-            {bringYourOwn.map(({ route, competitionSlug, competitionName }) => (
-              <RouteCard
-                key={route.id}
-                route={route}
-                competitionSlug={competitionSlug}
-                competitionName={competitionName}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
+      {/* ---- What the job is --------------------------------------------- */}
+      <Card className="mt-10">
+        <CardHeader title="What you'd actually be doing" />
+        <CardBody>
+          <dl className="grid gap-5 sm:grid-cols-3">
+            <Job term="Driving">
+              Almost every bout is remote-piloted. UFB uses standard game
+              controllers and supports piloting from a browser. Iron Fist
+              King&rsquo;s robots moved on motion capture taken from
+              professional kickboxers, driven live by an operator.
+            </Job>
+            <Job term="Building the stack">
+              URKL is built entirely around this: identical hardware for every
+              team, so the only thing you compete on is the algorithm. UFB calls
+              the role a Ghost.
+            </Job>
+            <Job term="Repairing, mid-fight">
+              At CyberHero&rsquo;s Riyadh event, mechanics fixed damaged
+              machines in a pit between rounds using telemetry. It is the most
+              sports-shaped thing about the format.
+            </Job>
+          </dl>
+        </CardBody>
+      </Card>
 
-      {/* ---- What a pilot does ------------------------------------------- */}
-      <h2 className="font-display text-title text-ink mt-12 mb-4 uppercase">
-        What a pilot actually does
-      </h2>
-      <div className="grid gap-5 lg:grid-cols-3">
-        <Card>
-          <CardHeader title="You drive it" />
-          <CardBody className="text-ink-muted space-y-3 text-sm leading-relaxed">
-            <p>
-              Almost every bout in this sport is remote-piloted. At UFB that
-              means a standard game controller, and the league also supports
-              piloting from a browser — the only route in this sport that does
-              not require being in the room.
-            </p>
-            <p>
-              Iron Fist King&rsquo;s robots moved on motion capture taken from
-              professional kickboxers, trained in simulation and then driven live
-              by an operator. The skill being tested is a mix of reaction, timing
-              and knowing what the machine can survive.
-            </p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Or you build the stack" />
-          <CardBody className="text-ink-muted space-y-3 text-sm leading-relaxed">
-            <p>
-              UFB calls this role a Ghost: the Physical AI stack behind the
-              robot rather than the hands on the controller. URKL is built
-              entirely around it — identical hardware for every team, so the only
-              thing you can compete on is the algorithm.
-            </p>
-            <p>
-              EngineAI open-sourced its robot code before Mecha King so teams
-              could customise and train their own fighters.
-            </p>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Between rounds, you repair" />
-          <CardBody className="text-ink-muted space-y-3 text-sm leading-relaxed">
-            <p>
-              At CyberHero&rsquo;s Riyadh event, each side&rsquo;s mechanics and
-              engineers worked on damaged machines in a pit area between rounds,
-              using telemetry to diagnose and fix them under time pressure.
-            </p>
-            <p>
-              It is the most sports-shaped thing about the whole format: a pit
-              lane, and an engineering race run in public.
-            </p>
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* ---- What it costs to buy ---------------------------------------- */}
+      {/* ---- Buying ------------------------------------------------------- */}
       {forSale.length > 0 ? (
         <>
           <h2 className="font-display text-title text-ink mt-12 mb-2 uppercase">
-            What it costs if you do want to own one
+            If you do want to own one
           </h2>
           <p className="text-ink-muted mb-4 max-w-2xl text-sm leading-relaxed">
             List prices where they are published. A fighting machine is a
@@ -175,9 +115,8 @@ export default async function GetInTheRingPage() {
                   <tr className="border-line text-ink-dim border-b text-left text-xs uppercase">
                     <th className="px-4 py-3 font-semibold sm:px-6">Machine</th>
                     <th className="px-4 py-3 font-semibold">Maker</th>
-                    <th className="px-4 py-3 text-right font-semibold">Price</th>
-                    <th className="hidden px-4 py-3 font-semibold sm:table-cell sm:px-6">
-                      Note
+                    <th className="px-4 py-3 text-right font-semibold sm:px-6">
+                      Price
                     </th>
                   </tr>
                 </thead>
@@ -199,15 +138,20 @@ export default async function GetInTheRingPage() {
                             Piloted mech
                           </Badge>
                         ) : null}
+                        {/* The caveat sits under the name rather than in its
+                            own column — it is a footnote about the number, and
+                            a fourth column made the table scroll on a phone. */}
+                        {robot.priceNote ? (
+                          <p className="text-ink-dim mt-0.5 text-xs">
+                            {robot.priceNote}
+                          </p>
+                        ) : null}
                       </td>
-                      <td className="text-ink-muted px-4 py-3">
+                      <td className="text-ink-muted px-4 py-3 align-top">
                         {makerName ?? "—"}
                       </td>
-                      <td className="text-ink tabular px-4 py-3 text-right font-semibold">
+                      <td className="text-ink tabular px-4 py-3 text-right align-top font-semibold sm:px-6">
                         {formatUsd(robot.priceUsd)}
-                      </td>
-                      <td className="text-ink-dim hidden px-4 py-3 text-xs sm:table-cell sm:px-6">
-                        {robot.priceNote ?? ""}
                       </td>
                     </tr>
                   ))}
@@ -215,61 +159,52 @@ export default async function GetInTheRingPage() {
               </table>
             </div>
           </Card>
+
+          {/* The one barrier that is not any single league's: importing. */}
+          <p className="text-ink-muted mt-4 max-w-3xl text-sm leading-relaxed">
+            Before you buy: the FCC added foreign-produced advanced robotic
+            devices to its Covered List in July 2026. Existing authorizations
+            were not revoked and used units are unaffected, but future models
+            are exposed — and EngineAI&rsquo;s T800 reportedly had no FCC
+            equipment authorization on record as of August 2026.{" "}
+            <Link
+              href="/context"
+              className="text-volt underline underline-offset-2"
+            >
+              The full position is on the context page.
+            </Link>
+          </p>
         </>
       ) : null}
 
-      {/* ---- Barriers ---------------------------------------------------- */}
-      <h2 className="font-display text-title text-ink mt-12 mb-4 uppercase">
-        What will actually stop you
-      </h2>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Barrier title="Language">
-          Two of the four routes run entirely in Chinese. CMG&rsquo;s
-          individual-operator track — the one that needs no robot at all, and the
-          most open door in the sport — registers through a WeChat official
-          account using a Chinese keyword. There is no English portal.
-        </Barrier>
-        <Barrier title="Geography">
-          URKL fights in China and finishes in Dubai. UFB fights in San
-          Francisco. CyberHero has named one of its eight cities. Only UFB&rsquo;s
-          browser-based piloting offers any way to compete without travelling.
-        </Barrier>
-        <Barrier title="No open door at CyberHero">
-          Hero Esports handles team entry through partnerships rather than a
-          signup form, so approaching them is the only route, and six of the
-          eight announced circuit cities are unnamed — you cannot know where you
-          would be competing.
-        </Barrier>
-        <Barrier title="Import and authorization">
-          The FCC added foreign-produced advanced robotic devices to its Covered
-          List in July 2026. Existing authorizations were not revoked and used
-          units are unaffected, but future models are exposed — and EngineAI&rsquo;s
-          T800 reportedly had no FCC equipment authorization on record as of
-          August 2026.
-        </Barrier>
-      </div>
-
       <p className="text-ink-dim mt-10 max-w-3xl text-xs leading-relaxed">
         Entry addresses, prize pools and deadlines change between seasons. Every
-        route on this page carries the confidence we have in it and, where one
-        was captured, a link to the source. If you find something here out of
-        date, that is worth more to us than almost anything else on the site.
+        route here carries the confidence we have in it. If you find something
+        out of date, that is worth more to us than almost anything else on the
+        site.
       </p>
     </PageShell>
   );
 }
 
-function RouteCard({
-  route,
-  competitionSlug,
-  competitionName,
+function LeagueCard({
+  group,
 }: {
-  route: Awaited<ReturnType<typeof getEntryRoutes>>[number]["route"];
-  competitionSlug: string;
-  competitionName: string;
+  group: Awaited<ReturnType<typeof getEntryRoutes>>;
 }) {
+  const { competitionSlug, competitionName, competitionCountry } = group[0];
+  const suppliesRobot = group.some((r) => r.route.hardwareProvided);
+
+  // The hardware note is the same across a league's roles, so it is printed
+  // once at the top rather than repeated under every role.
+  const hardwareNote = group.find((r) => r.route.hardwareNote)?.route
+    .hardwareNote;
+  const prize = group.find((r) => r.route.prize)?.route.prize;
+  const deadline = group.find((r) => r.route.deadline)?.route.deadline;
+  const barriers = group.find((r) => r.route.barriers)?.route.barriers;
+
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader
         title={
           <span className="flex flex-wrap items-center gap-2">
@@ -279,92 +214,106 @@ function RouteCard({
             >
               {competitionName}
             </Link>
-            <Badge variant="outline" size="sm">
-              {route.role}
-            </Badge>
+            {competitionCountry ? (
+              <span className="text-ink-dim text-xs font-normal">
+                {competitionCountry}
+              </span>
+            ) : null}
           </span>
         }
-        action={<ConfidenceBadge level={route.confidence} />}
+        action={<ConfidenceBadge level={group[0].route.confidence} showLabel={false} />}
       />
-      <CardBody className="space-y-4">
-        <p className="text-ink-muted text-sm leading-relaxed">
-          {route.howToEnter}
+      <CardBody className="flex flex-1 flex-col gap-4">
+        {/* The headline fact, first and in one line. */}
+        <p
+          className={
+            suppliesRobot
+              ? "text-ink flex items-start gap-2 text-sm leading-relaxed"
+              : "text-ink-muted flex items-start gap-2 text-sm leading-relaxed"
+          }
+        >
+          {suppliesRobot ? (
+            <Check className="text-volt mt-0.5 size-4 shrink-0" />
+          ) : (
+            <X className="text-ink-dim mt-0.5 size-4 shrink-0" />
+          )}
+          <span>
+            {hardwareNote ?? (suppliesRobot ? "Robot supplied." : "Bring your own machine.")}
+          </span>
         </p>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {route.url ? (
-            <a
-              href={route.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border-line hover:border-volt hover:text-volt text-ink inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors"
-            >
-              {new URL(route.url).hostname.replace(/^www\./, "")}
-              <ArrowUpRight className="size-3.5" />
-            </a>
-          ) : null}
-          {route.contact ? (
-            <span className="text-ink-muted inline-flex items-center gap-1.5 text-xs">
-              <Mail className="size-3.5" />
-              <code className="text-ink">{route.contact}</code>
-            </span>
-          ) : null}
+        <div className="space-y-3">
+          {group.map(({ route }) => (
+            <div key={route.id} className="border-line border-l-2 pl-3">
+              <p className="font-display text-ink text-xs font-semibold uppercase">
+                {route.role}
+              </p>
+              <p className="text-ink-muted mt-1 text-sm leading-relaxed">
+                {route.howToEnter}
+              </p>
+              {route.url ? (
+                <a
+                  href={route.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-volt mt-1.5 inline-flex items-center gap-1 text-xs font-medium underline underline-offset-4"
+                >
+                  {new URL(route.url).hostname.replace(/^www\./, "")}
+                  <ArrowUpRight className="size-3" />
+                </a>
+              ) : route.contact ? (
+                <p className="text-ink-muted mt-1.5 inline-flex items-center gap-1.5 text-xs">
+                  <Mail className="size-3.5 shrink-0" />
+                  <code className="text-ink break-all">{route.contact}</code>
+                </p>
+              ) : null}
+            </div>
+          ))}
         </div>
 
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          <Field label="Robot supplied">
-            <span className="inline-flex items-start gap-1.5">
-              {route.hardwareProvided ? (
-                <Check className="text-volt mt-0.5 size-4 shrink-0" />
-              ) : (
-                <X className="text-ink-dim mt-0.5 size-4 shrink-0" />
-              )}
-              <span>{route.hardwareNote ?? (route.hardwareProvided ? "Yes" : "No")}</span>
-            </span>
-          </Field>
-          {route.prize ? <Field label="Prize">{route.prize}</Field> : null}
-          <Field label="Deadline">{route.deadline ?? "None published."}</Field>
-          {route.barriers ? (
-            <Field label="Barriers">{route.barriers}</Field>
+        {/* Pushed to the bottom so every card's footer lines up in the grid. */}
+        <div className="mt-auto space-y-2 pt-2">
+          {prize ? (
+            <p className="text-ink-muted text-xs">
+              <span className="text-ink-dim font-semibold uppercase">
+                Prize:{" "}
+              </span>
+              {prize}
+            </p>
           ) : null}
-        </dl>
-
-        <SourceLink url={route.sourceUrl} />
+          <p className="text-ink-muted text-xs">
+            <span className="text-ink-dim font-semibold uppercase">
+              Deadline:{" "}
+            </span>
+            {deadline ?? "None published."}
+          </p>
+          {barriers ? (
+            <p className="text-ink-dim text-xs leading-relaxed">
+              <span className="font-semibold uppercase">Catch: </span>
+              {barriers}
+            </p>
+          ) : null}
+        </div>
       </CardBody>
     </Card>
   );
 }
 
-function Field({
-  label,
+function Job({
+  term,
   children,
 }: {
-  label: string;
+  term: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <dt className="text-ink-dim text-[0.6875rem] font-semibold tracking-widest uppercase">
-        {label}
+      <dt className="font-display text-ink text-xs font-semibold uppercase">
+        {term}
       </dt>
-      <dd className="text-ink-muted mt-1 text-sm leading-relaxed">{children}</dd>
-    </div>
-  );
-}
-
-function Barrier({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="border-line border-l-2 pl-4">
-      <h3 className="font-display text-ink text-sm font-semibold uppercase">
-        {title}
-      </h3>
-      <p className="text-ink-muted mt-2 text-sm leading-relaxed">{children}</p>
+      <dd className="text-ink-muted mt-1.5 text-sm leading-relaxed">
+        {children}
+      </dd>
     </div>
   );
 }
