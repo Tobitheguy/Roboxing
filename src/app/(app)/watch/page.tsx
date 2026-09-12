@@ -4,6 +4,7 @@ import { ChevronRight, MonitorPlay, Tv } from "lucide-react";
 
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { ChannelPill } from "@/components/channel-pill";
+import { LiveStreamPlayer } from "@/components/live-stream-player";
 import { EventDate } from "@/components/event-date";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
@@ -18,6 +19,7 @@ import {
   getPublishedPosts,
   getUpcomingEvents,
 } from "@/lib/queries";
+import { getLiveChannels } from "@/lib/twitch";
 
 export const metadata: Metadata = {
   title: "Where to watch",
@@ -42,11 +44,12 @@ export const metadata: Metadata = {
  * top comes from the same getLiveNow() the header uses.
  */
 export default async function WatchIndexPage() {
-  const [live, upcoming, posts, channels] = await Promise.all([
+  const [live, upcoming, posts, channels, liveChannels] = await Promise.all([
     getLiveNow(),
     getUpcomingEvents(),
     getPublishedPosts(),
     getAllWatchChannels(),
+    getLiveChannels(),
   ]);
 
   const videoPosts = posts.filter((p) => youtubeThumbnailUrl(p.post.embedUrl));
@@ -110,6 +113,28 @@ export default async function WatchIndexPage() {
             </Button>
           </div>
         </Card>
+      ) : null}
+
+      {/*
+        A league's own stream, playing here.
+
+        This is the page's best possible state and it is rare -- roughly one
+        event a month -- so it appears only when something is actually live and
+        vanishes the rest of the time. An empty player is exactly the mistake
+        this page made in its first version, promising "live events play here"
+        on a site that holds no rights.
+      */}
+      {liveChannels.length > 0 ? (
+        <div className="mb-10">
+          <h2 className="font-display text-title text-ink mb-4 uppercase">
+            Live now
+          </h2>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {liveChannels.map((channel) => (
+              <LiveStreamPlayer key={channel.login} channel={channel} />
+            ))}
+          </div>
+        </div>
       ) : null}
 
       {/* ---- The standing answer, per league ----------------------------- */}

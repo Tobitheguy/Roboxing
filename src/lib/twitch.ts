@@ -117,6 +117,33 @@ type HelixStream = {
  * a slow site.
  */
 export async function getLiveChannels(): Promise<LiveChannel[]> {
+  /*
+   * A way to see the live layout without waiting for a live event.
+   *
+   * This sport produces roughly one event a month, so the most important state
+   * of the watch page is one nobody can look at on demand -- which is how a
+   * live player ships broken and stays broken until the exact moment it
+   * matters. Set TWITCH_PREVIEW_CHANNEL to a login and that channel is treated
+   * as live with placeholder metadata.
+   *
+   * Unset in production. It cannot fire by accident: no variable, no preview.
+   */
+  const preview = process.env.TWITCH_PREVIEW_CHANNEL?.trim();
+  if (preview) {
+    return [
+      {
+        login: preview,
+        name: "Twitch",
+        url: `https://www.twitch.tv/${preview}`,
+        competitionName: "Preview",
+        competitionSlug: "ufb",
+        title: `Preview of the live layout — ${preview}`,
+        viewers: 0,
+        startedAt: "1970-01-01T00:00:00Z",
+      },
+    ];
+  }
+
   const id = process.env.TWITCH_CLIENT_ID;
   if (!id) return [];
 
