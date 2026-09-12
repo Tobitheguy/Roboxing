@@ -876,17 +876,22 @@ The H2 was driven by a full-body motion-capture suit. This was not autonomy, and
     })
     .where(eq(events.slug, "iron-fist-king-awakening-2025"));
 
+  /*
+   * The URKL opener's venue and format only.
+   *
+   * `results_summary` is deliberately NOT set here. On 12 September 2026 the
+   * winner turned out to be disputed -- Wikipedia says Matador took three of
+   * five rounds after being decapitated, Newsweek reads as a White Eagle win
+   * with no declared decision, and EngineAI has never published a result at all.
+   * scripts/fix-urkl-winner.ts owns that prose now, and a re-run of this seed
+   * must not quietly re-assert the settled-sounding version it replaced.
+   */
   await db
     .update(events)
     .set({
-      confidence: "confirmed",
+      confidence: "reported",
       venue: "Shenzhen Nanshan Cultural and Sports Center",
       note: "Around 200 teams from 10 countries registered; the top 32 came through online qualifiers, 16 advanced to four groups, and the top two per group went to single elimination. Every team fights an identical EngineAI T800, supplied free.",
-      resultsSummary: `White Eagle beat Matador on a decision, taking three of the five scored rounds — and the detail that travelled was that Matador was decapitated by a tornado kick and kept fighting.
-
-The rules are as interesting as the result: a mandatory fall-recovery test requiring a robot to stand within 3 to 20 seconds, algorithm changes approved in advance, and dangerous modifications banned. Donnie Yen appeared at the opening and Buakaw Banchamek at the launch conference.
-
-One thing is genuinely disputed. Sources conflict on how autonomous these machines are: some describe a semi-autonomous arrangement in which the operator supplies intent and onboard AI executes it, others describe full autonomy. Both cannot be right, and the difference decides what the sport actually is. See Open Questions.`,
     })
     .where(eq(events.slug, "urkl-opening-shenzhen-2026"));
 
@@ -961,19 +966,13 @@ AGIBOT topped the medal table with 18 gold, 16 silver and 12 bronze. Tiangong Ul
     });
   }
 
-  // The URKL opener's existing result predates the confidence column.
-  await db
-    .update(boutResults)
-    .set({ confidence: "confirmed" })
-    .where(
-      inArray(
-        boutResults.boutId,
-        db
-          .select({ id: bouts.id })
-          .from(bouts)
-          .where(eq(bouts.eventId, E("urkl-opening-shenzhen-2026"))),
-      ),
-    );
+  /*
+   * The URKL opener's result is NOT marked confirmed, and that is the whole
+   * point. It was, until checking it against three sources produced three
+   * answers and the promoter turned out never to have published one.
+   * scripts/fix-urkl-winner.ts sets it to `unconfirmed` and explains why; this
+   * seed leaves it alone so a re-run cannot silently launder it back.
+   */
 
   /* ---------------------------------------------------------------------- */
   /* 8. Where to watch                                                       */
