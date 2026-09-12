@@ -46,6 +46,12 @@ next-env.d.ts
 /.claude/
 /.agents/
 
+# ...except skills we wrote ourselves. `roboxing-social` is the design system
+# written down — token rules, card formats, credit obligations, caption voice.
+# That is documentation the next person needs whether or not they use an agent,
+# and it has to sit in .claude/skills to be discovered at all.
+!/.claude/skills/roboxing-social/
+
 # working material: design references, screenshots and raw logo/photo sources.
 # Anything the site actually serves lives in /public.
 /Logos/
