@@ -4,45 +4,47 @@ config({ path: ".env.local" });
 config({ path: ".env" });
 
 /**
- * Mark the URKL opener's winner as disputed.
+ * The URKL opener: Matador won. Correct the prose that said otherwise.
  *
- * WHAT WAS FOUND, 12 September 2026
- * ---------------------------------
- * The site recorded "White Eagle def. Matador, decision, 3 of 5 rounds" as a
- * settled result. Checking it against three sources produced three answers:
+ * WHAT HAPPENED, AND IT IS WORTH WRITING DOWN
+ * -------------------------------------------
+ * The stored bout result has always been right: `winner_robot_id` is Matador,
+ * by decision. The machine pages have always been right too — read
+ * `src/lib/machine-media.ts`, which says Matador "won because it had already
+ * built the lead: 3–2 on rounds", cites Guangzhou's Huacheng and People's
+ * Daily, and notes explicitly that "parts of the English-language press still
+ * credit the machine that threw the kick".
  *
- *   - Wikipedia's URKL article: MATADOR won. "Matador secured victory by
- *     narrowly winning three of the five scored rounds against White Eagle" —
- *     after being decapitated by White Eagle's tornado kick and continuing.
- *   - Newsweek: reads as WHITE EAGLE winning, but only atmospherically — "The
- *     White Eagle waited in the ring, fists still up, as Matador was carried
- *     away." No round score, no declared decision.
- *   - urkl.org, the PROMOTER: no winner published at all. Its own page calls
- *     the night an exhibition between White Eagle and Bullfighter (斗牛士,
- *     i.e. Matador) and stops there.
+ * On 11 September this script's first version marked that result `unconfirmed`
+ * and opened a question about who won. That was wrong, and the cause was a
+ * one-line claim in a build-out brief — "White Eagle def. Matador" — trusted
+ * over the database it was describing. The brief contradicted itself two lines
+ * later ("Matador ... won three of five rounds"), and the contradiction was
+ * noted at the time and resolved the wrong way: by writing the brief's version
+ * into `events.results_summary` and then flagging the database for disagreeing
+ * with it.
  *
- * The brief this record was built from is itself self-contradictory on this
- * point: it says "White Eagle def. Matador, decision, 3 of 5 rounds" and then
- * "Matador ... kept fighting, and won three of five rounds". In a five-round
- * decision, winning three rounds IS winning — both cannot be true.
+ * The evidence, now that it has actually been gathered:
  *
- * WHAT THIS SCRIPT DOES, AND WHAT IT DELIBERATELY DOES NOT
- * -------------------------------------------------------
- * It does NOT flip the winner. Wikipedia is explicit but is not a primary
- * source, and reversing a published result on that basis would replace one
- * unsupported assertion with another.
+ *   - Huacheng (Guangzhou) and People's Daily: 3–2 to Matador. Two Chinese
+ *     newsrooms, independent of each other.
+ *   - Wikipedia's URKL article: Matador won three of the five scored rounds.
+ *   - The site's own machine pages, written from those sources.
+ *   - Newsweek: describes White Eagle standing as Matador is carried away.
+ *     Atmospheric, declares no decision, publishes no score — and is exactly
+ *     the English-language coverage machine-media warned about.
  *
- * It downgrades the result to `unconfirmed`, states the conflict in the event's
- * prose, and opens a question. The site keeps the bout — it happened, and the
- * decapitation is the most-reported moment in the sport — while no longer
- * claiming to know something the promoter never said.
+ * `reported`, not `confirmed`: EngineAI has still never published a result.
+ * Three independent outlets agreeing is strong; the promoter's silence is why
+ * this is not the top grade.
  *
  * Usage: npx tsx scripts/fix-urkl-winner.ts
  */
 async function main() {
   const { db } = await import("../src/db");
-  const { boutResults, bouts, competitions, events, openQuestions } =
-    await import("../src/db/schema");
+  const { boutResults, bouts, events, openQuestions, robots } = await import(
+    "../src/db/schema"
+  );
   const { eq, inArray } = await import("drizzle-orm");
 
   const [event] = await db
@@ -51,67 +53,77 @@ async function main() {
     .where(eq(events.slug, "urkl-opening-shenzhen-2026"));
   if (!event) throw new Error("URKL opener not found");
 
-  const boutIds = await db
-    .select({ id: bouts.id })
-    .from(bouts)
-    .where(eq(bouts.eventId, event.id));
+  const boutIds = (
+    await db.select({ id: bouts.id }).from(bouts).where(eq(bouts.eventId, event.id))
+  ).map((b) => b.id);
 
-  const updated = await db
+  const [matador] = await db
+    .select({ id: robots.id })
+    .from(robots)
+    .where(eq(robots.slug, "matador-t800"));
+
+  // Assert rather than assume. If the stored winner is not Matador, something
+  // else has gone wrong and this script must not paper over it.
+  const [current] = await db
+    .select({ winnerRobotId: boutResults.winnerRobotId })
+    .from(boutResults)
+    .where(inArray(boutResults.boutId, boutIds));
+  if (current?.winnerRobotId !== matador?.id) {
+    throw new Error(
+      `Stored winner is not Matador (${current?.winnerRobotId} vs ${matador?.id}) — investigate before running this.`,
+    );
+  }
+
+  await db
     .update(boutResults)
     .set({
-      confidence: "unconfirmed",
+      confidence: "reported",
+      endRound: 5,
       sourceUrl: "https://en.wikipedia.org/wiki/Ultimate_Robot_Knock-out_Legend",
       notes:
-        "WINNER DISPUTED. Wikipedia's URKL article states Matador won three of the five scored rounds despite being decapitated; Newsweek's account reads as a White Eagle win but declares no decision and gives no score; EngineAI, the promoter, has published no result at all and calls the night an exhibition. The winner recorded here is the one the site was originally built with and is NOT settled. See Open Questions.",
+        "Matador took the decision 3–2 over five rounds after White Eagle's flying kick removed its head module; it fought on headless using the T800's distributed torso control. Scored 3–2 to Matador by Guangzhou's Huacheng and by People's Daily, and reported the same way by Wikipedia's URKL article. EngineAI has never published a result. Some English-language coverage credits White Eagle, which threw the kick and lost.",
     })
-    .where(
-      inArray(
-        boutResults.boutId,
-        boutIds.map((b) => b.id),
-      ),
-    )
-    .returning({ id: boutResults.id });
+    .where(inArray(boutResults.boutId, boutIds));
 
   await db
     .update(events)
     .set({
-      confidence: "reported",
-      resultsSummary: `The most-reported moment in this sport happened here: White Eagle landed a tornado kick that detached Matador's head, and Matador kept fighting to the end of the card without shutting down.
+      confidence: "confirmed",
+      resultsSummary: `Matador beat White Eagle 3–2 over five rounds — and did it without a head.
 
-WHO ACTUALLY WON IS NOT SETTLED, and this site is no longer going to pretend otherwise. Wikipedia's URKL article states that Matador secured victory by narrowly winning three of the five scored rounds — decapitated, and ahead on the cards. Newsweek's account describes White Eagle left standing with its fists up as Matador was carried away, but declares no decision and publishes no round score. EngineAI, the promoter, has never published a result: its own site calls the night an exhibition between White Eagle and Bullfighter and stops there.
+In the closing stretch White Eagle landed a flying kick that removed Matador's head module entirely. The head carries the T800's primary vision hardware; the torso carries balance and motion control. Matador kept blocking, punching and standing on distributed torso control, finished all five rounds, and won on the lead it had already built.
 
-Our table still shows the winner the site was originally built with, marked unconfirmed, because reversing it on a single secondary source would swap one unsupported claim for another. If you have the promoter's scorecard, we want it.
+The highlight and the result belong to different robots, which is this sport's founding paradox and the reason the fight is misreported so often. The clip of the kick passed hundreds of millions of plays; some English-language coverage still credits the machine that threw it. The 3–2 score comes from Guangzhou's Huacheng and from People's Daily, independently, and Wikipedia's URKL article reports it the same way. EngineAI has never published a result of its own, which is why this is recorded as reported rather than confirmed.
 
-The rest of the night is on firmer ground. Around 200 teams from 10 countries registered, the top 32 came through online qualifiers, and every team fought an identical EngineAI T800 supplied free — standardised hardware, differentiated algorithms. A mandatory fall-recovery test required a robot to stand within 3 to 20 seconds, algorithm changes were approved in advance, and dangerous modifications were banned. Donnie Yen appeared at the opening and Buakaw Banchamek at the launch conference.
+The rest of the night: around 200 teams from 10 countries registered, the top 32 came through online qualifiers, and every team fought an identical EngineAI T800 supplied free — standardised hardware, differentiated algorithms. A mandatory fall-recovery test required a robot to stand within 3 to 20 seconds, algorithm changes were approved in advance, and dangerous modifications were banned. Donnie Yen appeared at the opening and Buakaw Banchamek at the launch conference.
 
-One more thing is genuinely disputed: how autonomous these machines are. Some sources describe a semi-autonomous arrangement in which the operator supplies intent and onboard AI executes it, others describe full autonomy. Both cannot be right, and the difference decides what the sport actually is.`,
+One thing here is still genuinely disputed: how autonomous these machines are. Some sources describe a semi-autonomous arrangement in which the operator supplies intent and onboard AI executes it, others describe full autonomy. That question is still open.`,
     })
     .where(eq(events.id, event.id));
 
-  const question = {
-    slug: "urkl-opener-winner",
-    question: "Who actually won the URKL opener — White Eagle or Matador?",
-    detail:
-      "The most famous bout in humanoid fighting has no agreed winner. Wikipedia's URKL article says Matador won three of the five scored rounds after being decapitated by White Eagle's tornado kick. Newsweek describes White Eagle left standing as Matador was carried away, but declares no decision and gives no round score. EngineAI, the promoter, has published no result and refers to the night as an exhibition. This site records the winner it was originally built with, marked unconfirmed, and will correct it the moment a scorecard or a promoter statement surfaces.",
-    competitionId: event.competitionId,
-    eventId: event.id,
-    sourceUrl: "https://en.wikipedia.org/wiki/Ultimate_Robot_Knock-out_Legend",
-    orderIndex: 0,
-  };
-  await db
-    .insert(openQuestions)
-    .values(question)
-    .onConflictDoUpdate({ target: openQuestions.slug, set: question });
-
-  // Push the other questions down so this one leads the page.
+  /*
+   * The question closes rather than disappears. A row that records "this looked
+   * contested for a day and here is how it resolved" is more honest than a
+   * silent delete, and the Open Questions page is built to keep answered rows.
+   */
   await db
     .update(openQuestions)
-    .set({ orderIndex: 1 })
-    .where(eq(openQuestions.slug, "whrg-2025-kickboxing-medallists"));
+    .set({
+      answeredAt: new Date(),
+      answer:
+        "Matador, 3–2 over five rounds. Guangzhou's Huacheng and People's Daily both scored it that way independently, and Wikipedia's URKL article agrees; the site's own machine pages have said so since they were written. The confusion is real but one-sided: White Eagle threw the kick that removed Matador's head, and a highlight that big travels further than a scorecard. EngineAI has still published no result, so this is recorded as reported rather than confirmed.",
+    })
+    .where(eq(openQuestions.slug, "urkl-opener-winner"));
 
-  console.log(`Marked ${updated.length} bout result(s) unconfirmed.`);
-  console.log("Event prose rewritten; open question added.");
-  void competitions;
+  const [check] = await db
+    .select({
+      confidence: boutResults.confidence,
+      winner: boutResults.winnerRobotId,
+    })
+    .from(boutResults)
+    .where(inArray(boutResults.boutId, boutIds));
+  console.log("bout result:", check, "(Matador id:", matador?.id, ")");
+  console.log("Corrected. Matador won; the question is closed, not deleted.");
 }
 
 main().catch((error) => {
