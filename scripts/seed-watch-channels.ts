@@ -33,6 +33,17 @@ config({ path: ".env" });
  * so "it resolved" proves nothing there, and a wrong channel is worse than a
  * missing one. Those need a human to paste the real URL.
  *
+ * AND A 200 IS NOT ENOUGH EITHER, which this file learned the hard way.
+ * `youtube.com/@engineai` returns 200 and is titled "Engine AI" — and is a
+ * completely unrelated channel whose latest video is "Social media vs reality
+ * #travel". The real one is `@EngineAIRobot`. `youtube.com/@CGTN` also returns
+ * 200 and is CGTN **Español**; the English CMG channel is CCTV Video News
+ * Agency. Both were live on three league pages before anyone read a feed.
+ *
+ * So the check is now: resolve the handle to a channel id, pull
+ * `youtube.com/feeds/videos.xml?channel_id=...`, and READ THE TITLES. A
+ * plausible handle that resolves is exactly the shape of a wrong link.
+ *
  * Usage: npm run db:seed-watch
  */
 async function main() {
@@ -66,7 +77,7 @@ async function main() {
     {
       competition: "urkl",
       name: "EngineAI on YouTube",
-      url: "https://www.youtube.com/@engineai",
+      url: "https://www.youtube.com/@EngineAIRobot",
       note: "The organiser, and the maker of every robot in the league.",
       confidence: "reported",
     },
@@ -141,18 +152,18 @@ async function main() {
     },
     {
       competition: "iron-fist-king",
-      name: "CGTN on YouTube",
-      url: "https://www.youtube.com/@CGTN",
-      note: "CMG's English channel — where its coverage is findable outside China.",
+      name: "CCTV Video News Agency",
+      url: "https://www.youtube.com/@CCTVVideoNewsAgency",
+      note: "CMG's English-language news channel — where its coverage is findable outside China.",
       confidence: "reported",
     },
 
     /* ---- CMG2026 -------------------------------------------------------- */
     {
       competition: "cmg-2026",
-      name: "CGTN on YouTube",
-      url: "https://www.youtube.com/@CGTN",
-      note: "The realistic way to see a CMG event from outside China.",
+      name: "CCTV Video News Agency",
+      url: "https://www.youtube.com/@CCTVVideoNewsAgency",
+      note: "CMG in English — the realistic way to see one of its events from outside China.",
       confidence: "reported",
     },
     {
@@ -166,8 +177,8 @@ async function main() {
     /* ---- World Humanoid Robot Games ------------------------------------- */
     {
       competition: "world-humanoid-robot-games",
-      name: "CGTN on YouTube",
-      url: "https://www.youtube.com/@CGTN",
+      name: "CCTV Video News Agency",
+      url: "https://www.youtube.com/@CCTVVideoNewsAgency",
       note: "Carried the Games in English. The fighting events specifically are hard to find — see Open Questions.",
       confidence: "reported",
     },
@@ -176,7 +187,7 @@ async function main() {
     {
       competition: "engineai-mecha-king",
       name: "EngineAI on YouTube",
-      url: "https://www.youtube.com/@engineai",
+      url: "https://www.youtube.com/@EngineAIRobot",
       note: "EngineAI staged it. No footage of the final and no result have ever been published.",
       confidence: "reported",
     },

@@ -174,6 +174,64 @@ const BING_NEWS_ZH =
   encodeURIComponent("人形机器人 格斗") +
   "&format=RSS&setlang=zh-hans";
 
+/**
+ * The organisers' own YouTube channels.
+ *
+ * This is where the footage lands first, usually before any outlet writes
+ * about it — Unitree posted the Iron Fist King material itself, and EngineAI
+ * posts URKL's. A channel feed catches that the day it goes up rather than
+ * whenever a journalist gets to it.
+ *
+ * EVERY ID BELOW WAS RESOLVED FROM THE HANDLE AND THEN THE FEED WAS READ. That
+ * second step is not ceremony: `youtube.com/@engineai` resolves fine, is titled
+ * "Engine AI", and is an unrelated channel posting travel clips — the robot
+ * company is `@EngineAIRobot`. `@CGTN` resolves to CGTN Español. Both were live
+ * on this site as league links before anyone opened a feed.
+ *
+ * `newchinatv` (Xinhua's English channel) is deliberately absent: its feed
+ * returns zero entries, so subscribing to it would be subscribing to silence.
+ *
+ * Title-filtered like every publisher feed — these are general channels, and
+ * Unitree posts far more about warehouse robots than about fighting.
+ */
+const YOUTUBE_CHANNELS: SignalSource[] = [
+  {
+    id: "yt-engineai",
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCFsR6bmOGCOCAdqPccmBggg",
+    kind: "video",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "yt-unitree",
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCsMbp4V8oxzHCMdOUP-3oWw",
+    kind: "video",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "yt-hero-esports",
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCrpMZED321TF0BYKePONRmA",
+    kind: "video",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "yt-cctv-video-news",
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCmv5DbNpxH8X2eQxJBqEjKQ",
+    kind: "video",
+    language: "en",
+    match: RELEVANT_TITLE,
+  },
+  {
+    id: "yt-cctv",
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCcLK3j-XWdGBnt5bR9NJHaQ",
+    kind: "video",
+    language: "zh",
+    match: RELEVANT_TITLE,
+  },
+];
+
 export const SOURCES: SignalSource[] = [
   {
     id: "google-news-en",
@@ -204,8 +262,10 @@ export const SOURCES: SignalSource[] = [
     search: true,
   },
   ...PUBLISHER_FEEDS,
-  // YouTube channel feeds and Bilibili/RSSHub slots get added here as their
-  // channel ids are collected — same shape, zero code.
+  ...YOUTUBE_CHANNELS,
+  // Bilibili slots go here as their uids are collected — same shape, zero
+  // code. They need a human to paste a verified URL: Bilibili returns 200 for
+  // a space id that does not exist.
 ];
 
 export type FeedItem = {
