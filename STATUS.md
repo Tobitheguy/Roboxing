@@ -19,6 +19,50 @@
 > ANTHROPIC_API_KEY is set in the Vercel production environment (2026-09-08),
 > so the morning cron classifies for real.
 >
+> **2026-09-11: the Clerk production instance is half-configured. Read this
+> before touching auth.** The live site is STILL on the development instance —
+> verified by reading the deployed bundle, which serves `pk_test_…` decoding to
+> `vocal-grackle-2359.clerk.accounts.dev`. So "Development mode" is still on the
+> sign-in page and nothing about sign-in changed.
+>
+> What IS done: the app is renamed `clerk-cyan-drum` → **Roboxing** (in Vercel's
+> integration settings; the Backend API route for this is a verified dead end —
+> `PATCH /v1/instance` returns 204 and changes nothing). The production
+> instance's domain went from a placeholder `.lcl.dev` to **roboxing.tv,
+> Verified** — Frontend API, Account portal and Email 3/3 all green, SSL issued.
+> Five CNAMEs (`clerk`, `accounts`, `clkmail`, `clk._domainkey`,
+> `clk2._domainkey`) added with `vercel dns add` and read back from Google's
+> public resolver.
+>
+> **Clerk's one-click "Configure automatically" was deliberately NOT used.** It
+> warns it may replace DMARC, and this domain already has one plus the
+> Google-on-apex / Resend-on-`send` split described below. The five Clerk names
+> collide with nothing; SPF and MX were re-checked afterwards and are unchanged.
+>
+> What is NOT done, and why it is stuck: Vercel's integration still shows
+> **"Production domain required"**. Setting the production domain to roboxing.tv
+> in Update Configuration showed the right summary, then sat on "Processing", and
+> the field reads empty on re-open. Until that clears and the project is
+> redeployed, Vercel keeps injecting the dev keys — the marketplace env values
+> are `eyJ2IjoidjIi…` *references* resolved at build time, so their "12d ago"
+> timestamp says nothing about which key is live. **The only trustworthy check is
+> reading `pk_test_` vs `pk_live_` out of the deployed page.**
+>
+> And the reason "Continue with Google" shows **"Weiter zu clerk"**: the dev
+> instance's Google connection is on **shared credentials** — Clerk's own OAuth
+> client — so Google renders Clerk's app name. No rename in Clerk or Vercel can
+> change it. It needs a Google Cloud OAuth client of ours, with the consent
+> screen's App name set to Roboxing. The production instance's Authorized
+> Redirect URI is **`https://clerk.roboxing.tv/v1/oauth_callback`** (read off the
+> dashboard, not guessed). Production currently has zero SSO connections, so
+> Google sign-in will be unavailable the moment the live keys flip.
+>
+> Safe to proceed at any time: there are 3 users, all Tobias's own addresses, and
+> **0 predictions** (`npm run db:seed`-independent check: `npx tsx
+> scripts/count-accounts.ts`). `users.email` is indexed but NOT unique, so
+> re-signing in on the new instance inserts cleanly. Admin is by `ADMIN_EMAILS`,
+> so lockout is impossible.
+>
 > Still open, in order:
 >
 > 1. **Prove the signup works end to end** — subscribe on the live site with a
