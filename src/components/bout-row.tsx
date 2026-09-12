@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Badge, MethodBadge } from "@/components/badge";
+import { ConfidenceBadge } from "@/components/confidence-badge";
 import { CountryTag } from "@/components/country-tag";
 import { EventTime } from "@/components/event-time";
 import { RobotAvatar } from "@/components/robot-avatar";
@@ -215,6 +216,16 @@ export function BoutRow({
               <span className="text-ink-dim tabular text-xs">
                 {result.knockdownsA + result.knockdownsB} KD
               </span>
+            ) : null}
+            {/* How well the OUTCOME is sourced, on the result itself.
+                `confirmed` is not badged — that is the expected state and
+                labelling it would make every ordinary result shout. Anything
+                weaker IS badged, because a decision nobody has corroborated
+                must not render identically to one the promoter declared. The
+                URKL opener is the live case: three sources, three answers, and
+                the promoter never published a winner at all. */}
+            {result.confidence !== "confirmed" ? (
+              <ConfidenceBadge level={result.confidence} />
             ) : null}
           </>
         ) : (
