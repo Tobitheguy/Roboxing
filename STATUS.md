@@ -19,6 +19,46 @@
 > ANTHROPIC_API_KEY is set in the Vercel production environment (2026-09-08),
 > so the morning cron classifies for real.
 >
+> **2026-09-11: the cron can publish, and ONE VARIABLE IS MISSING.** Stage 3
+> (`src/lib/autopublish.ts`) fetches the source article behind a high-scoring
+> signal and writes a 2–4 paragraph brief. It is off until **`AUTOPUBLISH=on`**
+> is set in the Vercel production environment — nothing else is needed, the code
+> and the migration are live (`deea990`). Read what it would write first:
+> `npm run signals:publish -- --dry` prints the briefs and touches nothing.
+>
+> Tunable without a deploy: `AUTOPUBLISH_MAX` (default 2 per run),
+> `AUTOPUBLISH_MIN_SCORE` (default 85), `AUTOPUBLISH_MODEL`.
+>
+> **Still unexplained, and it blocks stage 3 too:** classification stopped
+> working in production on **9 September** and the cron reported 200 for two
+> days while 44 rows sat unscored. Running it locally cleared the whole backlog
+> for $0.011 with zero errors, so the code is fine and the production
+> environment is not — most likely `ANTHROPIC_API_KEY` no longer resolving
+> there, or its credit. **Vercel's runtime-logs API returns 403 for the agent**,
+> so the cron's own error text is not readable from here; check the key in the
+> dashboard. The route now returns 500 when a stage that was ASKED to run fails
+> (a stage that is switched off still returns 200), so the next occurrence is
+> red instead of silent.
+>
+> **Why there are two search engines in `signals.ts`.** Google News RSS links
+> are JS interstitials — 580 KB of Angular, publisher URL nowhere in the page,
+> recoverable only via an undocumented batchexecute RPC. Fine for discovery,
+> useless for publishing. Bing's news RSS carries the same stories with the
+> target in an `apiclick?url=` parameter, unwrapped at ingest. Verified on
+> 2026-09-11: the best FETCHABLE row scored 35 while six Google News rows scored
+> 85+, so without Bing stage 3 is starved. Five title-filtered publisher feeds
+> come along too.
+>
+> **CyberHero's result is on the site now, as prose.** `events.results_summary`
+> holds "Team FBA beat Team Al Majd 4–3 over seven rounds", sourced to Xinhua
+> and Wenhui Bao, because `bouts` requires two NAMED robots and the machines
+> were only ever the yellow and blue corners. Verified live on
+> `/competitions/cyberhero` and `/events/cyberhero-riyadh-2026`. When names are
+> published the card goes in and the standings compute; the prose stays as the
+> note on how it was first learned. The league page also gained a Coverage
+> section — before this, two posts about Riyadh sat three clicks from the league
+> they were about.
+>
 > **2026-09-11: the Clerk production instance is half-configured. Read this
 > before touching auth.** The live site is STILL on the development instance —
 > verified by reading the deployed bundle, which serves `pk_test_…` decoding to
