@@ -11,8 +11,13 @@ import { cn } from "@/lib/utils";
  *
  * Client-side only because it needs the current pathname to mark the active
  * item. On a phone this becomes a horizontally scrollable strip rather than a
- * hamburger menu: five destinations do not justify hiding navigation behind a
+ * hamburger menu: six destinations do not justify hiding navigation behind a
  * tap, and a visible strip tells a first-time visitor what the site contains.
+ *
+ * DIR_03: monospace, not the display face. Every nav item is a bordered box at
+ * 2px with zero radius; the active one fills cyan with dark ink on top. That
+ * is the same treatment the confidence chips use — filled means certain, and
+ * "you are here" is the one certainty a nav can offer.
  */
 export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -37,10 +42,10 @@ export function MainNav({ className }: { className?: string }) {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "font-display rounded-md px-3 py-1.5 text-sm font-semibold tracking-wide whitespace-nowrap uppercase transition-colors",
+              "font-mono border-2 px-3 py-2 text-xs tracking-[0.1em] whitespace-nowrap uppercase transition-colors",
               active
-                ? "bg-surface-2 text-volt"
-                : "text-ink-muted hover:bg-surface-2 hover:text-ink",
+                ? "border-volt bg-volt text-volt-ink"
+                : "border-line text-ink-muted hover:border-volt hover:text-ink",
             )}
           >
             {item.label}

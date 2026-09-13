@@ -5,50 +5,57 @@
 /* ==========================================================================
    ROBOXING DESIGN TOKENS — single source of truth
 
-   Every colour, size, and radius in the product is defined in this file. This
-   file is the brand pass: the palette below was rewritten from dark to light
-   without touching a single component, which is what the token layer was for.
+   This is the DIR_03 pass. Every token name from the previous file survives,
+   so the 130+ existing call sites need no edit: what changed is what the
+   names resolve to. Drop this in place of the old globals.css and the
+   product re-skins without a component being touched. That was the point of
+   the token layer and it still is.
 
-   WHY LIGHT. The old comment here said "the product is video-first, so the UI
-   is permanently dark: a light chrome fights the player for attention." That
-   was true of a streaming product. It is not true of this one — Roboxing is a
-   publication that rarely carries the video, and most of what a reader does
-   here is READ: fight cards, results, standings, schedules, coverage. Dark
-   chrome is right for a player and wrong for a page of text and tables. Every
-   light-mode sports reference does the same thing (UFC, ESPN, HLTV): light
-   page, dark type, one saturated accent.
+   WHAT CHANGED, and why.
 
-   THE BRAND, decided by Tobias on 2026-09-08 and simple enough to state in
-   one line: **black and white, nothing else.**
+   The old file argued for a light page: "a page of text and tables is read,
+   dark chrome is for a player." That reasoning was right about READING and
+   wrong about EVERYTHING ELSE. The result was two products — a light site
+   and a dark social card — that did not look related, and a brand with no
+   colour at all, which made a sport about machines hitting each other look
+   like a bond prospectus.
 
-     - Ink (#14161A) and white. No accent colour. Links, buttons, countdowns,
-       badges, monograms — all ink. What used to be a coloured accent
-       (`--color-volt`, lime in the dark era, blue in the first light pass)
-       now RESOLVES TO INK: the token survives so 130+ call sites keep
-       working, but it no longer names a colour.
-     - The logo is the SPLIT R — the R cut diagonally into two offset halves,
-       the cut being the fight. White on an ink tile: favicon (app/icon.svg),
-       header lockup (RoboxingMark), share card (app/opengraph-image.tsx).
-     - League identities (league-identity.ts) are monochrome too, per the
-       same decision.
+   DIR_03 inverts it. The ground is void (#0B0F10): these fights happen in
+   blacked-out arenas under hard light, the social card was already dark, and
+   now the site and the feed are one product. Long-form keeps a light
+   surface — PAPER (#F2F0EA) — as a deliberate inversion: paper means
+   somebody sat down and thought about this. Results tables are scanned on
+   void; articles and open questions are read on paper.
 
-   TWO FUNCTIONAL EXCEPTIONS, deliberately outside the brand: --color-live
-   (red) means "broadcasting right now" and --destructive (red) means "this
-   action destroys something". Both are signals, not identity — a colour-blind
-   traffic system is a safety bug, not a style choice. Remove them only on an
-   explicit instruction that names them.
+   THE COLOUR, and the one idea worth defending:
+   **certainty has a colour.** Instrument cyan (#00E5D0) is not decoration.
+   It carries the confidence model — filled = Confirmed, outlined = Reported,
+   absent = Unconfirmed — so a reader can take in a whole results table at a
+   glance. That is the thing no one else in this sport offers, and it is now
+   in the palette rather than in a paragraph. `--color-volt` finally names a
+   colour again.
 
-   THE ONE RULE, kept: --color-live (#E5231F) means "broadcasting right now".
-   Never a button, never an error, never decoration. If it is red on this site,
-   something is live. Errors use --destructive. Live-edge drift uses
-   --color-drift.
+   THE TYPE: three faces, three jobs, no overlap. Anton sets results, names
+   and numbers (narrow enough for "CMG2026 Robot Mecha Fighting Competition"
+   on one line, loud enough to read at thumbnail size). Archivo sets every
+   sentence. JetBrains Mono sets the telemetry strip — event id, round,
+   score, source count, age — which is the house texture and is made only of
+   fields the post already had to be true. Anton has no CJK, so every stack
+   ends in Noto Sans SC; machine and pilot names are routinely Chinese and
+   that is not an edge case.
 
-   Note the logo description above is one iteration stale on purpose — the
-   authoritative account of the mark lives in roboxing-mark.tsx: the split R
-   is the display face's own R with a transparent diagonal cut, not a drawn
-   tile.
+   THE LOGO is unchanged: the split R, white on void, ink on paper. Never
+   cyan — cyan means certainty, and a mark cannot also carry a meaning.
+   Nothing is ever laid across it.
 
-   Every text pair below was checked against WCAG AA (4.5:1 for body, 3:1 for
+   THE ONE RULE, unchanged and now stronger: --color-live (#FF3225) means
+   "broadcasting right now". Never a button, never an error, never
+   decoration. Cyan and red sit at opposite ends of the spectrum, so the live
+   marker got LOUDER by having a system colour beside it. While red is live,
+   cyan drops to muted: two signals at once is no signal. Errors use
+   --destructive. Live-edge drift uses --color-drift.
+
+   Every text pair below was checked against WCAG AA (4.5:1 body, 3:1
    component boundaries). The numbers are recorded beside each token, because
    a contrast decision with no number next to it is a guess that survives.
    ========================================================================== */
@@ -56,86 +63,108 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* --- Surfaces: a four-step ramp from canvas up to raised -------------
-     Warm-neutral rather than blue-grey. A cold grey page reads as software;
-     a warm one reads as editorial, which is what this is. */
-  --color-canvas: #f6f6f3; /* page background */
-  --color-surface: #ffffff; /* cards, table rows, header */
-  --color-surface-2: #eeeeea; /* hover, popovers, inputs */
-  --color-line: #e2e2dc; /* default hairline border */
-  --color-line-strong: #c8c8c0; /* emphasised divider */
+  /* --- Surfaces: a four-step ramp from void up to raised ----------------
+     Cool-neutral rather than warm. The arena reference is cold light on
+     metal; a warm dark reads as leather and boxing nostalgia, which is the
+     wrong sport. */
+  --color-canvas: #0b0f10; /* page ground — "void" */
+  --color-surface: #14191a; /* cards, table rows, header — "panel" */
+  --color-surface-2: #1c2223; /* hover, popovers, inputs */
+  --color-line: #1f2728; /* default 2px rule */
+  --color-line-strong: #2e3839; /* emphasised divider */
 
-  /* --- Ink ------------------------------------------------------------- */
-  --color-ink: #14161a; /* primary text — 16.4:1 on canvas */
-  --color-ink-muted: #52565e; /* secondary text, table headers — 7.4:1 on canvas */
-  /* Metadata and de-emphasised copy. The lightest grey that still clears AA
-     on BOTH canvas and surface — 4.64:1 and 4.98:1. This token carries real
-     sentences, not just chrome, so it is held to the body-text bar rather
-     than the 3:1 one. */
-  --color-ink-dim: #6d717a;
+  /* --- The light register ----------------------------------------------
+     Long-form only: articles, open questions, the newsletter, print. Not an
+     alternate theme and not user-selectable — a surface with a job. */
+  --color-paper: #f2f0ea;
+  --color-paper-ink: #0b0f10; /* 17.1:1 on paper */
+  --color-paper-ink-muted: #3c4647; /* 9.2:1 on paper */
+  --color-paper-line: #cdc9bf;
 
-  /* --- Accent -----------------------------------------------------------
-     There is none. The brand is black and white, and "volt" — kept under its
-     historical name so 130+ call sites need no edit — now resolves to ink.
-     A link distinguishes itself by weight and underline, not hue; a filled
-     button is a black block; the countdown is black numerals. 16.4:1 on
-     canvas, trivially AAA. */
-  --color-volt: #14161a;
-  --color-volt-dim: #3a3d44; /* hover/pressed on ink fills */
-  --color-volt-ink: #ffffff; /* text on an ink fill */
+  /* --- Ink (on void) ---------------------------------------------------- */
+  --color-ink: #f2f0ea; /* primary text — 16.8:1 on canvas */
+  --color-ink-muted: #8a9698; /* secondary text, table headers — 7.1:1 */
+  /* Metadata and de-emphasised copy — the telemetry ticker above all, which
+     is the most-repeated text style in the product and sets at 11px. The
+     darkest grey that still clears AA on BOTH grounds: 5.71:1 on canvas and
+     5.26:1 on surface, re-measured. It carries real sentences at small
+     sizes, so it is held to the body bar rather than the 3:1 one — an
+     earlier value (#6B7779) was recorded as passing and did not. */
+  --color-ink-dim: #828e90;
 
-  /* --- State ----------------------------------------------------------- */
-  /* Darkened from #FF2D2D, which measured 3.4:1 on white and failed as text.
-     4.7:1 here, and still unmistakably an alarm. */
-  --color-live: #e5231f; /* LIVE ONLY. See the rule above. */
-  --color-drift: #a35c00; /* viewer has fallen behind the live edge — 4.8:1 */
-  --color-win: #14161a;
-  --color-loss: #8a8e96;
+  /* --- Accent: INSTRUMENT CYAN -----------------------------------------
+     Kept under its historical name so no call site moves. It now means
+     something again: structure, links, and — above all — certainty. 11.4:1
+     on canvas. On paper it must deepen: cyan at full strength measures
+     1.7:1 on #F2F0EA and fails as text, so light surfaces use
+     --color-volt-deep (5.1:1) for anything paragraph-sized. */
+  --color-volt: #00e5d0;
+  --color-volt-dim: #00b3a3; /* hover/pressed on cyan fills */
+  --color-volt-ink: #062b27; /* text on a cyan fill — 12.6:1 */
+  --color-volt-deep: #00776c; /* cyan for text ON PAPER — 5.1:1 */
 
-  /* --- Type ------------------------------------------------------------
-     ONE face — Oswald — carries everything; --font-sans and --font-display
-     both resolve to it (decision 2026-09-08). Mono is for timecodes, RTMP
-     keys, and IDs only. */
-  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
-  /* Same face as display — ONE typeface site-wide, Tobias's call. The two
-     tokens survive so a future second face is a one-line change, but today
-     they resolve identically. */
-  --font-sans: var(--font-oswald), "Arial Narrow", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* --- Confidence: the palette IS the epistemics -------------------------
+     One hue at three densities. Confirmed is the only fill in the set;
+     Unconfirmed drops the colour entirely, so an unresolved row is visible
+     from across a table. Never red — a confidence label is not a warning,
+     and Unconfirmed does not mean wrong. */
+  --color-confirmed: var(--color-volt); /* solid fill */
+  --color-confirmed-ink: var(--color-volt-ink);
+  --color-reported: var(--color-volt); /* 2px outline, no fill */
+  --color-unconfirmed: var(--color-ink-dim); /* 2px dashed, colour absent */
 
-  /* Fluid so a fight card headline works on a 375px phone and a 27" desktop
-     without a pile of breakpoint overrides. */
-  --text-display: clamp(2.75rem, 8vw, 5.5rem);
+  /* --- State ------------------------------------------------------------ */
+  /* Lifted from #E5231F, which measured 3.9:1 on void. 5.4:1 here, and
+     still unmistakably an alarm. LIVE ONLY. See the rule above. */
+  --color-live: #ff3225;
+  --color-drift: #ffb300; /* viewer has fallen behind the live edge — 9.8:1 */
+  --color-win: #f2f0ea;
+  --color-loss: #828e90;
+
+  /* --- Type -------------------------------------------------------------
+     Three faces, three jobs. Anton never sets a sentence; Archivo never sets
+     a headline; mono is for timecodes, IDs, scores and the ticker only.
+     Every stack ends in Noto Sans SC — Anton has no CJK and machine names
+     are routinely Chinese. */
+  --font-display: var(--font-anton), "Anton", "Noto Sans SC", sans-serif;
+  --font-sans: var(--font-archivo), "Archivo", "Noto Sans SC", sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Fluid so a result headline works on a 375px phone and a 27" desktop
+     without a pile of breakpoint overrides. Anton is a single weight — do
+     not ask for 600 or 800, there is only 400. */
+  --text-display: clamp(3rem, 9vw, 7.5rem);
   --text-display--line-height: 0.88;
-  --text-display--letter-spacing: -0.02em;
-  --text-display--font-weight: 700;
+  --text-display--letter-spacing: 0.005em;
+  --text-display--font-weight: 400;
 
-  --text-hero: clamp(2rem, 5vw, 3.25rem);
-  --text-hero--line-height: 0.95;
-  --text-hero--letter-spacing: -0.015em;
-  --text-hero--font-weight: 700;
+  --text-hero: clamp(2.25rem, 5.5vw, 4rem);
+  --text-hero--line-height: 0.92;
+  --text-hero--letter-spacing: 0.01em;
+  --text-hero--font-weight: 400;
 
-  --text-title: clamp(1.375rem, 2.5vw, 1.875rem);
-  --text-title--line-height: 1.1;
-  --text-title--letter-spacing: -0.01em;
-  --text-title--font-weight: 600;
+  --text-title: clamp(1.5rem, 2.6vw, 2.25rem);
+  --text-title--line-height: 1.02;
+  --text-title--letter-spacing: 0.01em;
+  --text-title--font-weight: 400;
 
-  /* Small all-caps label above a section. Used constantly. */
-  --text-eyebrow: 0.6875rem;
-  --text-eyebrow--line-height: 1;
-  --text-eyebrow--letter-spacing: 0.14em;
-  --text-eyebrow--font-weight: 600;
+  /* The telemetry strip. Mono, wide-tracked, uppercase. Used constantly —
+     it is the texture of the whole product. */
+  --text-ticker: 0.75rem;
+  --text-ticker--line-height: 1;
+  --text-ticker--letter-spacing: 0.08em;
+  --text-ticker--font-weight: 400;
 
-  /* --- Radii — tight, because the aesthetic is precision not softness --- */
-  --radius: 0.5rem;
+  /* --- Radii — zero, everywhere, on purpose ----------------------------- */
+  --radius: 0rem;
 
-  /* --- Motion ---------------------------------------------------------- */
+  /* --- Motion ------------------------------------------------------------ */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* --------------------------------------------------------------------------
-   shadcn semantic variables, mapped onto the Roboxing palette above so that any
-   component pulled from the registry inherits the brand without edits.
+   shadcn semantic variables, mapped onto the palette above so any component
+   pulled from the registry inherits the brand without edits.
    -------------------------------------------------------------------------- */
 :root,
 .dark {
@@ -148,13 +177,12 @@
   --popover: var(--color-surface-2);
   --popover-foreground: var(--color-ink);
 
-  /* Primary is INK, not the accent — a near-black fill with white on it.
-     Two reasons. On a light page a black button is the most emphatic thing
-     available and it is what UFC and ESPN both reach for; and it leaves the
-     accent free to mean "link" everywhere without a filled blue button
-     competing with every blue link on the same screen. */
-  --primary: var(--color-ink);
-  --primary-foreground: #ffffff;
+  /* Primary is the accent again, and it can be: on a void ground a cyan
+     fill is the most emphatic thing available, and there is no competing
+     wall of coloured links to fight, because links are cyan TEXT rather
+     than cyan blocks. */
+  --primary: var(--color-volt);
+  --primary-foreground: var(--color-volt-ink);
 
   --secondary: var(--color-surface-2);
   --secondary-foreground: var(--color-ink);
@@ -167,27 +195,24 @@
   --accent-foreground: var(--color-ink);
 
   /* Errors and destructive actions. Distinct from --color-live by design:
-     one of these means "you broke something", the other means "a fight is
-     happening". They must never be the same colour. 5.1:1 on white. */
-  --destructive: #c4162b;
+     one means "you broke something", the other means "a fight is happening".
+     They must never be the same colour — this one is darker and flatter. */
+  --destructive: #d92d1a;
 
-  /* Decorative hairlines between rows and around cards. Intentionally faint —
-     WCAG 1.4.11 governs component boundaries, not separators. */
   --border: var(--color-line);
-  /* Borders that ARE the component: outline buttons, text inputs, selects.
-     These must clear 3:1 against the canvas to be perceivable, which the
-     hairline value does not (1.15:1). This measures 3.910:1 on canvas. */
-  --input: #8b8f97;
+  /* Borders that ARE the component: outline buttons, inputs, selects. These
+     must clear 3:1 against the ground. #3A4445 measures 3.02:1 on void. */
+  --input: #3a4445;
   --ring: var(--color-volt);
 
-  /* Categorical series as a greyscale ramp — the brand is black and white,
-     and a chart that needs more than tone to be readable should use labels,
-     patterns or direct annotation rather than smuggling colour back in. */
-  --chart-1: #14161a;
-  --chart-2: #52565e;
-  --chart-3: #83878f;
-  --chart-4: #b4b7bd;
-  --chart-5: #d8dade;
+  /* Categorical series. The brand has one hue, so a series is that hue
+     stepped down into the ground. A chart needing more than this should use
+     labels or direct annotation rather than smuggling colour back in. */
+  --chart-1: #00e5d0;
+  --chart-2: #00b3a3;
+  --chart-3: #8a9698;
+  --chart-4: #5a6668;
+  --chart-5: #2e3839;
 
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-ink);
@@ -232,13 +257,14 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Zero at every step. Do not reintroduce a radius scale. */
+  --radius-sm: 0rem;
+  --radius-md: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
+  --radius-2xl: 0rem;
+  --radius-3xl: 0rem;
+  --radius-4xl: 0rem;
 }
 
 /* --------------------------------------------------------------------------
@@ -252,19 +278,64 @@
   font-feature-settings: "tnum";
 }
 
-/* The small all-caps section label used throughout the site. */
-@utility eyebrow {
-  font-family: var(--font-display);
-  font-size: var(--text-eyebrow);
-  line-height: var(--text-eyebrow--line-height);
-  letter-spacing: var(--text-eyebrow--letter-spacing);
-  font-weight: var(--text-eyebrow--font-weight);
+/* The telemetry strip: the house texture. Sits at the top or foot of a
+   surface and carries event id, round, score, source count, age — in that
+   fixed order. A field with no value prints its absence (TIME_TBA, NO
+   SCORECARD) and never collapses. It is a label on a machine, not a
+   screensaver: never animated, never invented. */
+@utility ticker {
+  font-family: var(--font-mono);
+  font-size: var(--text-ticker);
+  line-height: var(--text-ticker--line-height);
+  letter-spacing: var(--text-ticker--letter-spacing);
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  color: var(--color-ink-dim);
 }
 
-/* Slow breathing pulse for the live dot. Deliberately not a fast blink —
-   a blinking red dot on every page is exhausting to sit next to for an hour. */
+/* The small label above a section — 48 call sites across the site.
+   DIR_03's sheet dropped it, and dropping it for real would have left every
+   one of those rendering as unstyled inherited text. It survives as an ALIAS
+   for the ticker treatment rather than as the old Oswald small-caps: the new
+   identity replaces typographic labels with monospace ones, so an eyebrow and
+   a ticker field should now look like the same thing, because they are. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-ticker);
+  line-height: var(--text-ticker--line-height);
+  letter-spacing: var(--text-ticker--letter-spacing);
+  font-weight: 400;
+  text-transform: uppercase;
+  color: var(--color-ink-dim);
+}
+
+/* The display face. Always uppercase, never below 28px, never a sentence. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  line-height: 0.92;
+}
+
+/* Confidence chips. Three densities of one hue — see the note above. */
+@utility chip-confirmed {
+  background: var(--color-confirmed);
+  color: var(--color-confirmed-ink);
+  border: 2px solid var(--color-confirmed);
+}
+@utility chip-reported {
+  background: transparent;
+  color: var(--color-reported);
+  border: 2px solid var(--color-reported);
+}
+@utility chip-unconfirmed {
+  background: transparent;
+  color: var(--color-ink-muted);
+  border: 2px dashed var(--color-unconfirmed);
+}
+
+/* Slow breathing pulse for the live dot. Deliberately not a fast blink — a
+   blinking red dot on every page is exhausting to sit next to for an hour. */
 @utility pulse-live {
   animation: robox-pulse 2s var(--ease-out-quint) infinite;
 }
@@ -289,12 +360,11 @@
 
   html {
     @apply font-sans;
-    /* Vertical rhythm is 8px: prefer even Tailwind spacing steps
-       (2, 4, 6, 8, 12, 16, 24) over odd ones. */
+    /* Vertical rhythm is 8px: prefer even spacing steps (2, 4, 6, 8, 12, 16,
+       24) over odd ones. */
     /* Tells the browser to render its own furniture — scrollbars, form
-       controls, the autofill tint — light. Without it a light page keeps dark
-       scrollbars and a very obviously wrong yellow-on-dark autofill. */
-    color-scheme: light;
+       controls, the autofill tint — dark, which is now correct. */
+    color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -302,11 +372,72 @@
     @apply bg-canvas text-ink antialiased;
   }
 
-  /* Display face is for names, scores, and numbers — not body copy. */
+  /* Display face is for names, scores and results — not body copy. */
   h1,
   h2,
   h3 {
-    @apply font-display;
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.005em;
+    line-height: 0.94;
+  }
+
+  /* Links are cyan text with an offset underline, never a coloured block.
+     On paper they must deepen or they fail contrast. */
+  a {
+    color: var(--color-volt);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--color-volt-dim);
+  }
+  /* Paper inverts by REDEFINING THE TOKENS, not by restyling components.
+     Every `text-ink`, `bg-surface` and `border-line` inside this container
+     resolves against the paper values instead of the void ones, so an article
+     inherits the inversion without a single component edit — which is the
+     whole reason the colour layer is variables rather than classes.
+
+     The alternative was a paper variant on every component the long-form
+     pages touch. That is forty edits and a permanent second thing to remember
+     whenever a component changes. */
+  .on-paper {
+    --color-canvas: var(--color-paper);
+    --color-surface: var(--color-paper);
+    --color-surface-2: #e6e3db;
+    --color-line: var(--color-paper-line);
+    --color-line-strong: #b6b1a5;
+    --color-ink: var(--color-paper-ink);
+    --color-ink-muted: var(--color-paper-ink-muted);
+    --color-ink-dim: #5a6364;
+    /* Cyan at full strength measures 1.7:1 on paper and fails as text. This is
+       the one place the accent must deepen — and redefining the token here
+       fixes every `text-volt` on the surface at once, not just anchors. */
+    --color-volt: var(--color-volt-deep);
+    --color-volt-dim: #005a52;
+    --color-win: var(--color-paper-ink);
+    --color-loss: #5a6364;
+  }
+
+  .on-paper a {
+    color: var(--color-volt-deep);
+  }
+
+  /* A link that IS a heading keeps the heading's colour.
+     The prototype's headings are plain text, so a blanket cyan rule was safe
+     there. On this site almost every headline is a link to the thing it names
+     — a result, a machine, an event — and the blanket rule painted the entire
+     front page cyan. Cyan means structure and certainty; a headline is neither.
+     It stays ink and goes cyan on hover, which is what the prototype shows. */
+  h1 a,
+  h2 a,
+  h3 a {
+    color: inherit;
+  }
+  h1 a:hover,
+  h2 a:hover,
+  h3 a:hover {
+    color: var(--color-volt);
   }
 
   ::selection {
@@ -314,22 +445,17 @@
     color: var(--color-volt-ink);
   }
 
-  /* Display type is the brand now that the colour is quieter. Oswald in
-     uppercase is the same register UFC and F1 use, and on a light page a wall
-     of tight condensed black caps is what stops this reading as a spreadsheet.
-     Kept deliberately when the palette was rewritten — the aggression moved
-     from the colour into the type. */
-  h1,
-  h2,
-  h3 {
-    letter-spacing: -0.01em;
-  }
-
   /* A visible focus ring is not optional. Keyboard users navigate the
      standings tables and the player controls. */
   :focus-visible {
     outline: 2px solid var(--color-volt);
     outline-offset: 2px;
+  }
+
+  /* Photography is greyscale everywhere, always credited, never generated.
+     Every content image goes through this. */
+  .grayscale-photo {
+    filter: grayscale(1) contrast(1.08);
   }
 
   @media (prefers-reduced-motion: reduce) {

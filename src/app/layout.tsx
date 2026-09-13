@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Oswald } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import {
+  Anton,
+  Archivo,
+  JetBrains_Mono,
+  Noto_Sans_SC,
+} from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { roboxingLocalization } from "@/components/auth/localization";
@@ -8,25 +12,53 @@ import { roboxingLocalization } from "@/components/auth/localization";
 import "./globals.css";
 
 /**
- * The site's ONE typeface, per Tobias's instruction of 2026-09-08: "generell
- * braucht die gesamte seite die gleiche font type". Oswald carries display
- * AND body — Inter was removed rather than left loaded-but-unused, so the
- * decision is enforced by the bundle, not by discipline. Geist Mono stays for
- * stream keys and timecodes only: those are technical strings where digit
- * alignment is function, not typography.
+ * Three faces, three jobs, no overlap (DIR_03).
+ *
+ * The site ran on Oswald alone — one face for everything, which was a
+ * deliberate instruction and the right call while the design was monochrome
+ * and typographic. The new identity separates the jobs instead:
+ *
+ *   Anton    display only. Results, machine names, headlines. Always
+ *            uppercase, never a sentence. Single weight — it only has one.
+ *   Archivo  every sentence. Never a headline.
+ *   Mono     the telemetry ticker, IDs, timecodes, scores, confidence chips.
+ *
+ * NOTO SANS SC IS NOT OPTIONAL. Anton has no CJK coverage at all, and this
+ * record is full of Chinese: machine names (斗牛士), pilot names (陆鑫), a
+ * league entry keyword (报名). Without a CJK fallback on every stack those
+ * render as boxes — which on a site whose whole claim is knowing which machine
+ * is which would be worse than ugly.
  */
-const oswald = Oswald({
-  variable: "--font-oswald",
+const anton = Anton({
+  variable: "--font-anton",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
   display: "swap",
 });
 
-/** Timecodes, stream keys, robot model numbers. */
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
   display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/*
+ * Loaded for its glyph coverage, not its personality. `preload: false` because
+ * the subset is large and most pages never need it — the browser fetches it
+ * when a CJK character actually appears rather than on every first paint.
+ */
+const notoSC = Noto_Sans_SC({
+  variable: "--font-noto-sc",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -104,7 +136,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         // palette; the palette is light now, and leaving it on would apply
         // dark-mode overrides on top of light tokens — which is how you get a
         // white page with dark-grey form controls on it.
-        className={`${oswald.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${anton.variable} ${archivo.variable} ${jetbrainsMono.variable} ${notoSC.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col">{children}</body>
       </html>

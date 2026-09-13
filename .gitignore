@@ -66,3 +66,9 @@ next-env.d.ts
 
 # working material for a design handoff: screenshots and copied assets.
 /design-handoff/
+
+# Design handoffs from Claude Design: prototypes, vendor bundles and reference
+# CSS. tokens.css is COPIED into src/app/globals.css rather than imported from
+# here, so nothing in the build depends on this folder — and its vendored
+# support.js trips eslint on rules that do not apply to our code.
+/design_handoff_dir03/
