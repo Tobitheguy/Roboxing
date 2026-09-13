@@ -308,13 +308,19 @@
   color: var(--color-ink-dim);
 }
 
-/* The display face. Always uppercase, never below 28px, never a sentence. */
+/* The display face. Always uppercase, never below 28px, never a sentence.
+   TRACKING IS 0.03em, NOT THE 0.005em DIR_03 SPECIFIED. Anton is extremely
+   condensed and its uppercase forms very nearly touch at their default fit; at
+   0.005em a long name — ULTIMATE ROBOT KNOCK-OUT LEGEND — closes up into a
+   single block and stops being readable, which Tobias caught immediately. The
+   prototype's headlines were short ("RESULTS", "WATCH"), where the tight fit
+   looks deliberate rather than jammed. Real content on this site is long. */
 @utility display {
   font-family: var(--font-display);
   font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.005em;
-  line-height: 0.92;
+  letter-spacing: 0.03em;
+  line-height: 1;
 }
 
 /* Confidence chips. Three densities of one hue — see the note above. */
@@ -379,8 +385,11 @@
     font-family: var(--font-display);
     font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.005em;
-    line-height: 0.94;
+    /* See the note on @utility display: 0.005em jams Anton's caps together on
+       anything longer than a word. A headline that has to be deciphered is a
+       headline nobody reads. */
+    letter-spacing: 0.03em;
+    line-height: 1;
   }
 
   /* Links are cyan text with an offset underline, never a coloured block.

@@ -37,7 +37,19 @@ export function StatTile({
       <div
         className={cn(
           "font-display tabular mt-1.5 text-2xl leading-none font-bold sm:text-3xl",
-          emphasis ? "text-volt" : "text-ink",
+          /*
+           * Emphasis is SIZE, never colour.
+           *
+           * This used to paint the emphasised tile in `--color-volt`, which was
+           * ink in the old palette — so "emphasis" meant nothing visually and
+           * nobody noticed. DIR_03 makes volt cyan, and the result was one
+           * random zero glowing cyan beside three white numbers: a reader looks
+           * for the meaning and there is none.
+           *
+           * Cyan on this site means certainty — it belongs to confidence chips,
+           * links and structure. A stat tile is not a claim about sourcing.
+           */
+          emphasis ? "text-ink sm:text-4xl" : "text-ink",
         )}
       >
         {value}
