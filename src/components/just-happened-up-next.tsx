@@ -158,7 +158,13 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
         />
       ) : null}
 
-      <div className="relative mt-6 flex flex-wrap items-center gap-4">
+      {/* `mt-auto` pushes this to the foot of its cell, so "Results" on the
+          left and "Fight card" on the right sit on the same line however much
+          text is above them. The two panels carry different amounts — one has
+          a result and a confidence chip, the other has a countdown — and
+          without this the two links land at different heights, which reads as
+          a layout mistake rather than two panels of different depth. */}
+      <div className="relative mt-auto flex flex-wrap items-center gap-4 pt-6">
         <Link
           href={`/events/${panel.eventSlug}`}
           className={cn(

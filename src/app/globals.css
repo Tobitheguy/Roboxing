@@ -372,6 +372,22 @@
        controls, the autofill tint — dark, which is now correct. */
     color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
+
+    /*
+     * NEVER LET THE BROWSER FAKE A WEIGHT.
+     *
+     * Anton ships one weight, 400. Eighty places in this codebase still carry
+     * `font-semibold` or `font-bold` from the Oswald era, where those were real
+     * weights. With Anton the browser SYNTHESISES them — it redraws each glyph
+     * thicker by smearing it — and on a condensed face that closes the counters
+     * and welds adjacent letters together. Tobias's report was exactly right:
+     * "die wörter kleben ein wenig aneinander".
+     *
+     * One line fixes all eighty, and it is the correct fix rather than a sweep:
+     * Archivo has real 400–700 weights, so body text still bolds properly. Only
+     * the fake is gone.
+     */
+    font-synthesis-weight: none;
   }
 
   body {
@@ -390,6 +406,24 @@
        headline nobody reads. */
     letter-spacing: 0.03em;
     line-height: 1;
+  }
+
+  /*
+   * Small headings get more air and slightly less glare.
+   *
+   * Two separate problems at small sizes. Tracking first: optical sizing runs
+   * the opposite way to intuition — the smaller the type, the more letterspace
+   * it needs, and a value tuned on a 56px headline is too tight at 14px.
+   *
+   * Then the white. #F2F0EA on #0B0F10 measures 16.8:1, which is far past what
+   * legibility needs and into the range where light type on a dark ground
+   * blooms — the strokes visually swell and the gaps close. Large display text
+   * can carry it; small caps cannot. Dropping to 92% opacity costs nothing in
+   * contrast terms (still >15:1) and removes the halation.
+   */
+  h3 {
+    letter-spacing: 0.055em;
+    opacity: 0.92;
   }
 
   /* Links are cyan text with an offset underline, never a coloured block.
