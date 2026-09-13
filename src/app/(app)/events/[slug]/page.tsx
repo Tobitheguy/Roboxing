@@ -322,6 +322,7 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
            belongs there: who, when, where, and how to see it. */
         fallback={
           <EventPoster
+            eventSlug={event.slug}
             competitionName={competitionName}
             city={event.city}
             country={event.country}

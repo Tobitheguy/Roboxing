@@ -2,7 +2,6 @@ import Image from "next/image";
 
 import { ChannelPill } from "@/components/channel-pill";
 import { ConfidenceBadge } from "@/components/confidence-badge";
-import { getMachineMedia } from "@/lib/machine-media";
 import type { BoutDetail } from "@/lib/queries";
 import type { ConfidenceValue, WatchChannel } from "@/db/schema";
 
@@ -18,18 +17,34 @@ import type { ConfidenceValue, WatchChannel } from "@/db/schema";
  *
  * He is right, and the fix is not a better empty state — it is a different
  * object. Before a fight, the thing a poster has always done is tell you WHO,
- * WHEN, WHERE and HOW TO SEE IT. So that is what this is: the two machines
- * with their real photographs, the date, the venue, and the channels that will
- * carry it.
+ * WHEN, WHERE and HOW TO SEE IT.
+ *
+ * ONE IMPLEMENTATION, TWO SURFACES.
+ *
+ * The matchup itself is `/api/social/matchup` — the same PNG that gets posted
+ * to a feed, rendered here rather than rebuilt in HTML. The first version of
+ * this component hand-built a second copy of that layout: two columns, a "V"
+ * in the middle, different margins, its own idea of what goes under a name.
+ * Two implementations of one card drift, and the drift stays invisible until
+ * somebody puts them side by side — which, for a poster, happens the first
+ * time a reader sees the post and then clicks through to the page.
+ *
+ * WHAT STAYS IN HTML, AND WHY IT IS NOT IN THE IMAGE.
+ * Everything a reader needs to ACT on: the venue, the confidence of the
+ * listing, and the channels, which have to be links. Text baked into a PNG
+ * cannot be clicked, selected, translated or read aloud. So the image carries
+ * the matchup and the page carries the facts — and the date appears in both,
+ * deliberately, because a poster without a date is not a poster.
  *
  * WHAT IT REFUSES TO DO.
  * It will not invent a matchup. Most fight cards in this sport are announced
  * as a number of bouts with no pairings — "five bouts, none paired" is the
  * normal state — and a poster that fills that with placeholder names would be
- * a fabricated card. When there are no bouts it says so, in the same words the
- * schedule uses.
+ * a fabricated card. When there are no bouts there is no image, and the block
+ * says so in the same words the schedule uses.
  */
 export function EventPoster({
+  eventSlug,
   competitionName,
   city,
   country,
@@ -42,6 +57,7 @@ export function EventPoster({
   channels,
   posterUrl,
 }: {
+  eventSlug: string;
   competitionName: string;
   city: string | null;
   country: string | null;
@@ -54,46 +70,8 @@ export function EventPoster({
   channels: WatchChannel[];
   posterUrl: string | null;
 }) {
-  // The main event is the LAST bout — a card is built to finish on its biggest
-  // fight, so bout one is the opener.
-  const headline = bouts.length > 0 ? bouts[bouts.length - 1] : null;
-  void [venue, city, country];
-
-  const corner = (robot: BoutDetail["robotA"] | undefined, align: "l" | "r") => {
-    const photo = robot ? getMachineMedia(robot.slug)?.card : null;
-    return (
-      <div
-        className={`flex min-w-0 flex-1 flex-col ${align === "r" ? "items-end text-right" : "items-start"}`}
-      >
-        <div className="border-line bg-surface-2 relative aspect-square w-full max-w-[220px] overflow-hidden border-2">
-          {photo ? (
-            <Image
-              src={photo.src}
-              alt=""
-              fill
-              sizes="220px"
-              className="grayscale-photo object-cover"
-            />
-          ) : (
-            <div className="text-ink-dim font-display flex size-full items-center justify-center text-4xl">
-              {robot ? robot.name.charAt(0) : "?"}
-            </div>
-          )}
-        </div>
-        <p className="font-display text-ink mt-3 text-2xl sm:text-3xl">
-          {robot ? robot.name : "TBA"}
-        </p>
-        <p className="text-ink-muted mt-1 text-sm">
-          {robot ? robot.teamName : "Not paired"}
-        </p>
-        {robot?.pilotName ? (
-          <p className="text-ink-dim mt-0.5 text-xs">
-            {`Piloted by ${robot.pilotName}`}
-          </p>
-        ) : null}
-      </div>
-    );
-  };
+  const hasCard = bouts.length > 0;
+  const where = [venue, city, country].filter(Boolean).join(" · ");
 
   return (
     <div className="border-line bg-surface border-2">
@@ -107,44 +85,61 @@ export function EventPoster({
         </span>
       </div>
 
+      {hasCard ? (
+        /*
+         * The card itself. `unoptimized` because this URL is already a
+         * generated PNG at a fixed size — running it back through the image
+         * optimiser re-encodes a file we just encoded, for nothing.
+         *
+         * Square rather than portrait: a 4:5 poster inside a page column
+         * pushes everything below it off the first screen, and the square
+         * format is the same layout with less letterbox.
+         */
+        <div className="border-line relative aspect-square w-full border-b-2 sm:aspect-[4/5] sm:max-h-[38rem]">
+          <Image
+            src={`/api/social/matchup?event=${encodeURIComponent(eventSlug)}&format=square`}
+            alt={`${competitionName} — fight card`}
+            fill
+            sizes="(min-width: 1024px) 900px, 100vw"
+            className="object-contain"
+            unoptimized
+            priority
+          />
+        </div>
+      ) : null}
+
       <div className="p-6 sm:p-8">
-        {/* No title and no date here: the page header two lines above already
-            carries both, and a poster that repeats them reads as a rendering
-            bug. What the header does NOT carry is the confidence of the
-            listing, so that stays. */}
-        {confidence !== "confirmed" ? (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <ConfidenceBadge level={confidence} />
-            <span className="text-ink-dim text-xs">
-              How firm this listing is
-            </span>
+        {!hasCard ? (
+          <div className="border-line mb-8 border-b-2 pb-8 text-center">
+            <p className="font-display text-ink text-2xl">Card not announced</p>
+            <p className="text-ink-muted mx-auto mt-2 max-w-md text-sm leading-relaxed">
+              {note ??
+                "The organiser has not published pairings. This page fills in the moment they do — nothing here is a guess."}
+            </p>
           </div>
         ) : null}
 
-        {/* The matchup, or an honest statement that there is not one yet. */}
-        <div className="border-line mt-8 border-t-2 pt-8">
-          {headline ? (
-            <div className="flex items-start gap-4 sm:gap-8">
-              {corner(headline.robotA, "l")}
-              <div className="font-display text-ink-dim pt-16 text-2xl sm:text-3xl">
-                V
-              </div>
-              {corner(headline.robotB, "r")}
-            </div>
-          ) : (
-            <div className="py-6 text-center">
-              <p className="font-display text-ink text-2xl">
-                Card not announced
-              </p>
-              <p className="text-ink-muted mx-auto mt-2 max-w-md text-sm leading-relaxed">
-                {note ??
-                  "The organiser has not published pairings. This page fills in the moment they do — nothing here is a guess."}
-              </p>
-            </div>
-          )}
-        </div>
+        {/* The facts a reader acts on, in one row. Venue and confidence sit
+            together because they answer the same question — how solid is
+            this — and a listing nobody has confirmed is worth knowing before
+            you plan an evening around it. */}
+        <dl className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <dt className="eyebrow">Where</dt>
+            <dd className="text-ink mt-1 text-sm">
+              {where || "Venue not announced"}
+            </dd>
+          </div>
+          <div>
+            <dt className="eyebrow">How firm this listing is</dt>
+            <dd className="mt-1">
+              <ConfidenceBadge level={confidence} />
+            </dd>
+          </div>
+        </dl>
 
-        {/* Where to see it. The other half of what a poster is for. */}
+        {/* Where to see it. The other half of what a poster is for, and the
+            half that cannot live inside a PNG. */}
         <div className="border-line mt-8 border-t-2 pt-6">
           <p className="eyebrow mb-3">Where to watch</p>
           {channels.length > 0 ? (
@@ -165,9 +160,9 @@ export function EventPoster({
         </div>
       </div>
 
-      {/* The promoter's own artwork, when they have released any. Below the
-          facts rather than behind them: a poster nobody can read is decoration,
-          and this block's job is the date and the matchup. */}
+      {/* The promoter's own artwork, when they have released any. Below our
+          card rather than instead of it: theirs is the marketing, ours is the
+          record, and the reader came here for the second one. */}
       {posterUrl ? (
         <div className="border-line relative aspect-[16/9] border-t-2">
           <Image

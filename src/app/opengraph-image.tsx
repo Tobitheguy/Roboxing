@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { ImageResponse } from "next/og";
+
+import { CARD, CARD_FONT, displayFont } from "@/lib/card-theme";
 
 /**
  * The share card — what a Roboxing link looks like on X, Discord, Slack,
@@ -28,15 +27,12 @@ export const contentType = "image/png";
 export const alt =
   "Roboxing — the record of humanoid robot fighting";
 
-const INK = "#14161A";
 
 export default async function OpengraphImage() {
   // Bundled, not fetched: a network call to Google Fonts inside the OG
   // handler would make every crawler hit depend on their uptime, and the
   // failure mode is a broken share card on exactly the post that trends.
-  const oswald = await readFile(
-    join(process.cwd(), "src/app/_fonts/oswald-700.ttf"),
-  );
+  const fonts = await displayFont();
 
   return new ImageResponse(
     (
@@ -46,10 +42,10 @@ export default async function OpengraphImage() {
           height: "100%",
           display: "flex",
           alignItems: "center",
-          background: INK,
+          background: CARD.void,
           padding: "80px",
           gap: "6px",
-          fontFamily: "Oswald",
+          fontFamily: CARD_FONT,
         }}
       >
         {/* The R, split by a diagonal bar in the card's own background —
@@ -61,7 +57,7 @@ export default async function OpengraphImage() {
             style={{
               fontSize: "110px",
               fontWeight: 700,
-              color: "#FFFFFF",
+              color: CARD.ink,
               textTransform: "uppercase",
             }}
           >
@@ -74,7 +70,7 @@ export default async function OpengraphImage() {
               top: "78px",
               width: "120px",
               height: "8px",
-              background: INK,
+              background: CARD.void,
               transform: "rotate(-10deg)",
             }}
           />
@@ -86,7 +82,7 @@ export default async function OpengraphImage() {
               display: "flex",
               fontSize: "110px",
               fontWeight: 700,
-              color: "#FFFFFF",
+              color: CARD.ink,
               letterSpacing: "-2px",
               textTransform: "uppercase",
             }}
@@ -97,7 +93,7 @@ export default async function OpengraphImage() {
             style={{
               marginTop: "18px",
               fontSize: "34px",
-              color: "#9BA0A8",
+              color: CARD.dim,
               letterSpacing: "0px",
             }}
           >
@@ -107,7 +103,7 @@ export default async function OpengraphImage() {
             style={{
               marginTop: "10px",
               fontSize: "34px",
-              color: "#9BA0A8",
+              color: CARD.dim,
             }}
           >
             Every league. Every fight. In English.
@@ -117,7 +113,7 @@ export default async function OpengraphImage() {
     ),
     {
       ...size,
-      fonts: [{ name: "Oswald", data: oswald, weight: 700 as const, style: "normal" as const }],
+      fonts,
     },
   );
 }

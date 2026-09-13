@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { ImageResponse } from "next/og";
+
+import { CARD, CARD_FONT, displayFont } from "@/lib/card-theme";
 
 import { METHOD_LABELS, formatDateLong, formatFinish } from "@/lib/format";
 import { getBoutsForEvent, getEventBySlug } from "@/lib/queries";
@@ -29,9 +28,6 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "Roboxing event card";
 
-const INK = "#14161A";
-const DIM = "#9BA0A8";
-const LINE = "#2A2E35";
 
 export default async function EventOpengraphImage({
   params,
@@ -39,12 +35,7 @@ export default async function EventOpengraphImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const oswald = await readFile(
-    join(process.cwd(), "src/app/_fonts/oswald-700.ttf"),
-  );
-  const fonts = [
-    { name: "Oswald", data: oswald, weight: 700 as const, style: "normal" as const },
-  ];
+  const fonts = await displayFont();
 
   const row = await getEventBySlug(slug);
 
@@ -102,9 +93,9 @@ export default async function EventOpengraphImage({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: INK,
+          background: CARD.void,
           padding: "70px 80px",
-          fontFamily: "Oswald",
+          fontFamily: CARD_FONT,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
@@ -112,19 +103,19 @@ export default async function EventOpengraphImage({
             style={{
               display: "flex",
               fontSize: "30px",
-              color: "#FFFFFF",
+              color: CARD.ink,
               letterSpacing: "6px",
               textTransform: "uppercase",
             }}
           >
             Roboxing
           </div>
-          <div style={{ display: "flex", width: "2px", height: "26px", background: LINE }} />
+          <div style={{ display: "flex", width: "2px", height: "26px", background: CARD.line }} />
           <div
             style={{
               display: "flex",
               fontSize: "30px",
-              color: DIM,
+              color: CARD.dim,
               textTransform: "uppercase",
               letterSpacing: "2px",
             }}
@@ -139,7 +130,7 @@ export default async function EventOpengraphImage({
               style={{
                 display: "flex",
                 fontSize: "86px",
-                color: "#FFFFFF",
+                color: CARD.ink,
                 lineHeight: 1.05,
                 textTransform: "uppercase",
               }}
@@ -150,7 +141,7 @@ export default async function EventOpengraphImage({
               style={{
                 display: "flex",
                 fontSize: "40px",
-                color: DIM,
+                color: CARD.dim,
                 margin: "8px 0",
                 textTransform: "lowercase",
               }}
@@ -161,7 +152,7 @@ export default async function EventOpengraphImage({
               style={{
                 display: "flex",
                 fontSize: "86px",
-                color: DIM,
+                color: CARD.dim,
                 lineHeight: 1.05,
                 textTransform: "uppercase",
               }}
@@ -173,7 +164,7 @@ export default async function EventOpengraphImage({
                 display: "flex",
                 marginTop: "24px",
                 fontSize: "34px",
-                color: "#FFFFFF",
+                color: CARD.ink,
                 letterSpacing: "2px",
                 textTransform: "uppercase",
               }}
@@ -191,7 +182,7 @@ export default async function EventOpengraphImage({
               style={{
                 display: "flex",
                 fontSize: "82px",
-                color: "#FFFFFF",
+                color: CARD.ink,
                 lineHeight: 1.08,
                 textTransform: "uppercase",
               }}
@@ -203,7 +194,7 @@ export default async function EventOpengraphImage({
                 display: "flex",
                 marginTop: "20px",
                 fontSize: "34px",
-                color: DIM,
+                color: CARD.dim,
               }}
             >
               {bouts.length > 0
@@ -222,7 +213,7 @@ export default async function EventOpengraphImage({
          * are the version that actually renders.
          */}
         <div style={{ display: "flex", alignItems: "baseline" }}>
-          <div style={{ display: "flex", fontSize: "32px", color: "#FFFFFF" }}>
+          <div style={{ display: "flex", fontSize: "32px", color: CARD.ink }}>
             {when}
             {timeUnknown ? " · time TBA" : ""}
           </div>
@@ -232,13 +223,13 @@ export default async function EventOpengraphImage({
                 style={{
                   display: "flex",
                   fontSize: "32px",
-                  color: DIM,
+                  color: CARD.dim,
                   margin: "0 14px",
                 }}
               >
                 ·
               </div>
-              <div style={{ display: "flex", fontSize: "32px", color: DIM }}>
+              <div style={{ display: "flex", fontSize: "32px", color: CARD.dim }}>
                 {where}
               </div>
             </>
@@ -260,15 +251,15 @@ function Fallback() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: INK,
-        fontFamily: "Oswald",
+        background: CARD.void,
+        fontFamily: CARD_FONT,
       }}
     >
       <div
         style={{
           display: "flex",
           fontSize: "72px",
-          color: "#FFFFFF",
+          color: CARD.ink,
           letterSpacing: "8px",
           textTransform: "uppercase",
         }}
