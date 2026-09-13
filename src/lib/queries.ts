@@ -41,6 +41,13 @@ export type BoutParticipant = {
   slug: string;
   name: string;
   photoUrl: string | null;
+  /**
+   * The chassis. A fight card names the machine AND what it runs on, because
+   * in this sport those are usually different words for the same object —
+   * Matador is a T800, White Eagle is a T800, and a poster that prints only
+   * the fighting name hides that the bout is hardware-identical.
+   */
+  model: string | null;
   weightClass: string | null;
   teamId: number;
   teamName: string;
@@ -127,6 +134,7 @@ const boutSelection = {
   aSlug: robotA.slug,
   aName: robotA.name,
   aPhoto: robotA.photoUrl,
+  aModel: robotA.model,
   aWeight: robotA.weightClass,
   aTeamId: teamA.id,
   aTeamName: teamA.name,
@@ -139,6 +147,7 @@ const boutSelection = {
   bSlug: robotB.slug,
   bName: robotB.name,
   bPhoto: robotB.photoUrl,
+  bModel: robotB.model,
   bWeight: robotB.weightClass,
   bTeamId: teamB.id,
   bTeamName: teamB.name,
@@ -187,6 +196,7 @@ function toBoutDetail(r: Record<string, unknown>): BoutDetail {
       slug: r.aSlug as string,
       name: r.aName as string,
       photoUrl: r.aPhoto as string | null,
+      model: r.aModel as string | null,
       weightClass: r.aWeight as string | null,
       teamId: r.aTeamId as number,
       teamName: r.aTeamName as string,
@@ -200,6 +210,7 @@ function toBoutDetail(r: Record<string, unknown>): BoutDetail {
       slug: r.bSlug as string,
       name: r.bName as string,
       photoUrl: r.bPhoto as string | null,
+      model: r.bModel as string | null,
       weightClass: r.bWeight as string | null,
       teamId: r.bTeamId as number,
       teamName: r.bTeamName as string,
@@ -1288,4 +1299,29 @@ export const getMachineRecords = cache(async () => {
   return [...byModel.values()].sort(
     (a, b) => b.bouts - a.bouts || b.wins - a.wins || a.model.localeCompare(b.model),
   );
+});
+
+/**
+ * The numbers the telemetry ticker carries.
+ *
+ * DIR_03's ticker is the house texture — a monospace rule at the top of the
+ * page stating what the record contains. The prototype hard-codes "9 LEAGUES ON
+ * RECORD · 7 OPEN QUESTIONS · 16 MACHINES"; these are the real ones, because a
+ * ticker that prints a number nobody computed is a decoration pretending to be
+ * an instrument.
+ *
+ * One round trip. Three counts on a strip that renders on every page of the
+ * site is not worth three queries.
+ */
+export const getRecordCounts = cache(async () => {
+  const [row] = await db
+    .select({
+      leagues: sql<number>`(select count(*) from ${competitions} where ${competitions.isLeague})::int`,
+      openQuestions: sql<number>`(select count(*) from ${openQuestions} where ${openQuestions.answeredAt} is null)::int`,
+      machines: sql<number>`(select count(*) from ${robots})::int`,
+      results: sql<number>`(select count(*) from ${boutResults})::int`,
+    })
+    .from(competitions)
+    .limit(1);
+  return row ?? { leagues: 0, openQuestions: 0, machines: 0, results: 0 };
 });

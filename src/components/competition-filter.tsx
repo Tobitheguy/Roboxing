@@ -32,10 +32,18 @@ export function CompetitionFilter({
             href={item.slug ? `${basePath}?competition=${item.slug}` : basePath}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "font-display rounded-md border px-3 py-1.5 text-xs font-semibold tracking-wide whitespace-nowrap uppercase transition-colors",
+              /* Mono, matching the nav and the confidence chips. These were set
+                 in the display face, which on strings like "CMG2026 ROBOT MECHA
+                 FIGHTING COMPETITION" produced an unreadable condensed block.
+                 A filter is a label, and labels on this site are monospace. */
+              "font-mono border-2 px-3 py-2 text-[11px] tracking-[0.1em] whitespace-nowrap uppercase transition-colors",
+              /* Filled when active — the same grammar as the nav and the
+                 confidence chips. A tinted 10%-opacity fill reads as "sort of
+                 selected"; filled or outlined is a state a reader can see from
+                 across the page, which is the entire idea behind the chips. */
               isActive
-                ? "border-volt/40 bg-volt/10 text-volt"
-                : "border-line text-ink-muted hover:border-line-strong hover:text-ink",
+                ? "border-volt bg-volt text-volt-ink"
+                : "border-line text-ink-muted hover:border-volt hover:text-ink",
             )}
           >
             {item.name}

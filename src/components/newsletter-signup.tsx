@@ -100,7 +100,9 @@ export function NewsletterSignup({
         <Honeypot />
         <input type="hidden" name="source" value={source} />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        {/* items-stretch, not items-start: with one control height they are
+            already equal, and stretch keeps them that way if one ever wraps. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
           <div className="flex-1">
             <label htmlFor={emailId} className="sr-only">
               Email address
@@ -114,7 +116,7 @@ export function NewsletterSignup({
               placeholder="you@example.com"
               aria-invalid={state.status === "error" ? true : undefined}
               aria-describedby={state.message ? `${emailId}-status` : undefined}
-              className="border-input bg-surface-2 text-ink focus-visible:border-volt w-full rounded-md border px-3 py-2 text-sm outline-none"
+              className="border-input bg-surface-2 text-ink focus-visible:border-volt control-h w-full border px-3 text-sm outline-none"
             />
           </div>
           <SubmitButton label={label} />

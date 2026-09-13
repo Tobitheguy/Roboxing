@@ -157,13 +157,19 @@ function MachineCard({
     <Card className="hover:border-line-strong overflow-hidden transition-colors">
       {/* The machine itself, not a monogram. Cards without photography keep the
           letter tile inside the body below. */}
-      {cardImage ? (
-        <Link
-          href={`/robots/${robot.slug}`}
-          className={`border-line relative block aspect-[16/9] border-b ${
-            cardImage.fit === "contain" ? "bg-white" : "bg-surface-2"
-          }`}
-        >
+      {/* EVERY card gets the same 16:9 band, photograph or not.
+          Before, a machine with photography got an image band and one without
+          got a letter tile inline in the body — so a row of cards came out at
+          three different heights with three different silhouettes, which is
+          what Tobias saw as "viel zu durcheinander". The grid is a comparison
+          table; cards in it have to be the same object.
+          Where there is no photograph, the band says so in words rather than
+          filling the hole with a monogram pretending to be a picture. */}
+      <Link
+        href={`/robots/${robot.slug}`}
+        className="border-line bg-surface-2 relative block aspect-[16/9] border-b-2"
+      >
+        {cardImage ? (
           <Image
             src={cardImage.src}
             alt={cardImage.alt}
@@ -173,18 +179,20 @@ function MachineCard({
               cardImage.fit === "contain" ? "object-contain" : "object-cover"
             }
           />
-        </Link>
-      ) : null}
-      <CardBody>
-        <div className="flex items-start gap-4">
-          {!cardImage ? (
+        ) : (
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-2">
             <RobotAvatar
               name={robot.name}
               photoUrl={robot.photoUrl}
               size="lg"
               decorative
             />
-          ) : null}
+            <span className="ticker">No photography on file</span>
+          </span>
+        )}
+      </Link>
+      <CardBody>
+        <div className="flex items-start gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <h2 className="font-display text-ink text-lg font-semibold uppercase">

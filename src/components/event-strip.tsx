@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { ChevronRight, Tv } from "lucide-react";
+import { Tv } from "lucide-react";
 
-import { Countdown } from "@/components/countdown";
-import { dateZone, formatRange } from "@/components/event-date";
-import { EventTime } from "@/components/event-time";
-import { getFeaturedEvent } from "@/lib/queries";
+import { getFeaturedEvent, getRecordCounts } from "@/lib/queries";
 import { rethrowControlFlow } from "@/lib/next-errors";
+import { cn } from "@/lib/utils";
 import { getLiveChannels } from "@/lib/twitch";
 
 /**
@@ -59,14 +57,16 @@ export async function EventStrip() {
     console.error("[EventStrip] live check failed:", error);
   }
 
+  const counts = await getRecordCounts();
+
   if (live.length > 0) {
     const channel = live[0];
     return (
-      <div className="border-line bg-surface/60 border-b">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 text-xs md:px-6">
+      <div className="border-line bg-surface ticker border-b-2">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 md:px-6">
           <Link
             href={`/competitions/${channel.competitionSlug}`}
-            className="text-ink-dim hover:text-ink-muted font-display shrink-0 font-semibold tracking-wide uppercase transition-colors"
+            className="shrink-0 text-current transition-opacity hover:opacity-70"
           >
             {/* The one place red is allowed. See the token note in
                 globals.css: --color-live means broadcasting and nothing else,
@@ -121,123 +121,77 @@ export async function EventStrip() {
 
   if (!featured) return null;
 
-  const { event, competitionName, competitionSlug, isLive } = featured;
-  const where = [event.venue, event.city].filter(Boolean).join(", ");
+  const { event, competitionName, isLive } = featured;
+
+  /*
+   * The telemetry strip.
+   *
+   * DIR_03's house texture: a monospace rule carrying, in a fixed order, what
+   * is next and what the record holds. Every field is data the record already
+   * has — never an invented id, never a number nobody computed — and a field
+   * with no value prints its absence rather than collapsing, which is why an
+   * undated fixture reads DATE_TBA instead of disappearing.
+   *
+   * Never animated. It is a label on a machine, not a screensaver.
+   */
+  /*
+   * Plain words, not machine-speak.
+   *
+   * This read "NEXT_EVT UFB-S2 · DATE_TBA" because the prototype's ticker is
+   * styled as instrumentation. On the prototype that is a look; on a live site
+   * it is a strip of jargon above every page, and Tobias's reaction was the
+   * correct one. The texture stays — monospace, uppercase, fixed order — and
+   * the words are words.
+   */
+  const lead = isLive
+    ? `● Live — ${event.name}`
+    : event.dateTbd
+      ? `Next · ${competitionName} · ${event.dateLabel?.trim() || "date to be announced"}`
+      : `Next · ${competitionName} · ${event.name}`;
 
   return (
-    <div className="border-line bg-surface/60 border-b">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2 text-xs md:px-6">
-        {/* Which league. Never omitted — see the note above. */}
-        <Link
-          href={`/competitions/${competitionSlug}`}
-          className="text-ink-dim hover:text-ink-muted font-display shrink-0 font-semibold tracking-wide uppercase transition-colors"
-        >
-          {isLive ? (
-            <span className="text-live inline-flex items-center gap-1.5">
-              <span className="bg-live size-1.5 animate-pulse rounded-full" />
-              Live
-            </span>
-          ) : (
-            "Next"
-          )}
-          <span className="text-ink-dim/60"> · </span>
-          {competitionName}
-        </Link>
-
+    /* A filled bar, not a dim rule. It was steel-on-charcoal and disappeared
+       into the header above it; as a solid band it reads as the one piece of
+       standing information on the page. Red when a league is live — the only
+       place that colour is allowed — and cyan otherwise, with dark ink on top
+       because cyan at full strength cannot carry white text. */
+    <div
+      /* NOT the `ticker` utility here. That utility sets its own colour
+         (--color-ink-dim), which lands in the same cascade layer as the text
+         colour below and can win depending on source order — the result is
+         steel text on a cyan field, which is what "unleserlich weil es auch in
+         blau ist" describes. On a coloured bar the type spec is applied
+         directly and the colour is stated once, with nothing to override it. */
+      className={cn(
+        "font-mono border-b-2 text-[0.75rem] tracking-[0.08em] uppercase",
+        isLive ? "border-live bg-live" : "border-volt bg-volt",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 md:px-6",
+          isLive ? "text-white" : "text-volt-ink",
+        )}
+      >
+        {/* `text-current`, explicitly. The base layer paints every anchor cyan,
+            and on a cyan bar that is cyan on cyan — the lead text vanished
+            entirely. Same trap as the headings and the wordmark: on this site
+            far more things are anchors than the prototype assumed. */}
         <Link
           href={`/events/${event.slug}`}
-          className="text-ink hover:text-volt min-w-0 truncate font-medium transition-colors"
+          className="min-w-0 truncate font-bold text-current transition-opacity hover:opacity-70"
         >
-          {event.name}
+          {lead}
         </Link>
 
-        {where ? (
-          <span className="text-ink-dim hidden truncate lg:inline">{where}</span>
-        ) : null}
-
-        {/* Pushed right on wide screens, wraps underneath on a phone. */}
-        <div className="ml-auto flex items-center gap-4">
-          {isLive ? null : event.dateTbd ? (
-            /*
-             * Announced, not scheduled.
-             *
-             * This slot used to read "Date set, time TBA" for anything with a
-             * TBA time -- which became a lie the moment the schedule started
-             * carrying announced-only fixtures, because for those the date is
-             * NOT set. `starts_at` on those rows is a placeholder we invented
-             * so the calendar can sort. Print the label the announcement
-             * actually gave and nothing else.
-             */
-            <span className="text-ink-muted">
-              {event.dateLabel?.trim() || "Date TBA"}
-            </span>
-          ) : event.endsAt ? (
-            /*
-             * A season, not a night.
-             *
-             * UFB's Season 2 runs 1 October to 31 March. Counting down to its
-             * first day is meaningless and "Date set, time TBA" is worse -- it
-             * describes a six-month window as though it were an evening whose
-             * start time had not been announced. Print the window.
-             */
-            <span className="text-ink-muted">
-              {formatRange(
-                event.startsAt,
-                event.endsAt,
-                dateZone(event.timezone, event.startTimeTbd),
-              )}
-            </span>
-          ) : event.startTimeTbd ? (
-            // No countdown to an hour nobody announced. The date still reads,
-            // via EventTime below.
-            <span className="text-ink-muted">Date set, time TBA</span>
-          ) : (
-            <Countdown
-              startsAt={event.startsAt.toISOString()}
-              className="text-volt font-display font-semibold"
-            />
-          )}
-
-          {/* Suppressed entirely for an announced-only fixture: this converts a
-              stored instant between two timezones, and converting a placeholder
-              produces a confident wrong answer in two clocks instead of one. */}
-          {event.dateTbd || event.endsAt ? null : (
-            <EventTime
-              startsAt={event.startsAt.toISOString()}
-              timeZone={event.timezone}
-              city={event.city}
-              timeTbd={event.startTimeTbd}
-              showDate={false}
-              className="text-ink-dim hidden sm:inline"
-            />
-          )}
-
-          {/* The where-to-watch link, promoted out of the event page. UFC
-              gives this its own button in the nav and on every event row
-              because rights are fragmented; almost every event here is on
-              somebody else's channel, so it matters more. */}
-          {event.broadcastUrl ? (
-            <a
-              href={event.broadcastUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-ink-muted hover:text-volt inline-flex shrink-0 items-center gap-1 font-medium transition-colors"
-            >
-              <Tv className="size-3.5" />
-              <span className="hidden sm:inline">
-                {event.broadcastName?.trim() || "Where to watch"}
-              </span>
-            </a>
-          ) : (
-            <Link
-              href={`/events/${event.slug}`}
-              className="text-ink-muted hover:text-volt inline-flex shrink-0 items-center gap-0.5 font-medium transition-colors"
-            >
-              {isLive ? "Watch" : "Fight card"}
-              <ChevronRight className="size-3.5" />
-            </Link>
-          )}
-        </div>
+        {/* What the record holds. Open questions used to sit here and do not
+            any more: a bar that announces "8 open questions" on every page
+            advertises the site's gaps above its content. That list is worth
+            keeping and worth linking — from the footer, where an index
+            belongs. */}
+        <span className="hidden shrink-0 sm:inline">
+          {`${counts.leagues} leagues · ${counts.results} results · ${counts.machines} machines`}
+        </span>
       </div>
     </div>
   );

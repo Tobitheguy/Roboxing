@@ -286,6 +286,9 @@ export default async function CompetitionPage(
                       key={channel.id}
                       name={channel.name}
                       url={channel.url}
+                      /* No availability chip. "Embedded" / "Never
+                         published" is production bookkeeping — how WE hold
+                         the link, not where to watch. */
                     />
                   ))}
                 </div>

@@ -413,6 +413,12 @@ Nothing here is a sanctioned result and nothing here reaches a standings table. 
       model: "T1",
       manufacturerId: makerId.get("booster-robotics"),
       teamId: null,
+      // From Booster's own T1 product page, read September 2026: "~1.2m,
+      // ~30kg, 23-41 DoFs". The DoF range is a configuration option, so the
+      // base figure is recorded and the range lives in the machine's reading.
+      heightCm: 120,
+      weightGrams: 30_000,
+      degreesOfFreedom: 23,
       priceUsd: 33_949,
       priceNote: "Approximate.",
       purchaseUrl: "https://www.boosterobotics.com",

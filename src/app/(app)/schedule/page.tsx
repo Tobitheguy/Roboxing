@@ -13,7 +13,7 @@ import { LivePill } from "@/components/live-pill";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { safeTimeZone } from "@/lib/timezones";
 import {
-  getCompetitions,
+  getLeagues,
   getUpcomingBouts,
   getUpcomingEvents,
 } from "@/lib/queries";
@@ -26,7 +26,12 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
   const competition = Array.isArray(raw) ? raw[0] : raw;
 
   const [competitions, events, bouts] = await Promise.all([
-    getCompetitions(),
+    // getLeagues, not getCompetitions: the filter is a list of LEAGUES, and
+    // `getCompetitions` also returns the exhibitions container — a row that
+    // exists so a manufacturer's sparring video has somewhere to hang without
+    // inventing a competition for it. Listing it as a filter chip presented it
+    // as a league, which it is not.
+    getLeagues(),
     getUpcomingEvents(competition),
     getUpcomingBouts(competition),
   ]);

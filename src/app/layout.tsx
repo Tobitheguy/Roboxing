@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Oswald } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import {
+  Anton,
+  Archivo,
+  JetBrains_Mono,
+  Noto_Sans_SC,
+} from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { roboxingLocalization } from "@/components/auth/localization";
@@ -8,25 +12,53 @@ import { roboxingLocalization } from "@/components/auth/localization";
 import "./globals.css";
 
 /**
- * The site's ONE typeface, per Tobias's instruction of 2026-09-08: "generell
- * braucht die gesamte seite die gleiche font type". Oswald carries display
- * AND body — Inter was removed rather than left loaded-but-unused, so the
- * decision is enforced by the bundle, not by discipline. Geist Mono stays for
- * stream keys and timecodes only: those are technical strings where digit
- * alignment is function, not typography.
+ * Three faces, three jobs, no overlap (DIR_03).
+ *
+ * The site ran on Oswald alone — one face for everything, which was a
+ * deliberate instruction and the right call while the design was monochrome
+ * and typographic. The new identity separates the jobs instead:
+ *
+ *   Anton    display only. Results, machine names, headlines. Always
+ *            uppercase, never a sentence. Single weight — it only has one.
+ *   Archivo  every sentence. Never a headline.
+ *   Mono     the telemetry ticker, IDs, timecodes, scores, confidence chips.
+ *
+ * NOTO SANS SC IS NOT OPTIONAL. Anton has no CJK coverage at all, and this
+ * record is full of Chinese: machine names (斗牛士), pilot names (陆鑫), a
+ * league entry keyword (报名). Without a CJK fallback on every stack those
+ * render as boxes — which on a site whose whole claim is knowing which machine
+ * is which would be worse than ugly.
  */
-const oswald = Oswald({
-  variable: "--font-oswald",
+const anton = Anton({
+  variable: "--font-anton",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
   display: "swap",
 });
 
-/** Timecodes, stream keys, robot model numbers. */
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
   display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/*
+ * Loaded for its glyph coverage, not its personality. `preload: false` because
+ * the subset is large and most pages never need it — the browser fetches it
+ * when a CJK character actually appears rather than on every first paint.
+ */
+const notoSC = Noto_Sans_SC({
+  variable: "--font-noto-sc",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -45,7 +77,10 @@ export const viewport: Viewport = {
   // Matches --color-canvas. This is the colour a mobile browser paints its
   // chrome and its overscroll with, so a stale value here shows up as a dark
   // band above a light page on every phone.
-  themeColor: "#F6F6F3",
+  /* The phone's browser chrome, which sits directly above the header and is
+     the first colour anyone sees. It was still the retired light canvas, so
+     a dark site opened under a cream bar. */
+  themeColor: "#0B0F10",
   colorScheme: "light",
 };
 
@@ -81,19 +116,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // the largest text on the sign-in screen. See localization.ts — this is
       // a patch over a dashboard setting, not the fix.
       localization={roboxingLocalization}
-      // Clerk's own UI, themed to the light palette. The `dark` theme import
-      // is gone: leaving it on would render a near-black sign-in card in the
-      // middle of a white page, which reads as a third-party interruption
-      // rather than part of the site.
+      /*
+       * Clerk's own UI, themed to DIR_03.
+       *
+       * These four variables are the ONLY styling hook that works — see
+       * components/auth/appearance.tsx for why the `elements` overrides were
+       * deleted. They were still set to the retired light palette, so the
+       * sign-in card rendered as a white rounded box in the middle of a void
+       * page: a third-party interruption rather than part of the site.
+       *
+       * `colorDanger` is amber, NOT the signal red. Red on this site means
+       * broadcasting right now, and a form validation error is not that. This
+       * is the one place the rule would have been broken by inattention rather
+       * than by choice.
+       *
+       * No `colorText`: Core 3 dropped it. Clerk derives the foreground from
+       * colorBackground, which is the dark panel here, so the text comes out
+       * light on its own.
+       */
       appearance={{
         variables: {
-          colorPrimary: "#14161A",
-          colorBackground: "#FFFFFF",
-          // No `colorText` — Core 3 dropped it from Variables. Clerk derives
-          // its foreground from colorBackground, which is white here, so the
-          // text comes out dark on its own.
-          colorDanger: "#C4162B",
-          borderRadius: "0.5rem",
+          colorPrimary: "#00E5D0",
+          colorBackground: "#14191A",
+          colorDanger: "#FFB300",
+          borderRadius: "0",
         },
       }}
     >
@@ -104,7 +150,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         // palette; the palette is light now, and leaving it on would apply
         // dark-mode overrides on top of light tokens — which is how you get a
         // white page with dark-grey form controls on it.
-        className={`${oswald.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${anton.variable} ${archivo.variable} ${jetbrainsMono.variable} ${notoSC.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col">{children}</body>
       </html>

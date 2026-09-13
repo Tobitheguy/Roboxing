@@ -44,6 +44,14 @@ config({ path: ".env" });
  * `youtube.com/feeds/videos.xml?channel_id=...`, and READ THE TITLES. A
  * plausible handle that resolves is exactly the shape of a wrong link.
  *
+ * NAMES SAY WHO, ICONS SAY WHERE. A row used to read "Hero Esports on
+ * YouTube" or "@realheroesports" or "CCTV Video News Agency" — the platform
+ * spelled out in words beside a glyph that already says it, three times over
+ * on one card. The pill now carries the icon and the account holder, and the
+ * platform lives in the icon and the tooltip. Where one league has two
+ * channels from the same owner (EngineAI's site and its YouTube), the icons
+ * tell them apart.
+ *
  * Usage: npm run db:seed-watch
  */
 async function main() {
@@ -65,25 +73,36 @@ async function main() {
     url: string;
     note: string | null;
     confidence: "confirmed" | "reported" | "unconfirmed";
+    /*
+     * Only set where it has actually been ESTABLISHED. Left undefined means
+     * nobody has checked, and the page renders that as "not checked" rather
+     * than guessing — which is the whole reason the column is nullable.
+     */
+    availability?:
+      | "embedded"
+      | "link_only"
+      | "geo_locked"
+      | "vod_removed"
+      | "never_published";
   }[] = [
     /* ---- URKL: EngineAI runs it and posts it ---------------------------- */
     {
       competition: "urkl",
-      name: "urkl.org",
+      name: "URKL",
       url: "https://urkl.org/",
       note: "The league's own site. Opening-night footage is posted here.",
       confidence: "confirmed",
     },
     {
       competition: "urkl",
-      name: "EngineAI on YouTube",
+      name: "EngineAI",
       url: "https://www.youtube.com/@EngineAIRobot",
       note: "The organiser, and the maker of every robot in the league.",
       confidence: "reported",
     },
     {
       competition: "urkl",
-      name: "en.engineai.com.cn",
+      name: "EngineAI",
       url: "https://en.engineai.com.cn/",
       note: null,
       confidence: "confirmed",
@@ -92,28 +111,31 @@ async function main() {
     /* ---- UFB: the only league with a real live channel ------------------- */
     {
       competition: "ufb",
-      name: "Twitch",
+      name: "UFB",
       url: "https://www.twitch.tv/ufb0ts",
       note: "Live and on replay. The channel is ufb0ts — with a zero.",
       confidence: "confirmed",
+      // Verified by embedding it: the player loads and the parent check
+      // passes. See src/components/live-stream-player.tsx.
+      availability: "embedded",
     },
     {
       competition: "ufb",
-      name: "play.ufb.gg",
+      name: "Play & pilot",
       url: "https://play.ufb.gg/",
       note: "One account to watch and to pilot — UFB lets you drive from the browser.",
       confidence: "confirmed",
     },
     {
       competition: "ufb",
-      name: "X",
+      name: "UFB",
       url: "https://x.com/UFBots",
       note: null,
       confidence: "confirmed",
     },
     {
       competition: "ufb",
-      name: "ultimatebots.com",
+      name: "Ultimate Bots",
       url: "https://www.ultimatebots.com/",
       note: null,
       confidence: "confirmed",
@@ -122,21 +144,21 @@ async function main() {
     /* ---- CyberHero: Hero Esports' own channels -------------------------- */
     {
       competition: "cyberhero",
-      name: "Hero Esports on YouTube",
+      name: "Hero Esports",
       url: "https://www.youtube.com/@realheroesports",
       note: "Riyadh was invite-only with no confirmed stream, so footage appears here first.",
       confidence: "confirmed",
     },
     {
       competition: "cyberhero",
-      name: "X",
+      name: "Hero Esports",
       url: "https://x.com/realheroesports",
       note: null,
       confidence: "confirmed",
     },
     {
       competition: "cyberhero",
-      name: "heroesports.com",
+      name: "Hero Esports",
       url: "https://www.heroesports.com/",
       note: null,
       confidence: "confirmed",
@@ -145,14 +167,14 @@ async function main() {
     /* ---- Iron Fist King: Unitree's machines, CMG's broadcast ------------ */
     {
       competition: "iron-fist-king",
-      name: "Unitree on YouTube",
+      name: "Unitree",
       url: "https://www.youtube.com/@unitreerobotics",
       note: "All four robots were Unitree G1s; Unitree posts its own fight footage.",
       confidence: "reported",
     },
     {
       competition: "iron-fist-king",
-      name: "CCTV Video News Agency",
+      name: "CCTV News",
       url: "https://www.youtube.com/@CCTVVideoNewsAgency",
       note: "CMG's English-language news channel — where its coverage is findable outside China.",
       confidence: "reported",
@@ -161,14 +183,14 @@ async function main() {
     /* ---- CMG2026 -------------------------------------------------------- */
     {
       competition: "cmg-2026",
-      name: "CCTV Video News Agency",
+      name: "CCTV News",
       url: "https://www.youtube.com/@CCTVVideoNewsAgency",
       note: "CMG in English — the realistic way to see one of its events from outside China.",
       confidence: "reported",
     },
     {
       competition: "cmg-2026",
-      name: "CCTV on YouTube",
+      name: "CCTV",
       url: "https://www.youtube.com/@cctv",
       note: null,
       confidence: "reported",
@@ -177,7 +199,7 @@ async function main() {
     /* ---- World Humanoid Robot Games ------------------------------------- */
     {
       competition: "world-humanoid-robot-games",
-      name: "CCTV Video News Agency",
+      name: "CCTV News",
       url: "https://www.youtube.com/@CCTVVideoNewsAgency",
       note: "Carried the Games in English. The fighting events specifically are hard to find — see Open Questions.",
       confidence: "reported",
@@ -186,23 +208,26 @@ async function main() {
     /* ---- Mecha King ----------------------------------------------------- */
     {
       competition: "engineai-mecha-king",
-      name: "EngineAI on YouTube",
+      name: "EngineAI",
       url: "https://www.youtube.com/@EngineAIRobot",
       note: "EngineAI staged it. No footage of the final and no result have ever been published.",
       confidence: "reported",
+      // The event was fought behind closed doors and nothing has ever
+      // surfaced — not a missing link, an absent one.
+      availability: "never_published",
     },
 
     /* ---- REK ------------------------------------------------------------ */
     {
       competition: "rek",
-      name: "rek.com",
+      name: "REK",
       url: "https://rek.com/",
       note: null,
       confidence: "reported",
     },
     {
       competition: "rek",
-      name: "X",
+      name: "REK",
       url: "https://x.com/REKrobot",
       note: null,
       confidence: "reported",
@@ -226,6 +251,7 @@ async function main() {
       // them, which is not information — it is a column of the same word.
       region: null,
       note: row.note,
+      availability: row.availability ?? null,
       orderIndex: order++,
       confidence: row.confidence,
     });

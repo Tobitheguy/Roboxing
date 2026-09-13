@@ -46,7 +46,6 @@ export const NAV_ITEMS: NavItem[] = [
  */
 export const FOOTER_ITEMS: NavItem[] = [
   ...NAV_ITEMS,
-  { href: "/pilots", label: "Pilots" },
   { href: "/teams", label: "Teams" },
   { href: "/robots", label: "Machines" },
   { href: "/open-questions", label: "Open questions" },

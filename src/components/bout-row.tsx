@@ -42,7 +42,12 @@ function Corner({
     <div
       className={cn(
         "flex min-w-0 flex-1 items-center gap-3",
-        align === "right" && "flex-row-reverse text-right",
+        /* The mirror is a container-query, not a fact about this corner.
+           Stacked, both corners read left-to-right like any other list;
+           mirrored, they face each other across the "vs". Flipping the right
+           corner unconditionally is what made the sidebar row read
+           "CN · White E…" with the name cut off. */
+        align === "right" && "@md:flex-row-reverse @md:text-right",
       )}
     >
       <RobotAvatar
@@ -56,9 +61,15 @@ function Corner({
         <Link
           href={`/robots/${robot.slug}`}
           className={cn(
+            /* THE LOSER IS DIMMED, NOT THE WINNER TINTED.
+               The winner used to be painted cyan, which reads as a link in a
+               row full of actual links and spends the one colour this system
+               has on emphasis — cyan means structure and certainty here, not
+               "important". Full-strength ink against muted is the whole
+               signal, and it survives a greyscale screenshot. */
             "font-display block truncate text-base font-semibold tracking-tight uppercase transition-colors",
-            outcome === "win" ? "text-volt" : "text-ink hover:text-volt",
-            outcome === "loss" && "text-ink-muted",
+            outcome === "loss" ? "text-ink-muted" : "text-ink",
+            "hover:text-volt",
           )}
         >
           {robot.name}
@@ -66,7 +77,7 @@ function Corner({
         <div
           className={cn(
             "flex min-w-0 items-center gap-1.5",
-            align === "right" && "flex-row-reverse",
+            align === "right" && "@md:flex-row-reverse",
           )}
         >
           <CountryTag code={robot.teamCountry} />
@@ -83,19 +94,19 @@ function Corner({
             by a person, and the operator is named far less often than the
             machine -- so on the rare occasions it IS named, it belongs on the
             card and not in a footnote. */}
-        {robot.pilotName && robot.pilotSlug ? (
+        {/* Text, not a link. There was a /pilots index; it is gone, and a
+            name is still worth printing — this sport under-reports the people
+            driving the machines, which is why the field exists at all. */}
+        {robot.pilotName ? (
           <div
             className={cn(
               "mt-0.5 flex min-w-0 items-center",
-              align === "right" && "justify-end",
+              align === "right" && "@md:justify-end",
             )}
           >
-            <Link
-              href={`/pilots/${robot.pilotSlug}`}
-              className="text-ink-dim hover:text-ink-muted block truncate text-xs transition-colors"
-            >
+            <span className="text-ink-dim block truncate text-xs">
               Piloted by {robot.pilotName}
-            </Link>
+            </span>
           </div>
         ) : null}
       </div>
@@ -137,7 +148,13 @@ export function BoutRow({
   };
 
   return (
-    <div className={cn("px-4 py-4 sm:px-6", className)}>
+    /* A CONTAINER, NOT A BREAKPOINT.
+       This row appears at full page width on /results and inside a ~350px
+       sidebar on an event page. Viewport breakpoints cannot tell those apart
+       — the window is the same size in both — which is why the sidebar copy
+       came out as two truncated names either side of a "vs". The row now
+       measures ITSELF and stacks below 28rem. */
+    <div className={cn("@container px-4 py-4 sm:px-6", className)}>
       {showEvent || showLeague ? (
         <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           {showLeague ? (
@@ -184,10 +201,10 @@ export function BoutRow({
         </p>
       ) : null}
 
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex flex-col gap-2 @md:flex-row @md:items-center @md:gap-4">
         <Corner robot={bout.robotA} outcome={outcomeFor(bout.robotA)} />
 
-        <div className="flex shrink-0 flex-col items-center gap-1 px-1">
+        <div className="flex shrink-0 items-center gap-1 @md:flex-col @md:px-1">
           <span className="font-display text-ink-dim text-xs font-semibold tracking-widest uppercase">
             vs
           </span>

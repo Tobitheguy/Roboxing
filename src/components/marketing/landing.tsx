@@ -47,7 +47,9 @@ export async function Landing() {
         className="pointer-events-none absolute inset-0 opacity-[0.55]"
         style={{
           backgroundImage:
-            "linear-gradient(to right, #e2e2dc 1px, transparent 1px), linear-gradient(to bottom, #e2e2dc 1px, transparent 1px)",
+            // #1f2728, the DIR_03 rule colour. This was #e2e2dc, the retired LIGHT
+            // line — bright white hairlines drawn across a dark page.
+            "linear-gradient(to right, #1f2728 1px, transparent 1px), linear-gradient(to bottom, #1f2728 1px, transparent 1px)",
           backgroundSize: "72px 72px",
           maskImage:
             "radial-gradient(ellipse 90% 60% at 50% 0%, #000 30%, transparent 80%)",
@@ -60,7 +62,9 @@ export async function Landing() {
         className="pointer-events-none absolute inset-x-0 -top-40 h-96 opacity-[0.18] blur-3xl"
         style={{
           background:
-            "radial-gradient(ellipse 60% 100% at 50% 100%, #14161a 0%, transparent 70%)",
+            // Cyan, faint. The wash was #14161a — the old ink — which on void is
+            // a dark smudge on a dark page, i.e. nothing at all.
+            "radial-gradient(ellipse 60% 100% at 50% 100%, #00e5d0 0%, transparent 70%)",
         }}
       />
 

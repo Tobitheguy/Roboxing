@@ -6,10 +6,9 @@ import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { CompetitionFilter } from "@/components/competition-filter";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeading, PageShell } from "@/components/page-shell";
-import { StatRow, StatTile } from "@/components/stat-tile";
 import {
   getAllResults,
-  getCompetitions,
+  getLeagues,
   getMachineRecords,
 } from "@/lib/queries";
 
@@ -21,15 +20,30 @@ export default async function ResultsPage(props: PageProps<"/results">) {
   const competition = Array.isArray(raw) ? raw[0] : raw;
 
   const [competitions, results, machineRecords] = await Promise.all([
-    getCompetitions(),
+    // getLeagues, not getCompetitions: the filter is a list of LEAGUES, and
+    // `getCompetitions` also returns the exhibitions container — a row that
+    // exists so a manufacturer's sparring video has somewhere to hang without
+    // inventing a competition for it. Listing it as a filter chip presented it
+    // as a league, which it is not.
+    getLeagues(),
     getAllResults(competition),
     getMachineRecords(),
   ]);
 
-  const finishes = results.filter(
-    (b) => b.result?.method === "ko" || b.result?.method === "tko",
-  ).length;
-  const draws = results.filter((b) => b.result?.method === "draw").length;
+  /*
+   * Counts per confidence state, not per method.
+   *
+   * The old tiles counted finishes and draws — sensible for a sport with a
+   * steady stream of results, and meaningless here, where the whole table is
+   * two rows. What a reader of THIS record wants to know first is how much of
+   * it is corroborated, so the summary counts sourcing.
+   */
+  const byConfidence = {
+    confirmed: results.filter((b) => b.result?.confidence === "confirmed").length,
+    reported: results.filter((b) => b.result?.confidence === "reported").length,
+    unconfirmed: results.filter((b) => b.result?.confidence === "unconfirmed")
+      .length,
+  };
 
   // Group by event so a night of fights reads as a night rather than a stream.
   const byEvent = new Map<number, typeof results>();
@@ -72,12 +86,23 @@ export default async function ResultsPage(props: PageProps<"/results">) {
         </Card>
       ) : (
         <>
-          <StatRow className="mb-8">
-            <StatTile label="Bouts" value={results.length} />
-            <StatTile label="Finishes" value={finishes} emphasis />
-            <StatTile label="Draws" value={draws} />
-            <StatTile label="Events" value={byEvent.size} />
-          </StatRow>
+          {/* One hue, three densities — the same grammar as the chips on the
+              rows below, so the summary and the table teach each other. A
+              reader learns the system here and can then scan the whole page.
+              A state with no rows still prints its zero: "nothing unconfirmed"
+              is a fact about the record, not an empty slot. */}
+          <div className="border-line mb-8 flex flex-wrap items-center gap-2 border-y-2 py-3">
+            <span className="ticker mr-2">{`${results.length} bouts · ${byEvent.size} events`}</span>
+            <span className="chip-confirmed font-mono px-2.5 py-[5px] text-[11px] font-bold tracking-[0.1em] uppercase">
+              {`Confirmed ${byConfidence.confirmed}`}
+            </span>
+            <span className="chip-reported font-mono px-2 py-[3px] text-[11px] font-bold tracking-[0.1em] uppercase">
+              {`Reported ${byConfidence.reported}`}
+            </span>
+            <span className="chip-unconfirmed font-mono px-2 py-[3px] text-[11px] font-bold tracking-[0.1em] uppercase">
+              {`Unconfirmed ${byConfidence.unconfirmed}`}
+            </span>
+          </div>
 
           <div className="space-y-6">
             {[...byEvent.values()].map((eventBouts) => {

@@ -38,7 +38,10 @@ export default async function OpenQuestionsPage() {
   const answered = rows.filter((r) => r.question.answeredAt);
 
   return (
-    <PageShell>
+    /* Paper, like the articles — see the note in news/[slug]. These are read,
+       not scanned. */
+    <div className="on-paper bg-paper text-paper-ink flex-1">
+      <PageShell>
       <PageHeading
         eyebrow="What we don't know"
         title="Open questions"
@@ -138,6 +141,7 @@ export default async function OpenQuestionsPage() {
           </div>
         </>
       ) : null}
-    </PageShell>
+      </PageShell>
+    </div>
   );
 }

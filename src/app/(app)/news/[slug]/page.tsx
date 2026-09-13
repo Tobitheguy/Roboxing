@@ -67,9 +67,26 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
   const { post, eventSlug, eventName } = row;
 
   return (
-    <PageShell>
+    /*
+     * Paper. Long-form inverts onto #F2F0EA with #0B0F10 ink.
+     *
+     * Not a theme toggle and not user-selectable — it is a surface with a job.
+     * Void is scanned, paper is read, and the inversion is the signal that
+     * somebody sat down and thought about this piece rather than filed it.
+     *
+     * `on-paper` also deepens links to --color-volt-deep: cyan at full
+     * strength measures 1.7:1 on paper and fails as text. This is the one
+     * place the accent has to change value.
+     */
+    /* Full-bleed: the paper is the PAGE FIELD, not a card floating on void.
+       Wrapping the shell rather than styling it is what makes the inversion
+       reach the gutters — an article on a paper column inside a dark frame
+       reads as a widget, which is the opposite of "somebody sat down and wrote
+       this". `flex-1` so short pieces still fill the viewport. */
+    <div className="on-paper bg-paper text-paper-ink flex-1">
+      <PageShell>
       <BackLink href="/news" label="All coverage" />
-      <article className="mx-auto max-w-3xl">
+      <article className="mx-auto max-w-[680px]">
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <Badge variant="outline">
             {post.kind === "clip" ? "Clip" : "Analysis"}
@@ -143,6 +160,7 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
         ) : null}
 
       </article>
-    </PageShell>
+      </PageShell>
+    </div>
   );
 }

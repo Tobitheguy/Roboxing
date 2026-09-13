@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { ImageResponse } from "next/og";
+
+import { CARD, CARD_BODY_FONT, CARD_FONT, displayFont } from "@/lib/card-theme";
 
 import { getPostBySlug } from "@/lib/queries";
 
@@ -27,8 +26,6 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "Roboxing story";
 
-const INK = "#14161A";
-const DIM = "#9BA0A8";
 
 /**
  * Long headlines have to shrink or they overflow the card silently — satori
@@ -47,12 +44,7 @@ export default async function PostOpengraphImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const oswald = await readFile(
-    join(process.cwd(), "src/app/_fonts/oswald-700.ttf"),
-  );
-  const fonts = [
-    { name: "Oswald", data: oswald, weight: 700 as const, style: "normal" as const },
-  ];
+  const fonts = await displayFont();
 
   const row = await getPostBySlug(slug);
   const title = row?.post.title ?? "Roboxing";
@@ -67,16 +59,16 @@ export default async function PostOpengraphImage({
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: INK,
+          background: CARD.void,
           padding: "70px 80px",
-          fontFamily: "Oswald",
+          fontFamily: CARD_FONT,
         }}
       >
         <div
           style={{
             display: "flex",
             fontSize: "30px",
-            color: DIM,
+            color: CARD.dim,
             letterSpacing: "6px",
             textTransform: "uppercase",
           }}
@@ -89,7 +81,7 @@ export default async function PostOpengraphImage({
             style={{
               display: "flex",
               fontSize: `${headlineSize(title)}px`,
-              color: "#FFFFFF",
+              color: CARD.ink,
               lineHeight: 1.1,
               textTransform: "uppercase",
             }}
@@ -102,7 +94,12 @@ export default async function PostOpengraphImage({
                 display: "flex",
                 marginTop: "26px",
                 fontSize: "32px",
-                color: DIM,
+                color: CARD.dim,
+                /* The summary is a sentence, so it is set in the body face.
+                   The card's root fontFamily is the display face and
+                   everything inherits it — which is how a paragraph ends up
+                   in Anton without anyone deciding it should. */
+                fontFamily: CARD_BODY_FONT,
                 lineHeight: 1.3,
               }}
             >
@@ -115,7 +112,7 @@ export default async function PostOpengraphImage({
           style={{
             display: "flex",
             fontSize: "28px",
-            color: DIM,
+            color: CARD.dim,
             letterSpacing: "2px",
             textTransform: "uppercase",
           }}

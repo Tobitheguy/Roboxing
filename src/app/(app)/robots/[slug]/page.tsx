@@ -51,7 +51,10 @@ function MachineFigure({ image }: { image: MachineImage }) {
     <figure className="min-w-0">
       <div
         className={`border-line relative aspect-[16/10] overflow-hidden border ${
-          image.fit === "contain" ? "bg-white" : "bg-surface-2"
+          /* One plate colour. A white plate was the light skin's way of
+             letting a cut-out product shot sit on its own ground; on void it
+             is a lit block in the middle of a dark page. */
+          image.fit === "contain" ? "bg-surface-2" : "bg-surface-2"
         }`}
       >
         <Image
@@ -168,7 +171,6 @@ export default async function RobotPage(props: PageProps<"/robots/[slug]">) {
           tagline={showcase.tagline}
           stats={showcase.stats}
           image={showcase.hero}
-          tone={showcase.heroTone}
         />
       ) : (
         <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">

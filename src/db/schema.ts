@@ -102,6 +102,32 @@ export const competitionClass = pgEnum("competition_class", [
  */
 export const eventKind = pgEnum("event_kind", ["competition", "exhibition"]);
 
+/**
+ * Whether the footage for a channel can actually be watched, and where.
+ *
+ * DIR_03's watch layer, and the reason that page is worth more than a list of
+ * links. Two of these are derivable from the platform — a Twitch or YouTube URL
+ * is embeddable, a Bilibili one is not — and three are FACTS SOMEBODY HAS TO
+ * ESTABLISH:
+ *
+ *   `geo_locked`      it plays, in one region, and not here.
+ *   `vod_removed`     it existed and is gone. The row stays: a stream that was
+ *                     taken down is part of the record, and tracking the
+ *                     disappearance is the whole point.
+ *   `never_published` no footage ever surfaced. Mecha King was fought behind
+ *                     closed doors and nothing has ever been released.
+ *
+ * Null means nobody has checked, which is different from "link only" and must
+ * not be rendered as though it were.
+ */
+export const watchAvailability = pgEnum("watch_availability", [
+  "embedded",
+  "link_only",
+  "geo_locked",
+  "vod_removed",
+  "never_published",
+]);
+
 /** What a person did, on a site that until now had no people on it at all. */
 export const pilotRole = pgEnum("pilot_role", [
   "pilot",
@@ -1183,6 +1209,12 @@ export const watchChannels = pgTable(
     url: text("url"),
     /** "China", "Worldwide", "US only" — prose, because rights maps are prose. */
     region: text("region"),
+    /**
+     * Whether this can be watched, and how. Null until somebody checks —
+     * which is not the same as "link only" and is not rendered as though it
+     * were. See the enum for why three of the five cannot be derived.
+     */
+    availability: watchAvailability("availability"),
     /** "Live only, no stream" and similar caveats worth more than the link. */
     note: text("note"),
     /** Ordering on the page. Lower first. */

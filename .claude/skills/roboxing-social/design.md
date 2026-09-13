@@ -8,7 +8,10 @@ are literal and copy-pasteable. `readme.md` is the human reference and explains
   fighting.
 - **Domain:** roboxing.tv
 - **Scope:** web, social cards, share images, newsletter.
-- **Validated against:** `src/app/globals.css` and the live site, 12 Sep 2026.
+- **Validated against:** `src/app/globals.css`, DIR_03 skin, 12 Sep 2026.
+- **Change of record:** DIR_03 supersedes the monochrome skin. Where this
+  file and Brand Book v2 disagree, DIR_03 wins — the book has not been
+  re-skinned and says so itself. Its RULES are current; its colours are not.
 - **Precedence:** where this file and `globals.css` disagree, **globals.css
   wins** — it is compiled, this is transcribed. Fix this file and say so.
 
@@ -21,29 +24,33 @@ an intention.
 
 | Retired | Replaced by | When |
 |---|---|---|
-| `#FF2D2D` (live red) | `#e5231f` | measured 3.4:1 on white, failed as text |
-| A coloured accent ("volt" as a hue) | `--color-volt` → `#14161a` | the brand is monochrome; the token name survives so 130+ call sites need no edit |
-| A second typeface for body | Oswald everywhere | decision 2026-09-08 |
+| Light ground `#f6f6f3` | Void `#0b0f10` | DIR_03 |
+| Monochrome accent (`--color-volt` = ink) | Instrument cyan `#00e5d0` | DIR_03 — volt NAMES a colour again |
+| `#e5231f` live red | `#ff3225` | DIR_03 |
+| Oswald, one face for everything | Anton / Archivo / JetBrains Mono | DIR_03 |
+| `--radius: 0.5rem` | `0` at every step | DIR_03 — do not reintroduce a radius scale |
+| 1px hairlines | 2px rules, never softened | DIR_03 |
+| `#FF2D2D` (live red) | superseded twice; see above | pre-DIR_03 |
 | Non-humanoid coverage (piloted mech, wheeled) | removed entirely | 12 Sep 2026 |
 
 ---
 
 ## 1 · Brand character
 
-Warm-neutral surfaces, near-black ink, **no accent colour**, one condensed
-face. The system reads **editorial and exact** — a record, not a broadcaster.
-Low chrome, no gradients, no glow, no rounded softness.
+Void ground, paper for long-form, **one system colour with a job**, three faces
+with no overlap. Flat, flush left, zero radius, 2px rules — alignment does the
+organising, nothing floats, nothing is decorated.
 
-Two registers:
+Three registers:
 
 | Register | Field | Feel |
 |---|---|---|
-| Site | `#f6f6f3` canvas, white cards | Restrained, dense, factual |
-| Card / social | `#14161a` ink field, canvas text | High contrast, one fact per card |
+| Site | `#0b0f10` void, `#14191a` panels | Scanned. Dense, instrument-like |
+| Long-form | `#f2f0ea` paper, `#0b0f10` ink | Read. Somebody sat down and wrote this |
+| Card / social | `#0b0f10` void | Competes inside somebody else's feed |
 
-A card is dark because it competes inside somebody else's feed. The site is
-light because it is read for minutes, not scrolled past in two seconds. Never
-apply the site's light field to a social card.
+Void is scanned, paper is read. The inversion is the signal, not a theme
+toggle and never user-selectable.
 
 ---
 
@@ -69,76 +76,86 @@ unless a database row carries it with a source.
 ## 3 · Colour
 
 ```css
---color-canvas:       #f6f6f3   /* page background */
---color-surface:      #ffffff   /* cards, table rows, header */
---color-surface-2:    #eeeeea   /* hover, popovers, inputs */
---color-line:         #e2e2dc   /* default hairline */
---color-line-strong:  #c8c8c0   /* emphasised divider */
+--color-canvas:       #0b0f10   /* void — the ground */
+--color-surface:      #14191a   /* panel — cards, rows, header */
+--color-surface-2:    #1c2223   /* hover, inputs */
+--color-line:         #1f2728   /* the 2px rule */
+--color-line-strong:  #2e3839   /* emphasised divider */
 
---color-ink:          #14161a   /* primary text — 16.4:1 on canvas */
---color-ink-muted:    #52565e   /* secondary — 7.4:1 */
---color-ink-dim:      #6d717a   /* metadata — 4.64:1 canvas, 4.98:1 surface */
+--color-paper:            #f2f0ea   /* long-form surface */
+--color-paper-ink:        #0b0f10   /* 17.1:1 on paper */
+--color-paper-ink-muted:  #3c4647   /* 9.2:1 on paper */
+--color-paper-line:       #cdc9bf
 
---color-volt:         #14161a   /* the "accent". It is ink. */
---color-volt-dim:     #3a3d44   /* hover/pressed on ink fills */
---color-volt-ink:     #ffffff   /* text on an ink fill */
+--color-ink:          #f2f0ea   /* body on void — 16.8:1 */
+--color-ink-muted:    #8a9698   /* secondary — 7.1:1 */
+--color-ink-dim:      #828e90   /* ticker, metadata — 5.71:1 */
 
---color-live:         #e5231f   /* LIVE ONLY — 4.7:1 */
---color-drift:        #a35c00   /* behind the live edge — 4.8:1 */
---color-win:          #14161a
---color-loss:         #8a8e96
+--color-volt:         #00e5d0   /* instrument cyan — structure, links, certainty */
+--color-volt-dim:     #00b3a3   /* hover/pressed on cyan fills */
+--color-volt-ink:     #062b27   /* text on a cyan fill — 12.6:1 */
+--color-volt-deep:    #00776c   /* cyan for text ON PAPER — 5.1:1 */
+
+--color-live:         #ff3225   /* BROADCASTING ONLY — 5.4:1 */
+--color-drift:        #ffb300   /* behind the live edge */
+--color-win:          #f2f0ea
+--color-loss:         #828e90
 ```
 
-**On a dark card field**, the site tokens do not apply directly. Use:
-
-```
-field       #14161A
-text        #F6F6F3
-dim text    #9BA0A8
-hairline    #2A2E35
-panel       #1D2127
-```
+Inside `.on-paper` the ink tokens are REDEFINED rather than the components
+restyled — an article inherits the whole inversion with no component edit, and
+`--color-volt` becomes `--color-volt-deep` there, because cyan at full strength
+measures 1.7:1 on paper and fails as text.
 
 ### Rules
 
-1. **`--color-live` is red and means broadcasting.** Not "important", not
-   "new", not decoration. One use, site-wide.
-2. **There is no brand colour.** Emphasis is weight, size, and inversion. A
-   card that must shout becomes an ink field with canvas text.
-3. **The loser is dimmed, not tinted.** There is no second colour to spend.
-4. Every text colour above clears WCAG AA on its intended field. Do not
-   introduce a lighter grey for "subtle" text.
+1. **`--color-live` is red and means broadcasting right now.** Not a button,
+   not an error, not a finished result, not decoration. On a normal week the
+   colour does not appear at all — which is exactly what makes it legible the
+   week it does. **While red is live, cyan drops to muted on that surface: two
+   signals at once is no signal.**
+2. **Cyan is structure, links and certainty.** It is not emphasis. A stat tile
+   painted cyan is a reader looking for a meaning that is not there — emphasis
+   is size.
+3. **On a cyan or red field, state the text colour explicitly.** The base layer
+   paints every anchor cyan, so an inherited link on a cyan bar is cyan on
+   cyan. This has caught the wordmark, every heading link, and the ticker.
+4. **The loser is dimmed, not tinted.** There is no third colour to spend.
+5. Every value above clears WCAG AA on its intended field.
 
 ---
 
 ## 4 · Typography
 
-**One face: Oswald.** `--font-display` and `--font-sans` both resolve to it.
-Mono (`--font-geist-mono`) is for timecodes, stream keys and IDs only.
+**Three faces, three jobs, no overlap.**
+
+| Role | Face | Used for |
+|---|---|---|
+| Display | **Anton** (400 only) | Results, machine names, headlines. Always uppercase, never a sentence. |
+| Body | **Archivo** (400–700) | Every sentence. Never a headline. |
+| Mono | **JetBrains Mono** | Ticker, IDs, timecodes, scores, confidence chips, nav, filter chips. |
+| CJK | **Noto Sans SC** | Fallback on every stack. Anton has no CJK and machine names are routinely Chinese. |
 
 ```css
---font-display: var(--font-oswald), "Arial Narrow", sans-serif;
---font-sans:    var(--font-oswald), "Arial Narrow", sans-serif;
---font-mono:    var(--font-geist-mono), ui-monospace, monospace;
+--font-display: var(--font-anton), "Anton", "Noto Sans SC", sans-serif;
+--font-sans:    var(--font-archivo), "Archivo", "Noto Sans SC", sans-serif;
+--font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
 ```
 
-| Token | Size | Line height | Tracking | Weight |
-|---|---|---|---|---|
-| `--text-display` | `clamp(2.75rem, 8vw, 5.5rem)` | `0.88` | `-0.02em` | 700 |
-| `--text-hero` | `clamp(2rem, 5vw, 3.25rem)` | `0.95` | `-0.015em` | 700 |
-| `--text-title` | `clamp(1.375rem, 2.5vw, 1.875rem)` | `1.1` | `-0.01em` | 600 |
-| `--text-eyebrow` | `0.6875rem` | `1` | `0.14em` | 600 |
+**TRACKING IS 0.03em ON DISPLAY, NOT DIR_03's 0.005em.** Anton is extremely
+condensed and its caps very nearly touch at their default fit; at 0.005em a
+long name — ULTIMATE ROBOT KNOCK-OUT LEGEND — closes into an unreadable block.
+The prototype's headlines are one word, where the tight fit looks deliberate.
+Small headings (`h3`) take 0.055em and drop to 92% opacity: optical sizing runs
+the opposite way to intuition, and #F2F0EA on #0B0F10 at 16.8:1 blooms at small
+sizes.
 
-Headings are uppercase. Eyebrows are uppercase. Body is sentence case.
-Numbers use the `tabular` class so scores and times align in a column.
+**`font-synthesis-weight: none` is set globally.** Anton ships one weight and
+the codebase still carries `font-bold` from the Oswald era; without this the
+browser fakes the weight by smearing the glyphs, which welds adjacent letters
+together.
 
-**Image routes must read the font off disk**, never fetch it:
-
-```ts
-const oswald = await readFile(
-  join(process.cwd(), "src/app/_fonts/oswald-700.ttf"),
-);
-```
+**Image routes must read the font off disk**, never fetch it.
 
 ### Card type scale (fixed px, no clamp)
 
@@ -155,23 +172,35 @@ const oswald = await readFile(
 ## 5 · Shape and motion
 
 ```css
---radius: 0.5rem;                              /* tight — precision, not softness */
+--radius: 0;                                   /* zero at every step */
 --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 ```
 
-No pills. No shadows beyond the shadcn defaults already mapped. Borders are
-`1px` hairlines; `2px` only to mark a winner on a card.
+**Zero radius everywhere. Do not reintroduce a radius scale.** No pills, no
+shadows, no gradients, no glow. Rules are **2px** and never softened to
+hairlines. Everything is flush left, including labels inside wide buttons.
+
+Spacing stays on the 8px rhythm.
 
 ---
 
 ## 6 · Logo
 
-- `Logos/roboxing-r.svg` — the mark.
-- `Logos/roboxing-r-black-square.svg` — the mark on a field.
-- On a card, the wordmark is set in Oswald, uppercase, `letter-spacing: 0.16em`.
+- `public/roboxing-r.svg` — the mark, as drawn. **The SVG, never reconstructed
+  from a font.** A mark built from whatever face is loaded breaks on the next
+  type decision — it did, when Anton replaced Oswald and the header rendered a
+  black slab over the first glyph.
+- The wordmark beside it is set in the display face, uppercase, `0.04em`.
 
-Never re-typeset, recolour or outline the mark. League marks come from
-`public/leagues/` and are never redrawn.
+Rules from Brand Book v2, all current:
+
+- Clear space on all sides equals the width of the R's stem.
+- **Minimum 24px** — it must hold beside seven foreign league marks.
+- Ink on ground, or knocked out of an ink tile. **Never red. Never cyan** —
+  cyan means certainty and a mark cannot also carry a meaning.
+- Never stretched, squeezed, rotated, tilted, rounded, shadowed or glowed.
+- **Never redraw or recomposite it.** Place the supplied SVG and leave it alone.
+- League marks come from `public/leagues/` and are never redrawn either.
 
 **The identity is not final.** An earlier name/logo/colour direction was
 rejected and the decision sits with Tobias. Everything above is built so a
@@ -216,6 +245,59 @@ be inlined as data URIs; a relative path does not resolve.
 
 ---
 
+## 8a · The matchup card — the fixture poster
+
+From Brand Book v2, template B. **Two equal cells divided by a 2px rule. The
+division is the whole idea, so neither side is ever given more weight.**
+
+```
++----------------------------------------------+
+| ULTIMATE BOTS                   SEP 30, 2026 |   league left, date right
++----------------------+-----------------------+
+|   [machine photo]    |    [machine photo]    |   equal cells, 2px rule
+|   AI STRATEGIST      |    ENERGY GUARDIAN    |   name, display face
+|   Unitree G1 · CN    |    Unitree G1 · CN    |   chassis · country
++----------------------+-----------------------+
+| ROBOXING            UFB SEASON 2 · TIME TBA  |
++----------------------------------------------+
+```
+
+Verbatim from the book:
+
+- **Machine name, chassis, country.** Never a nickname we invented.
+- **A time that is genuinely unknown reads `time TBA`.** Never a guess, never
+  omitted.
+- **Live events only:** a red dot and `LIVE NOW` replace the date, and only
+  while it is happening.
+- For a single-machine profile the right cell becomes the stat block — height,
+  mass, price, record.
+- **No "V" as a headline.** The rule between the cells is the versus.
+
+**Unpaired is the normal state.** Most cards in this sport are announced as a
+number of bouts with no pairings, so both cells then read `TBA` with the bout
+number beneath — never a placeholder name. A fabricated card in the biggest
+slot on the page is the worst thing this site could publish.
+
+**ONE IMPLEMENTATION, TWO SURFACES.** `/api/social/matchup` already renders
+this as a PNG for social. The event page renders that same route rather than
+rebuilding the layout in HTML. Two implementations of one card drift, and the
+drift stays invisible until somebody puts them side by side.
+
+## 8b · The result card
+
+Template A, the workhorse. Published within two hours of a result reaching any
+confidence state above nothing.
+
+**Outcome first.** The result sits in the TOP THIRD at the largest size on the
+card — a feed decides in the upper 30% of the image, and the machines below are
+the evidence, not the headline.
+
+- **Winner named first** in the outcome line, and again on the left below.
+- **A timestamp, not an adjective.** Top right: "14 min ago". It carries the
+  urgency that "BREAKING" pretends to.
+- **Confidence label on the same baseline as the method**, never near the logo.
+- **No red anywhere.** The fight is over.
+
 ## 9 · Accuracy rules for published output
 
 These outrank every aesthetic rule in this file.
@@ -252,8 +334,15 @@ the sentence is excited.
 
 ## 11 · Open questions
 
-- The identity (name, mark, palette) is not settled. §6.
-- No dark mode exists. The `.dark` variant is mapped but the site ships light
-  only; a card's dark field is a card decision, not a theme.
+- The identity (name, mark, palette) is not settled. §6. Tobias rejected the
+  name, logo and colours and is working on his own direction; DIR_03 is the
+  skin, not the brand.
+- The two surfaces are void and paper, and which one a page gets is an
+  editorial call — void is scanned, paper is read. There is no theme toggle
+  and it is not user-selectable. A card is always void.
 - No motion system beyond one easing curve. Nothing on this site animates
   that needs one yet.
+- The favicon is still an Oswald "R" reconstructed as a path, from the era
+  when the brand was one typeface. It contradicts §logo ("never redraw or
+  recomposite the mark") and it is deliberately left alone until the rebrand
+  lands, because replacing it is a branding decision, not a cleanup.

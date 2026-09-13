@@ -31,7 +31,10 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{
           backgroundImage:
-            "linear-gradient(to right, #e2e2dc 1px, transparent 1px), linear-gradient(to bottom, #e2e2dc 1px, transparent 1px)",
+            // #1f2728, the DIR_03 rule colour. This was #e2e2dc — the retired LIGHT
+            // line — which on the void ground drew bright white lines straight
+            // through the headline.
+            "linear-gradient(to right, #1f2728 1px, transparent 1px), linear-gradient(to bottom, #1f2728 1px, transparent 1px)",
           backgroundSize: "72px 72px",
           maskImage:
             "radial-gradient(ellipse 90% 70% at 50% 0%, #000 30%, transparent 78%)",
@@ -46,7 +49,9 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         className="pointer-events-none absolute inset-x-0 -top-40 h-96 opacity-[0.10] blur-3xl"
         style={{
           background:
-            "radial-gradient(ellipse 60% 100% at 50% 100%, #14161a 0%, transparent 70%)",
+            // Cyan, and faint. The wash was #14161a — the old ink — which on a
+            // near-black ground is invisible, so the accent appeared nowhere.
+            "radial-gradient(ellipse 60% 100% at 50% 100%, #00e5d0 0%, transparent 70%)",
         }}
       />
 
