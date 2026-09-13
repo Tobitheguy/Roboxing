@@ -334,8 +334,15 @@ the sentence is excited.
 
 ## 11 · Open questions
 
-- The identity (name, mark, palette) is not settled. §6.
-- No dark mode exists. The `.dark` variant is mapped but the site ships light
-  only; a card's dark field is a card decision, not a theme.
+- The identity (name, mark, palette) is not settled. §6. Tobias rejected the
+  name, logo and colours and is working on his own direction; DIR_03 is the
+  skin, not the brand.
+- The two surfaces are void and paper, and which one a page gets is an
+  editorial call — void is scanned, paper is read. There is no theme toggle
+  and it is not user-selectable. A card is always void.
 - No motion system beyond one easing curve. Nothing on this site animates
   that needs one yet.
+- The favicon is still an Oswald "R" reconstructed as a path, from the era
+  when the brand was one typeface. It contradicts §logo ("never redraw or
+  recomposite the mark") and it is deliberately left alone until the rebrand
+  lands, because replacing it is a branding decision, not a cleanup.
