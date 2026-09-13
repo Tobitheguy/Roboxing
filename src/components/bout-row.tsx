@@ -83,19 +83,19 @@ function Corner({
             by a person, and the operator is named far less often than the
             machine -- so on the rare occasions it IS named, it belongs on the
             card and not in a footnote. */}
-        {robot.pilotName && robot.pilotSlug ? (
+        {/* Text, not a link. There was a /pilots index; it is gone, and a
+            name is still worth printing — this sport under-reports the people
+            driving the machines, which is why the field exists at all. */}
+        {robot.pilotName ? (
           <div
             className={cn(
               "mt-0.5 flex min-w-0 items-center",
               align === "right" && "justify-end",
             )}
           >
-            <Link
-              href={`/pilots/${robot.pilotSlug}`}
-              className="text-ink-dim hover:text-ink-muted block truncate text-xs transition-colors"
-            >
+            <span className="text-ink-dim block truncate text-xs">
               Piloted by {robot.pilotName}
-            </Link>
+            </span>
           </div>
         ) : null}
       </div>

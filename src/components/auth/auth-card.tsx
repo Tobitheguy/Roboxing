@@ -43,8 +43,12 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center">
+    /* `items-center` on a flex column, not two independently centred blocks.
+       The heading was centred inside max-w-md while Clerk's card centres itself
+       at its own width, so the two sat on centre lines about 24px apart —
+       close enough to look like a mistake rather than a decision. */
+    <div className="flex w-full max-w-md flex-col items-center">
+      <div className="w-full text-center">
         {step ? (
           <p className="text-eyebrow text-volt font-semibold uppercase">
             Step {step} of {totalSteps}
@@ -62,7 +66,7 @@ export function AuthCard({
         ) : null}
       </div>
 
-      <div className="mt-6">{children}</div>
+      <div className="mt-6 w-full [&>*]:mx-auto">{children}</div>
 
       {footer ? (
         <div className="text-ink-dim mt-5 text-center text-sm">{footer}</div>

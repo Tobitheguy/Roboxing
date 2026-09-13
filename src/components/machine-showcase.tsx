@@ -15,6 +15,21 @@ import type { AnatomyView, Feature, MachineImage, Stat } from "@/lib/machine-med
  * text pinned next to a marker collides with its neighbours the moment the
  * image scales down, while a number always fits. The words live in the
  * legend, which can wrap freely.
+ *
+ * EVERY SURFACE HERE IS A TOKEN, NOT A LITERAL.
+ *
+ * This file used to switch between a `bg-white` band and a
+ * `bg-[var(--color-ink)]` one and paint `text-white` on the second, because
+ * under the old light skin `--color-ink` was near-black and that read as
+ * "the dark variant". DIR_03 inverted the palette: `--color-ink` is now
+ * #F2F0EA, the paper-white body colour. The band kept resolving, kept
+ * painting, and turned into white text on a white block — the T800 page,
+ * the platform banner, and every anatomy marker at once, all from one
+ * assumption that stopped being true.
+ *
+ * So: no light/dark branching, no literal colours. A panel is `bg-surface`
+ * inside the void and inherits the inversion for free if it is ever placed
+ * on paper.
  */
 
 export function MachineHero({
@@ -23,63 +38,36 @@ export function MachineHero({
   tagline,
   stats,
   image,
-  tone = "dark",
 }: {
   eyebrow: string;
   name: string;
   tagline: string;
   stats: Stat[];
   image: MachineImage;
-  tone?: "dark" | "light";
 }) {
-  const dark = tone === "dark";
   return (
-    <section
-      className={`border-line relative mb-8 overflow-hidden border ${
-        dark ? "bg-[var(--color-ink)]" : "bg-white"
-      }`}
-    >
+    <section className="border-line bg-surface relative mb-8 overflow-hidden border-2">
       <div className="flex flex-col sm:flex-row">
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-8 p-6 sm:p-8">
           <div>
-            <p
-              className={`eyebrow ${dark ? "text-white/60" : ""}`}
-            >
-              {eyebrow}
-            </p>
-            <h1
-              className={`font-display mt-2 text-6xl leading-none font-bold uppercase sm:text-8xl ${
-                dark ? "text-white" : "text-ink"
-              }`}
-            >
+            <p className="eyebrow">{eyebrow}</p>
+            <h1 className="font-display text-ink mt-2 text-6xl leading-none font-bold uppercase sm:text-8xl">
               {name}
             </h1>
-            <p
-              className={`mt-4 max-w-md text-sm ${
-                dark ? "text-white/70" : "text-ink-muted"
-              }`}
-            >
-              {tagline}
-            </p>
+            <p className="text-ink-muted mt-4 max-w-md text-sm">{tagline}</p>
           </div>
           <dl className="grid grid-cols-3 gap-x-6 gap-y-4 sm:grid-cols-3">
             {stats.map((stat) => (
               <div key={stat.label}>
-                <dt className={`eyebrow ${dark ? "text-white/50" : ""}`}>
-                  {stat.label}
-                </dt>
-                <dd
-                  className={`font-display tabular mt-1 text-xl font-bold ${
-                    dark ? "text-white" : "text-ink"
-                  }`}
-                >
+                <dt className="eyebrow">{stat.label}</dt>
+                <dd className="font-display tabular text-ink mt-1 text-xl font-bold">
                   {stat.value}
                 </dd>
               </div>
             ))}
           </dl>
         </div>
-        <div className="relative min-h-72 sm:min-h-[26rem] sm:w-2/5">
+        <div className="bg-surface-2 relative min-h-72 sm:min-h-[26rem] sm:w-2/5">
           <Image
             src={image.src}
             alt={image.alt}
@@ -115,7 +103,7 @@ export function AnatomyFigure({
           image gets its own clipping wrapper inside. */}
       <div className="relative">
         <div
-          className="border-line relative overflow-hidden border bg-white"
+          className="border-line bg-surface-2 relative overflow-hidden border-2"
           style={{ aspectRatio: aspect }}
         >
           <Image
@@ -136,10 +124,15 @@ export function AnatomyFigure({
           >
             {/* A button, not a bare span: hover is not available on a
                 touchscreen, and focus-within gives tap and keyboard the same
-                tooltip without any client-side JavaScript. */}
+                tooltip without any client-side JavaScript.
+
+                Cyan chip, dark glyph, void ring. These markers sit on
+                photographs the site does not control — a light one is as
+                likely as a dark one — so the chip carries its own contrast
+                in both directions instead of trusting the frame behind it. */}
             <button
               type="button"
-              className="bg-ink font-display focus-visible:ring-ink flex size-5 cursor-help items-center justify-center rounded-full text-[0.65rem] font-bold text-white shadow-[0_0_0_2px_white] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+              className="bg-volt font-display text-volt-ink focus-visible:ring-volt flex size-5 cursor-help items-center justify-center text-[0.65rem] font-bold shadow-[0_0_0_2px_var(--color-canvas)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
             >
               {index + 1}
               <span className="sr-only">
@@ -148,7 +141,7 @@ export function AnatomyFigure({
               </span>
             </button>
             <span
-              className={`bg-ink pointer-events-none absolute z-20 block w-52 scale-95 rounded p-2.5 text-white opacity-0 shadow-lg transition duration-100 group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100 ${tooltipPosition(
+              className={`bg-surface-2 border-volt text-ink pointer-events-none absolute z-20 block w-52 scale-95 border-2 p-2.5 opacity-0 transition duration-100 group-focus-within:scale-100 group-focus-within:opacity-100 group-hover:scale-100 group-hover:opacity-100 ${tooltipPosition(
                 point.x,
                 point.y,
               )}`}
@@ -158,7 +151,7 @@ export function AnatomyFigure({
                 {point.label}
               </span>
               {point.detail ? (
-                <span className="mt-1 block text-xs leading-snug text-white/70">
+                <span className="text-ink-muted mt-1 block text-xs leading-snug">
                   {point.detail}
                 </span>
               ) : null}
@@ -168,9 +161,7 @@ export function AnatomyFigure({
       </div>
       <figcaption className="text-ink-dim mt-2 text-xs">
         {view.points.length > 0 ? (
-          <span className="text-ink-muted">
-            Hover the markers for detail.{" "}
-          </span>
+          <span className="text-ink-muted">Hover the markers for detail. </span>
         ) : null}
         Photo: {view.image.credit}.
       </figcaption>
@@ -203,7 +194,7 @@ export function FeatureGrid({ features }: { features: Feature[] }) {
   return (
     <div className="mb-8 grid gap-4 sm:grid-cols-3">
       {features.map((feature) => (
-        <figure key={feature.title} className="border-line min-w-0 border">
+        <figure key={feature.title} className="border-line min-w-0 border-2">
           <div className="bg-surface-2 relative aspect-[4/3]">
             <Image
               src={feature.image.src}
@@ -248,9 +239,9 @@ export function PlatformBanner({
   return (
     <Link
       href={`/robots/${slug}`}
-      className="border-line hover:border-line-strong mb-8 flex items-center gap-4 border bg-[var(--color-ink)] p-4 transition-colors"
+      className="border-line hover:border-volt bg-surface group mb-8 flex items-center gap-4 border-2 p-4 transition-colors"
     >
-      <span className="relative block h-16 w-24 shrink-0 overflow-hidden">
+      <span className="bg-surface-2 relative block h-16 w-24 shrink-0 overflow-hidden">
         <Image
           src={image.src}
           alt={image.alt}
@@ -260,13 +251,13 @@ export function PlatformBanner({
         />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="eyebrow block text-white/50">The hardware</span>
-        <span className="font-display block text-lg font-bold text-white uppercase">
+        <span className="eyebrow block">The hardware</span>
+        <span className="font-display text-ink group-hover:text-volt block text-lg font-bold uppercase transition-colors">
           {name}
         </span>
-        <span className="mt-0.5 block text-xs text-white/70">{note}</span>
+        <span className="text-ink-muted mt-0.5 block text-xs">{note}</span>
       </span>
-      <span className="text-white/60" aria-hidden>
+      <span className="text-volt" aria-hidden>
         →
       </span>
     </Link>

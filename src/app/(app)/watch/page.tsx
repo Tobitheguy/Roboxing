@@ -167,7 +167,12 @@ export default async function WatchIndexPage() {
                         key={channel.id}
                         name={channel.name}
                         url={channel.url}
-                        availability={channel.availability}
+                        /* No availability chip here.
+                           "Embedded" / "Never published" is production
+                           bookkeeping — it tells a reader how WE hold the
+                           link, not where to watch. The column stays in the
+                           database and still drives which channels can be
+                           embedded; it just is not a reader's problem. */
                       />
                     ))}
                   </div>

@@ -322,6 +322,96 @@ const G1_SHOWCASE: Showcase = {
   ],
 };
 
+const G1_IFK: MachineImage = {
+  src: "/machines/g1-ifk.jpg",
+  alt: "Two G1s exchanging kicks in the Iron Fist King ring with a referee behind them",
+  caption:
+    "Iron Fist King: Awakening, Hangzhou, May 2025 — the tournament AI Strategist won.",
+  credit: "Iron Fist King broadcast",
+  width: 980,
+  height: 720,
+};
+
+/*
+ * CARDS TAKE PHOTOGRAPHS WITH A BACKGROUND, NOT CUT-OUTS.
+ *
+ * g1-front.jpg is a manufacturer studio shot on white. Under the old light
+ * skin that sat flush with the page; on void it is a lit white rectangle in
+ * a grid of dark ones — the same white-square problem as the league marks,
+ * except the white is in the pixels and no token can reach it. The studio
+ * views keep their place in the showcase, where a reader expects a catalogue
+ * photograph. The card gets the machine in a ring.
+ */
+const G1_RING: MachineImage = {
+  src: "/machines/g1-hero.jpg",
+  alt: "Unitree G1 landing a kick in the ring at Iron Fist King: Awakening, Hangzhou",
+  caption:
+    "The G1 in the ring at Iron Fist King — 1.3 m, and the platform most of this sport is fought on.",
+  credit: "Unitree Robotics / Iron Fist King broadcast",
+  width: 1280,
+  height: 720,
+};
+
+const G1_WHRG: MachineImage = {
+  src: "/machines/g1-whrg.jpg",
+  alt: "G1s in red and black protective gear fighting in the WHRG kickboxing bracket",
+  caption:
+    "The kickboxing bracket of the World Humanoid Robot Games, Beijing — G1s in full contact gear.",
+  credit: "World Humanoid Robot Games broadcast",
+  width: 980,
+  height: 720,
+};
+
+const H2_GUARD: MachineImage = {
+  src: "/machines/h2-guard.jpg",
+  alt: "Unitree H2 humanoid robot standing in a boxing guard outside a stadium at night",
+  caption:
+    "The H2 in a fighting guard — adult scale, about 1.8 m and 70 kg.",
+  credit: "Unitree Robotics",
+  width: 3840,
+  height: 2160,
+};
+
+const H2_SCALE: MachineImage = {
+  src: "/machines/h2-scale.jpg",
+  alt: "Unitree H2 walking beside a man in a corridor, both roughly the same height",
+  caption:
+    "Walking beside a person, clothed — the clearest published record of how big this machine actually is.",
+  credit: "Unitree Robotics",
+  width: 3840,
+  height: 2160,
+};
+
+const H1_STANCE: MachineImage = {
+  src: "/machines/h1-stance.jpg",
+  alt: "Unitree H1 humanoid robot mid-stride in front of a concrete wall",
+  caption:
+    "The H1 platform, from the product page Unitree publishes the H1-2 under.",
+  credit: "Unitree Robotics",
+  width: 1920,
+  height: 1080,
+};
+
+const H1_KICK: MachineImage = {
+  src: "/machines/h1-kick.jpg",
+  alt: "A man kicking a Unitree H1 humanoid robot, which stays upright",
+  caption:
+    "Unitree's own robustness demonstration — kicked hard, still standing.",
+  credit: "Unitree Robotics",
+  width: 1920,
+  height: 1080,
+};
+
+const T1_PITCH: MachineImage = {
+  src: "/machines/t1-pitch.webp",
+  alt: "Booster T1 humanoid robot running at a football on a stadium pitch",
+  caption:
+    "The T1 on a pitch — a RoboCup AdultSize champion, and an autonomous machine rather than a piloted one.",
+  credit: "Booster Robotics",
+  width: 5120,
+  height: 1600,
+};
+
 export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   "engineai-t800": {
     card: T800_DUO,
@@ -337,15 +427,7 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
     ],
   },
   "unitree-g1": {
-    card: {
-      src: "/machines/g1-front.jpg",
-      alt: "Unitree G1 humanoid robot standing, seen from the front",
-      caption: "The G1 in standard trim — 1.3 metres, the most widely used humanoid in combat events.",
-      credit: "Unitree Robotics",
-      width: 800,
-      height: 800,
-      fit: "contain",
-    },
+    card: G1_RING,
     // Both studio shots live in the showcase (anatomy pair) — nothing left
     // for a separate gallery.
     gallery: [],
@@ -355,6 +437,89 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
       "The standard machine runs 23 degrees of freedom, expandable to 43 with the dexterous-hand options, with up to 90 newton-metres of knee joint torque. That is enough for hooks, side kicks, spinning strikes and — the capability audiences actually came for — getting back up off the floor unassisted. Its control stack is trained by imitation and reinforcement learning.",
       "Its combat record spans three formats: Unitree's own Iron Fist King tournaments in Hangzhou, the kickboxing bracket of the World Humanoid Robot Games in Beijing, and REK's fights in San Francisco — the first robot fighting on US soil — where the machines are modified G1s fought under VR control. When you see a small humanoid throw a hook anywhere in the world, it is almost certainly this platform.",
       "At a reported price around $13,500 for the base configuration, the G1 is the accessible end of this sport — several university teams' entire combat programmes run on it. Unitree followed it with the larger H-series, but as of this season the G1 remains the platform every smaller-format fight card is built on.",
+    ],
+  },
+  /*
+   * THE G1 MACHINES.
+   *
+   * AI Strategist, Energy Guardian and the EDU Combat Edition are all Unitree
+   * G1s. They are not separate designs and there is no separate photography of
+   * them to find — the Iron Fist King broadcast frames below ARE these two
+   * fighters, in that tournament, and the studio views are the chassis all
+   * three run. Giving each one the platform banner is the same seam already
+   * used for Matador and White Eagle on the T800: the fighter is the entry,
+   * the G1 is the hardware, and the page says which is which rather than
+   * implying a machine nobody has photographed.
+   */
+  "ai-strategist-g1": {
+    card: G1_IFK,
+    platformSlug: "unitree-g1",
+    platformName: "Unitree G1",
+    gallery: [G1_IFK, G1_RING],
+    reading: [
+      "AI Strategist (AI算策师) won the first Iron Fist King tournament in Hangzhou on 25 May 2025 — the first humanoid robot boxing tournament ever staged, and therefore the first champion this sport produced. It was piloted by Lu Xin.",
+      "The machine is a stock Unitree G1: 1.32 metres, about 35 kilograms, no reinforcement package. Every G1 in that tournament was identical hardware, which makes the 2025 bracket the cleanest demonstration in the sport's short record that the result belonged to the operator and the control stack rather than the metal.",
+      "Iron Fist King ran under Unitree's own banner with a CMG broadcast, remote-piloted throughout, with the machines' movement trained from motion capture of professional kickboxers. Nothing in that tournament was autonomous.",
+    ],
+  },
+  "energy-guardian-g1": {
+    card: G1_IFK,
+    platformSlug: "unitree-g1",
+    platformName: "Unitree G1",
+    gallery: [G1_IFK, G1_RING],
+    reading: [
+      "Energy Guardian was runner-up in the first Iron Fist King final on 25 May 2025, piloted by Hu Yunqian — the other half of the first tournament final in humanoid fighting.",
+      "Like its opponent it is a stock Unitree G1 at 1.32 metres and roughly 35 kilograms. Iron Fist King fielded identical machines to every team by design.",
+      "Beyond the final, no round-by-round scoring for this machine has been published in any language the record can cite. What is here is what is sourced.",
+    ],
+  },
+  "unitree-g1-combat": {
+    card: G1_WHRG,
+    platformSlug: "unitree-g1",
+    platformName: "Unitree G1",
+    gallery: [G1_WHRG, G1_RING],
+    reading: [
+      "The G1 EDU Combat Edition is what Unitree sells when the buyer intends the machine to be hit. It is a G1 with a reinforced waist and arms, a Jetson Orin NX compute module, gloves and a helmet — the reinforcement is the entire product, because a standard G1 is not built to absorb repeated impact.",
+      "It is sold into the United States through Robots International in Las Vegas at a reported $63,900, roughly five times the base G1. It ships with a repair subsidy rather than a warranty, which is the vendor's own acknowledgement that a fighting robot is a consumable.",
+      "Photography here is of the G1 chassis. Unitree has not published studio views of the combat trim specifically, and this record does not pass a standard G1 off as one.",
+    ],
+  },
+  /*
+   * H2, H1-2, T1 — photography sourced from the manufacturers' own product
+   * pages, September 2026. Each frame was opened and looked at before it was
+   * wired up, because the first four candidates pulled off unitree.com were
+   * quadrupeds from a navigation grid and one Booster image whose alt text
+   * said "t1" while its link went to /booster-t2. A URL that sounds right is
+   * not a photograph of the machine.
+   */
+  "unitree-h2": {
+    card: H2_GUARD,
+    gallery: [H2_GUARD, H2_SCALE],
+    reading: [
+      "The H2 is Unitree's full-size humanoid and the headline machine for CMG's 2026 competition. It stands about 1.8 metres and weighs roughly 70 kilograms — adult scale, in the same class as EngineAI's T800 and a different animal entirely from the 1.3-metre G1 that most fight cards are built on.",
+      "Unitree gives it 31 degrees of freedom: six per leg, seven per arm, three at the waist and two in the head. Peak joint torque is quoted at 360 newton-metres in the legs and 120 in the arms. It is the first Unitree humanoid with a bionic face, which is a statement about where the company wants the machine to go rather than anything to do with fighting.",
+      "Its appearance in this record is the December 2025 sparring video against a G1 — and the important detail of that clip is that the H2 was driven by a full-body motion-capture suit, not by autonomy. Every strike in it was a person's.",
+      "Unitree does not publish a list price for the H2. Third-party resellers quote figures; this record does not repeat them as fact. On US availability, the H2 was authorized before the July 2026 FCC notice, so existing units are unaffected.",
+    ],
+  },
+  "unitree-h1-2": {
+    card: H1_STANCE,
+    gallery: [H1_STANCE, H1_KICK],
+    reading: [
+      "The H1-2 is the current revision of Unitree's first full-size humanoid, at roughly 1.83 metres and 70 kilograms. REK is moving its San Francisco cards onto it — a deliberate step up from the modified G1s the league started with, and the first time an American promotion has put adult-scale machines in the ring.",
+      "REK founder Cix Liv described being hit by one as \"like a motorized bat\". It is the most useful single sentence anyone in this sport has said about scale: the difference between a G1 bout and a full-size bout is not a matter of degree, and the safety case changes with it.",
+      "Reported pricing is around $100,000. Unitree does not publish a list price, so that figure travels with the caveat rather than without it.",
+      "Photography here is of the H1 platform, from Unitree's own product page — the page the company publishes the H1-2 under. Unitree has not released studio views of the H1-2 revision specifically, and this record will not label an H1 frame as one.",
+    ],
+  },
+  "booster-t1": {
+    card: T1_PITCH,
+    gallery: [T1_PITCH],
+    reading: [
+      "The Booster T1 is the odd entry in this record: a machine with a serious competitive pedigree that was never built to fight. Booster sells it as a developer platform — roughly 1.2 metres and 30 kilograms, 23 to 41 degrees of freedom depending on configuration, about two hours of walking or four hours standing on a charge.",
+      "It is the championship model from the RoboCup Soccer \"AdultSize\" category, which is autonomous humanoid football: no operator, no remote, the machine reading the pitch and deciding for itself. That is the opposite end of the control spectrum from URKL's shared-control T800s or Iron Fist King's remote-piloted G1s, and it is why the T1 is worth watching even though it has never won a fight.",
+      "UFB has run it alongside the G1 at its San Francisco events. Reported price is about $33,949.",
+      "Booster's own site now leads with the newer T2 and K1 platforms; the T1 keeps its own product page. The photograph is Booster's official product image, which is a render rather than a press photograph — flagged here because this record distinguishes the two.",
     ],
   },
   "white-eagle-t800": {

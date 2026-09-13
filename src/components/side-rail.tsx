@@ -47,7 +47,11 @@ export function SideRail({ posts }: { posts: PostRow[] }) {
                   {/* The rank, worn as UFC wears it: a filled square. Ink,
                       not the accent — five accent blocks in a stack would
                       out-shout everything else on the page. */}
-                  <span className="bg-ink font-display flex size-6 shrink-0 items-center justify-center rounded text-xs font-bold text-white">
+                  {/* `text-canvas`, not `text-white`. In the old light palette bg-ink was
+                      black and white text sat on it; DIR_03 makes ink near-white, so
+                      this rendered a white number on a white square. The pair has to
+                      invert together — that is what the token pair is FOR. */}
+                  <span className="bg-ink text-canvas font-display flex size-6 shrink-0 items-center justify-center text-xs font-bold">
                     {index + 1}
                   </span>
                   <span className="text-ink group-hover:text-volt min-w-0 text-sm leading-snug font-medium transition-colors">
