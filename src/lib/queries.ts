@@ -1289,3 +1289,28 @@ export const getMachineRecords = cache(async () => {
     (a, b) => b.bouts - a.bouts || b.wins - a.wins || a.model.localeCompare(b.model),
   );
 });
+
+/**
+ * The numbers the telemetry ticker carries.
+ *
+ * DIR_03's ticker is the house texture — a monospace rule at the top of the
+ * page stating what the record contains. The prototype hard-codes "9 LEAGUES ON
+ * RECORD · 7 OPEN QUESTIONS · 16 MACHINES"; these are the real ones, because a
+ * ticker that prints a number nobody computed is a decoration pretending to be
+ * an instrument.
+ *
+ * One round trip. Three counts on a strip that renders on every page of the
+ * site is not worth three queries.
+ */
+export const getRecordCounts = cache(async () => {
+  const [row] = await db
+    .select({
+      leagues: sql<number>`(select count(*) from ${competitions} where ${competitions.isLeague})::int`,
+      openQuestions: sql<number>`(select count(*) from ${openQuestions} where ${openQuestions.answeredAt} is null)::int`,
+      machines: sql<number>`(select count(*) from ${robots})::int`,
+      results: sql<number>`(select count(*) from ${boutResults})::int`,
+    })
+    .from(competitions)
+    .limit(1);
+  return row ?? { leagues: 0, openQuestions: 0, machines: 0, results: 0 };
+});

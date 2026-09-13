@@ -1,5 +1,6 @@
 import { AtSign, CirclePlay, Globe, Radio } from "lucide-react";
 
+import type { WatchChannel } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,17 +46,42 @@ function platformOf(url: string): Platform {
   return { icon: Globe, kind: "Site" };
 }
 
+/**
+ * The availability state, in the same one-hue-three-densities grammar as the
+ * confidence chips — because it is the same kind of claim. Filled means we
+ * checked and it plays here; an outline means it exists elsewhere; the colour
+ * drops out entirely when there is nothing to watch.
+ *
+ * `vod_removed` is the one that earns the page. A stream that has been taken
+ * down STAYS LISTED: its absence is part of the record, and nobody else is
+ * keeping that list.
+ */
+const AVAILABILITY: Record<
+  NonNullable<WatchChannel["availability"]>,
+  { label: string; className: string }
+> = {
+  embedded: { label: "Embedded", className: "chip-confirmed" },
+  link_only: { label: "Link only", className: "chip-reported" },
+  geo_locked: { label: "Geo-locked", className: "chip-unconfirmed" },
+  vod_removed: { label: "VOD removed", className: "chip-unconfirmed" },
+  never_published: { label: "Never published", className: "chip-unconfirmed" },
+};
+
 export function ChannelPill({
   name,
   url,
+  availability,
   className,
 }: {
   name: string;
   url: string | null;
+  /** Null means nobody has checked — which is not a state, so nothing renders. */
+  availability?: WatchChannel["availability"];
   className?: string;
 }) {
   if (!url?.trim()) return null;
   const { icon: Icon, kind } = platformOf(url);
+  const state = availability ? AVAILABILITY[availability] : null;
 
   return (
     <a
@@ -64,12 +90,22 @@ export function ChannelPill({
       rel="noopener noreferrer"
       title={`${name} — ${kind}`}
       className={cn(
-        "border-line hover:border-ink-dim hover:bg-surface-2 text-ink-muted hover:text-ink inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+        "border-line hover:border-volt hover:bg-surface-2 text-ink-muted hover:text-ink inline-flex items-center gap-1.5 border-2 px-2.5 py-1.5 text-xs font-medium transition-colors",
         className,
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden />
       {name}
+      {state ? (
+        <span
+          className={cn(
+            "font-mono ml-1 px-1.5 py-px text-[9px] font-bold tracking-[0.08em] uppercase",
+            state.className,
+          )}
+        >
+          {state.label}
+        </span>
+      ) : null}
     </a>
   );
 }

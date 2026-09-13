@@ -167,6 +167,7 @@ export default async function WatchIndexPage() {
                         key={channel.id}
                         name={channel.name}
                         url={channel.url}
+                        availability={channel.availability}
                       />
                     ))}
                   </div>

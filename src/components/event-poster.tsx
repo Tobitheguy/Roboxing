@@ -30,7 +30,6 @@ import type { ConfidenceValue, WatchChannel } from "@/db/schema";
  * schedule uses.
  */
 export function EventPoster({
-  eventName,
   competitionName,
   city,
   country,
@@ -43,7 +42,6 @@ export function EventPoster({
   channels,
   posterUrl,
 }: {
-  eventName: string;
   competitionName: string;
   city: string | null;
   country: string | null;

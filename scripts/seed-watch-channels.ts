@@ -65,6 +65,17 @@ async function main() {
     url: string;
     note: string | null;
     confidence: "confirmed" | "reported" | "unconfirmed";
+    /*
+     * Only set where it has actually been ESTABLISHED. Left undefined means
+     * nobody has checked, and the page renders that as "not checked" rather
+     * than guessing — which is the whole reason the column is nullable.
+     */
+    availability?:
+      | "embedded"
+      | "link_only"
+      | "geo_locked"
+      | "vod_removed"
+      | "never_published";
   }[] = [
     /* ---- URKL: EngineAI runs it and posts it ---------------------------- */
     {
@@ -96,6 +107,9 @@ async function main() {
       url: "https://www.twitch.tv/ufb0ts",
       note: "Live and on replay. The channel is ufb0ts — with a zero.",
       confidence: "confirmed",
+      // Verified by embedding it: the player loads and the parent check
+      // passes. See src/components/live-stream-player.tsx.
+      availability: "embedded",
     },
     {
       competition: "ufb",
@@ -190,6 +204,9 @@ async function main() {
       url: "https://www.youtube.com/@EngineAIRobot",
       note: "EngineAI staged it. No footage of the final and no result have ever been published.",
       confidence: "reported",
+      // The event was fought behind closed doors and nothing has ever
+      // surfaced — not a missing link, an absent one.
+      availability: "never_published",
     },
 
     /* ---- REK ------------------------------------------------------------ */
@@ -226,6 +243,7 @@ async function main() {
       // them, which is not information — it is a column of the same word.
       region: null,
       note: row.note,
+      availability: row.availability ?? null,
       orderIndex: order++,
       confidence: row.confidence,
     });

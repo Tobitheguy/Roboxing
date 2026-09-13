@@ -286,6 +286,7 @@ export default async function CompetitionPage(
                       key={channel.id}
                       name={channel.name}
                       url={channel.url}
+                      availability={channel.availability}
                     />
                   ))}
                 </div>
