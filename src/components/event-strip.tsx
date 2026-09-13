@@ -66,7 +66,7 @@ export async function EventStrip() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2 md:px-6">
           <Link
             href={`/competitions/${channel.competitionSlug}`}
-            className="hover:text-ink-muted shrink-0 transition-colors"
+            className="shrink-0 text-current transition-opacity hover:opacity-70"
           >
             {/* The one place red is allowed. See the token note in
                 globals.css: --color-live means broadcasting and nothing else,
@@ -134,39 +134,57 @@ export async function EventStrip() {
    *
    * Never animated. It is a label on a machine, not a screensaver.
    */
+  /*
+   * Plain words, not machine-speak.
+   *
+   * This read "NEXT_EVT UFB-S2 · DATE_TBA" because the prototype's ticker is
+   * styled as instrumentation. On the prototype that is a look; on a live site
+   * it is a strip of jargon above every page, and Tobias's reaction was the
+   * correct one. The texture stays — monospace, uppercase, fixed order — and
+   * the words are words.
+   */
   const lead = isLive
-    ? `● LIVE — ${event.name}`
+    ? `● Live — ${event.name}`
     : event.dateTbd
-      ? `NEXT_EVT ${competitionName} · ${event.dateLabel?.trim() || "DATE_TBA"}`
-      : `NEXT_EVT ${competitionName} · ${event.name}`;
+      ? `Next · ${competitionName} · ${event.dateLabel?.trim() || "date to be announced"}`
+      : `Next · ${competitionName} · ${event.name}`;
 
   return (
-    <div className="border-line bg-surface ticker border-b-2">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 md:px-6">
+    /* A filled bar, not a dim rule. It was steel-on-charcoal and disappeared
+       into the header above it; as a solid band it reads as the one piece of
+       standing information on the page. Red when a league is live — the only
+       place that colour is allowed — and cyan otherwise, with dark ink on top
+       because cyan at full strength cannot carry white text. */
+    <div
+      className={cn(
+        "ticker border-b-2",
+        isLive ? "border-live bg-live" : "border-volt bg-volt",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 md:px-6",
+          isLive ? "text-white" : "text-volt-ink",
+        )}
+      >
+        {/* `text-current`, explicitly. The base layer paints every anchor cyan,
+            and on a cyan bar that is cyan on cyan — the lead text vanished
+            entirely. Same trap as the headings and the wordmark: on this site
+            far more things are anchors than the prototype assumed. */}
         <Link
           href={`/events/${event.slug}`}
-          className={cn(
-            "min-w-0 truncate transition-colors",
-            isLive ? "text-live" : "hover:text-ink-muted",
-          )}
+          className="min-w-0 truncate font-bold text-current transition-opacity hover:opacity-70"
         >
           {lead}
         </Link>
 
+        {/* What the record holds. Open questions used to sit here and do not
+            any more: a bar that announces "8 open questions" on every page
+            advertises the site's gaps above its content. That list is worth
+            keeping and worth linking — from the footer, where an index
+            belongs. */}
         <span className="hidden shrink-0 sm:inline">
-          {`${counts.leagues} leagues on record`}
-        </span>
-        <span className="hidden shrink-0 md:inline">
-          {`${counts.results} results`}
-        </span>
-        <Link
-          href="/open-questions"
-          className="hover:text-ink-muted hidden shrink-0 transition-colors lg:inline"
-        >
-          {`${counts.openQuestions} open questions`}
-        </Link>
-        <span className="hidden shrink-0 lg:inline">
-          {`${counts.machines} machines`}
+          {`${counts.leagues} leagues · ${counts.results} results · ${counts.machines} machines`}
         </span>
       </div>
     </div>
