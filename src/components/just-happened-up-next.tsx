@@ -166,7 +166,16 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
           a layout mistake rather than two panels of different depth. */}
       <div className="relative mt-auto flex flex-wrap items-center gap-4 pt-6">
         <Link
-          href={`/events/${panel.eventSlug}`}
+          /* A link labelled "Results" that lands on an event page is a
+             mislabel, and it was disorienting in exactly the way Tobias
+             described: click Results, arrive at a page with a dead player,
+             press back, land somewhere else again. Each label now goes where
+             it says. */
+          href={
+            panel.eyebrow === "Just happened"
+              ? "/results"
+              : `/events/${panel.eventSlug}`
+          }
           className={cn(
             "inline-flex items-center gap-1 text-sm font-medium transition-colors",
             featured

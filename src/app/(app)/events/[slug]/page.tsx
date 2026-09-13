@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BackLink } from "@/components/back-link";
+import { EventPoster } from "@/components/event-poster";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { Badge } from "@/components/badge";
 import { Countdown } from "@/components/countdown";
@@ -27,6 +28,7 @@ import {
   getPostsForEvent,
   getStreamForEvent,
   getUserPicksForEvent,
+  getWatchChannelsFor,
 } from "@/lib/queries";
 import { createSignedToken, hlsUrl, isStreamConfigured } from "@/lib/stream";
 
@@ -195,9 +197,10 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
   const { event, competitionSlug, competitionName } = row;
   const external = event.broadcastUrl?.trim() || null;
 
-  const [bouts, coverage, playback] = await Promise.all([
+  const [bouts, coverage, channels, playback] = await Promise.all([
     getBoutsForEvent(event.id),
     getPostsForEvent(event.id),
+    getWatchChannelsFor(event.competitionId),
     // Skipped entirely for an external broadcast. Not an optimisation: this
     // call mints a signed Cloudflare token and applies the paywall, and doing
     // either for an event we do not carry would gate a page whose video is
@@ -265,7 +268,13 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
 
   return (
     <PageShell>
-      <BackLink href="/schedule" label="Schedule" />
+      {/* Back to where this event actually belongs. It always said "Schedule",
+          so arriving from the results page and pressing back landed you on a
+          calendar you had not come from. */}
+      <BackLink
+        href={event.status === "completed" ? "/results" : "/schedule"}
+        label={event.status === "completed" ? "Results" : "Schedule"}
+      />
       <div className="mb-6">
         <p className="eyebrow mb-2">
           <Link
@@ -307,6 +316,25 @@ export default async function EventPage(props: PageProps<"/events/[slug]">) {
         blocked={playback.blocked}
         externalBroadcast={
           external ? { url: external, name: event.broadcastName } : undefined
+        }
+        /* Nothing to play is not an error — for most events on this site it is
+           the normal state, and it lasts for weeks. A poster is the object that
+           belongs there: who, when, where, and how to see it. */
+        fallback={
+          <EventPoster
+            eventName={event.name}
+            competitionName={competitionName}
+            city={event.city}
+            country={event.country}
+            venue={event.venue}
+            dateTbd={event.dateTbd}
+            startTimeTbd={event.startTimeTbd}
+            confidence={event.confidence}
+            note={event.note}
+            bouts={bouts}
+            channels={channels}
+            posterUrl={event.posterUrl}
+          />
         }
       />
 

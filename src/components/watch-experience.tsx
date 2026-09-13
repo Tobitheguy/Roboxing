@@ -55,6 +55,7 @@ export function WatchExperience({
   directSource = false,
   blocked,
   externalBroadcast,
+  fallback,
 }: {
   eventSlug: string;
   initialBouts: BoutDetail[];
@@ -63,6 +64,14 @@ export function WatchExperience({
   playbackUrl: string | null;
   posterUrl?: string | null;
   unavailableReason?: string;
+  /**
+   * What to render when there is nothing to play and nothing is blocked.
+   *
+   * The built-in empty state below is an apology in a player-shaped box, which
+   * is the right thing for "the stream dropped" and the wrong thing for "this
+   * fight is in three weeks". The event page passes a poster.
+   */
+  fallback?: React.ReactNode;
   /**
    * The manifest came from outside Cloudflare, so there is no token to renew
    * and no point asking our own endpoint for one.
@@ -213,6 +222,8 @@ export function WatchExperience({
             isLive={isLive}
             onRefreshSrc={directSource ? undefined : fetchPlayback}
           />
+        ) : fallback && !blocked ? (
+          fallback
         ) : (
           <div className="border-line bg-surface relative aspect-video w-full overflow-hidden rounded-lg border">
             <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
