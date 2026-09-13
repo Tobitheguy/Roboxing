@@ -156,8 +156,14 @@ export async function EventStrip() {
        place that colour is allowed — and cyan otherwise, with dark ink on top
        because cyan at full strength cannot carry white text. */
     <div
+      /* NOT the `ticker` utility here. That utility sets its own colour
+         (--color-ink-dim), which lands in the same cascade layer as the text
+         colour below and can win depending on source order — the result is
+         steel text on a cyan field, which is what "unleserlich weil es auch in
+         blau ist" describes. On a coloured bar the type spec is applied
+         directly and the colour is stated once, with nothing to override it. */
       className={cn(
-        "ticker border-b-2",
+        "font-mono border-b-2 text-[0.75rem] tracking-[0.08em] uppercase",
         isLive ? "border-live bg-live" : "border-volt bg-volt",
       )}
     >

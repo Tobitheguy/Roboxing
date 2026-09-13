@@ -113,19 +113,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       // the largest text on the sign-in screen. See localization.ts — this is
       // a patch over a dashboard setting, not the fix.
       localization={roboxingLocalization}
-      // Clerk's own UI, themed to the light palette. The `dark` theme import
-      // is gone: leaving it on would render a near-black sign-in card in the
-      // middle of a white page, which reads as a third-party interruption
-      // rather than part of the site.
+      /*
+       * Clerk's own UI, themed to DIR_03.
+       *
+       * These four variables are the ONLY styling hook that works — see
+       * components/auth/appearance.tsx for why the `elements` overrides were
+       * deleted. They were still set to the retired light palette, so the
+       * sign-in card rendered as a white rounded box in the middle of a void
+       * page: a third-party interruption rather than part of the site.
+       *
+       * `colorDanger` is amber, NOT the signal red. Red on this site means
+       * broadcasting right now, and a form validation error is not that. This
+       * is the one place the rule would have been broken by inattention rather
+       * than by choice.
+       *
+       * No `colorText`: Core 3 dropped it. Clerk derives the foreground from
+       * colorBackground, which is the dark panel here, so the text comes out
+       * light on its own.
+       */
       appearance={{
         variables: {
-          colorPrimary: "#14161A",
-          colorBackground: "#FFFFFF",
-          // No `colorText` — Core 3 dropped it from Variables. Clerk derives
-          // its foreground from colorBackground, which is white here, so the
-          // text comes out dark on its own.
-          colorDanger: "#C4162B",
-          borderRadius: "0.5rem",
+          colorPrimary: "#00E5D0",
+          colorBackground: "#14191A",
+          colorDanger: "#FFB300",
+          borderRadius: "0",
         },
       }}
     >
