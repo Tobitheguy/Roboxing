@@ -45,7 +45,10 @@ export type LeagueIdentity = {
  * that per-league colour can come back with a five-line diff if the brand
  * decision ever reverses.
  */
-const INK = "#14161A";
+/* DIR_03's raised surface, not the retired ink. A monogram tile has to read
+   as a cell on the panel behind it; #14161A was the OLD near-black ink, which
+   on void is a tile you cannot see the edges of. */
+const INK = "#1C2223";
 const TINT = "rgba(20, 22, 26, 0.06)";
 
 const IDENTITIES: Record<string, LeagueIdentity> = {

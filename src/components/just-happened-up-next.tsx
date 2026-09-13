@@ -55,12 +55,16 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
     <div
       className={cn(
         "relative flex flex-col overflow-hidden p-6 sm:p-8",
-        // The featured half — what is live or next — is the ONE dark panel on
-        // the light site. That inversion is the visual weight Tobias asked
-        // for, and it is spent on the single most important thing on the
-        // page rather than sprinkled everywhere. It also keeps a foot in the
-        // old broadcast identity: dark is the register of the arena.
-        featured && "bg-[#14161a] text-white",
+        /* THE FEATURED HALF NO LONGER INVERTS.
+           It used to be "the ONE dark panel on the light site", built from a
+           literal #14161a and `text-white`. DIR_03 made the whole site dark:
+           that panel became the same colour as everything around it, its
+           league chip became a white block, and the inversion that was
+           carrying the emphasis stopped saying anything at all.
+           A raised surface and a cyan top edge do the job now — the same
+           grammar the rest of the site uses to mark what matters, rather
+           than a second colour scheme living inside one component. */
+        featured && "bg-surface border-volt border-t-2",
       )}
     >
       {/* The corner wash that used to sit here carried the league's colour;
@@ -70,7 +74,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
         <p
           className={cn(
             "font-display text-[0.65rem] font-semibold tracking-widest uppercase",
-            featured ? "text-white/60" : "text-ink-dim",
+            "text-ink-dim",
           )}
         >
           {panel.eyebrow}
@@ -80,13 +84,9 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
           href={`/competitions/${panel.leagueSlug}`}
           className={cn(
             "font-display rounded px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase transition-opacity hover:opacity-80",
-            // An ink chip on the ink panel would vanish, so the featured half
-            // inverts it — the same rule as everything else on that panel.
-            featured
-              ? "bg-white text-[#14161a]"
-              : "text-white",
+            "text-ink",
           )}
-          style={featured ? undefined : { backgroundColor: identity.accent }}
+          style={{ backgroundColor: identity.accent }}
         >
           {panel.leagueName}
         </Link>
@@ -95,13 +95,12 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
       <h3
         className={cn(
           "font-display relative text-3xl leading-tight uppercase sm:text-4xl",
-          featured ? "text-white" : "text-ink",
+          "text-ink",
         )}
       >
         <Link
           href={`/events/${panel.eventSlug}`}
           className="hover:text-volt transition-colors"
-          style={featured ? { color: "inherit" } : undefined}
         >
           {panel.eventName}
         </Link>
@@ -116,14 +115,13 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
         <p
           className={cn(
             "relative mt-3 flex flex-wrap items-center gap-2 text-base",
-            featured ? "text-white" : "text-ink",
+            "text-ink",
           )}
         >
           <span className="font-medium">{panel.outcome.line}</span>
           {panel.outcome.confidence !== "confirmed" ? (
             <ConfidenceBadge
               level={panel.outcome.confidence}
-              className={featured ? "border-white/30 text-white/70" : undefined}
             />
           ) : null}
         </p>
@@ -132,7 +130,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
       <p
         className={cn(
           "relative mt-3 text-sm",
-          featured ? "text-white/70" : "text-ink-muted",
+          "text-ink-muted",
         )}
       >
         <EventTime
@@ -142,7 +140,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
           timeTbd={panel.startTimeTbd}
         />
         {until ? (
-          <span className={featured ? "text-white" : "text-volt"}>
+          <span className={"text-volt"}>
             {" "}
             · {until}
           </span>
@@ -154,7 +152,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
       {featured && !panel.isLive && !panel.startTimeTbd ? (
         <Countdown
           startsAt={panel.startsAt.toISOString()}
-          className="font-display relative mt-4 block text-3xl font-bold text-white sm:text-4xl"
+          className="font-display text-ink relative mt-4 block text-3xl font-bold sm:text-4xl"
         />
       ) : null}
 
@@ -178,9 +176,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
           }
           className={cn(
             "inline-flex items-center gap-1 text-sm font-medium transition-colors",
-            featured
-              ? "text-white hover:text-white/70"
-              : "text-ink hover:text-volt",
+            "text-ink hover:text-volt",
           )}
         >
           {panel.eyebrow === "Just happened" ? "Results" : "Fight card"}
@@ -193,9 +189,7 @@ function EventPanel({ panel, featured }: { panel: Panel; featured: boolean }) {
             rel="noopener noreferrer"
             className={cn(
               "inline-flex items-center gap-1.5 text-sm transition-colors",
-              featured
-                ? "text-white/70 hover:text-white"
-                : "text-ink-muted hover:text-volt",
+              "text-ink-muted hover:text-volt",
             )}
           >
             <Tv className="size-3.5" />

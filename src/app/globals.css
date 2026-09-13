@@ -273,6 +273,24 @@
 
 /* Standings and stat columns must not jitter as numbers change during a live
    event. Every numeric column gets this. */
+/*
+ * ONE CONTROL HEIGHT.
+ *
+ * A text field and the button beside it are one object to a reader, and two
+ * objects the moment their edges do not line up. They were 38px and 36px —
+ * the input from `py-2` plus a border, the button from its own `h-9` — which
+ * is small enough to look like a mistake rather than a choice, and Tobias
+ * spotted it on the newsletter form.
+ *
+ * 2.25rem, matching the Button `lg` size, which is the size that actually
+ * sits next to a field on this site. Padding on a field is horizontal only;
+ * the height comes from here.
+ */
+@utility control-h {
+  height: 2.25rem;
+  padding-block: 0;
+}
+
 @utility tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";

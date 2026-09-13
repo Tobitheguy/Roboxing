@@ -77,7 +77,10 @@ export const viewport: Viewport = {
   // Matches --color-canvas. This is the colour a mobile browser paints its
   // chrome and its overscroll with, so a stale value here shows up as a dark
   // band above a light page on every phone.
-  themeColor: "#F6F6F3",
+  /* The phone's browser chrome, which sits directly above the header and is
+     the first colour anyone sees. It was still the retired light canvas, so
+     a dark site opened under a cream bar. */
+  themeColor: "#0B0F10",
   colorScheme: "light",
 };
 

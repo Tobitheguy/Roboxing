@@ -50,7 +50,10 @@ export function twitchEmbedUrl(login: string): string {
 export function LiveStreamPlayer({ channel }: { channel: LiveChannel }) {
   return (
     <div className="border-line bg-surface overflow-hidden rounded-lg border">
-      <div className="bg-ink relative aspect-video">
+      {/* Void behind the frame, not `bg-ink` — ink is the paper-white body
+          colour under DIR_03, and a player that has not loaded yet was
+          flashing a white rectangle the size of the video. */}
+      <div className="bg-canvas relative aspect-video">
         <iframe
           src={twitchEmbedUrl(channel.login)}
           title={`${channel.competitionName} — live on Twitch`}

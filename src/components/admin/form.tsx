@@ -49,8 +49,17 @@ function FieldShell({
   );
 }
 
-const inputClass =
-  "border-input bg-surface-2 text-ink focus-visible:border-volt w-full rounded-md border px-3 py-2 text-sm outline-none";
+/* The shared skin, minus anything to do with height. */
+const fieldSkin =
+  "border-input bg-surface-2 text-ink focus-visible:border-volt w-full border px-3 text-sm outline-none";
+
+/* A single-line control, on the one control height the site uses. */
+const inputClass = `${fieldSkin} control-h`;
+
+/* A textarea sizes itself from `rows`. It must NOT take `control-h` — that
+   is a fixed 2.25rem, and a four-row notes field collapsed to the height of
+   a button is not a smaller textarea, it is a broken one. */
+const textAreaClass = `${fieldSkin} resize-y py-2`;
 
 /**
  * A checkbox.
@@ -139,7 +148,7 @@ export function TextArea({
         name={props.name}
         rows={rows}
         defaultValue={defaultValue ?? undefined}
-        className={cn(inputClass, "resize-y")}
+        className={cn(textAreaClass)}
       />
     </FieldShell>
   );

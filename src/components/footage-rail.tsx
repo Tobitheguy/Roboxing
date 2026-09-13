@@ -96,7 +96,11 @@ export function FootageRail({
                   ) : null}
                   <span className="absolute inset-0 bg-black/20 transition-colors group-hover:bg-black/10" />
                   <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="bg-ink/80 group-hover:bg-ink flex size-14 items-center justify-center rounded-full text-white transition-colors">
+                    {/* Void plate, cyan glyph. This was `bg-ink/80 text-white` — under the
+                        old skin bg-ink was near-black, so it read as a dark disc with a
+                        white arrow. DIR_03 made ink paper-white and the arrow
+                        disappeared into its own button. */}
+                    <span className="bg-canvas/80 group-hover:bg-canvas text-volt flex size-14 items-center justify-center transition-colors">
                       <Play className="ml-0.5 size-6 fill-current" />
                     </span>
                   </span>

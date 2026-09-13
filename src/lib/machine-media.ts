@@ -412,6 +412,67 @@ const T1_PITCH: MachineImage = {
   height: 1600,
 };
 
+/*
+ * HEROES FOR THE THREE MACHINES THAT HAD NONE.
+ *
+ * The T800 and G1 opened with a hero band — name at display size, tagline,
+ * the numbers — while the H2, H1-2 and T1 opened with a plain heading and a
+ * sentence, because they had no photography to build one from. Same record,
+ * two different kinds of page.
+ *
+ * Every figure below is the value already in the database, not a number found
+ * while sourcing the photographs. Where a spec is genuinely unpublished the
+ * tile says so — an empty slot reads as an oversight, "Not published" reads
+ * as the fact it is.
+ *
+ * No anatomy views and no feature tiles: those need annotated studio
+ * photography, and calling two press frames an anatomy set would be
+ * dressing. The page already renders those sections only when they exist.
+ */
+const H2_SHOWCASE: Showcase = {
+  eyebrow: "Unitree · CMG 2026 headline machine",
+  tagline:
+    "Adult scale, and the machine a state broadcaster built a competition around. Its one appearance in this record was driven by a person in a motion-capture suit.",
+  hero: H2_GUARD,
+  stats: [
+    { label: "Height", value: "183 cm" },
+    { label: "Weight", value: "70 kg" },
+    { label: "Body joints", value: "31 DOF" },
+    { label: "Price", value: "Not published" },
+  ],
+  anatomy: [],
+  features: [],
+};
+
+const H1_2_SHOWCASE: Showcase = {
+  eyebrow: "Unitree · REK's step up to full size",
+  tagline:
+    "The first adult-scale machine an American promotion has put in the ring. Being hit by one, per REK's founder, is “like a motorized bat”.",
+  hero: H1_STANCE,
+  stats: [
+    { label: "Height", value: "183 cm" },
+    { label: "Weight", value: "70 kg" },
+    { label: "Price", value: "~$100,000" },
+  ],
+  anatomy: [],
+  features: [],
+};
+
+const T1_SHOWCASE: Showcase = {
+  eyebrow: "Booster Robotics · RoboCup AdultSize champion",
+  tagline:
+    "A developer platform with a championship pedigree in autonomous football, and no fighting record at all. The opposite end of the control spectrum from everything else here.",
+  hero: T1_PITCH,
+  stats: [
+    { label: "Height", value: "120 cm" },
+    { label: "Weight", value: "30 kg" },
+    { label: "Body joints", value: "23 DOF" },
+    { label: "Price", value: "$33,949" },
+  ],
+  anatomy: [],
+  features: [],
+};
+
 export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   "engineai-t800": {
     card: T800_DUO,
@@ -494,7 +555,8 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
    */
   "unitree-h2": {
     card: H2_GUARD,
-    gallery: [H2_GUARD, H2_SCALE],
+    showcase: H2_SHOWCASE,
+    gallery: [H2_SCALE],
     reading: [
       "The H2 is Unitree's full-size humanoid and the headline machine for CMG's 2026 competition. It stands about 1.8 metres and weighs roughly 70 kilograms — adult scale, in the same class as EngineAI's T800 and a different animal entirely from the 1.3-metre G1 that most fight cards are built on.",
       "Unitree gives it 31 degrees of freedom: six per leg, seven per arm, three at the waist and two in the head. Peak joint torque is quoted at 360 newton-metres in the legs and 120 in the arms. It is the first Unitree humanoid with a bionic face, which is a statement about where the company wants the machine to go rather than anything to do with fighting.",
@@ -504,7 +566,8 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   },
   "unitree-h1-2": {
     card: H1_STANCE,
-    gallery: [H1_STANCE, H1_KICK],
+    showcase: H1_2_SHOWCASE,
+    gallery: [H1_KICK],
     reading: [
       "The H1-2 is the current revision of Unitree's first full-size humanoid, at roughly 1.83 metres and 70 kilograms. REK is moving its San Francisco cards onto it — a deliberate step up from the modified G1s the league started with, and the first time an American promotion has put adult-scale machines in the ring.",
       "REK founder Cix Liv described being hit by one as \"like a motorized bat\". It is the most useful single sentence anyone in this sport has said about scale: the difference between a G1 bout and a full-size bout is not a matter of degree, and the safety case changes with it.",
@@ -514,7 +577,8 @@ export const MACHINE_MEDIA: Record<string, MachineMedia> = {
   },
   "booster-t1": {
     card: T1_PITCH,
-    gallery: [T1_PITCH],
+    showcase: T1_SHOWCASE,
+    gallery: [],
     reading: [
       "The Booster T1 is the odd entry in this record: a machine with a serious competitive pedigree that was never built to fight. Booster sells it as a developer platform — roughly 1.2 metres and 30 kilograms, 23 to 41 degrees of freedom depending on configuration, about two hours of walking or four hours standing on a charge.",
       "It is the championship model from the RoboCup Soccer \"AdultSize\" category, which is autonomous humanoid football: no operator, no remote, the machine reading the pitch and deciding for itself. That is the opposite end of the control spectrum from URKL's shared-control T800s or Iron Fist King's remote-piloted G1s, and it is why the T1 is worth watching even though it has never won a fight.",
