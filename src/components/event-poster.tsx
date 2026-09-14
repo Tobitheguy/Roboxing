@@ -2,6 +2,8 @@ import Image from "next/image";
 
 import { ChannelPill } from "@/components/channel-pill";
 import { ConfidenceBadge } from "@/components/confidence-badge";
+import { TwitchEmbed } from "@/components/twitch-embed";
+import { twitchLogin } from "@/lib/twitch";
 import type { BoutDetail } from "@/lib/queries";
 import type { ConfidenceValue, WatchChannel } from "@/db/schema";
 
@@ -73,6 +75,24 @@ export function EventPoster({
   const hasCard = bouts.length > 0;
   const where = [venue, city, country].filter(Boolean).join(" · ");
 
+  /*
+   * Split the directory in two: what we can play, and what we can only point
+   * at. Deduplicated by login, because a league listing the same channel
+   * twice must not render the same player twice.
+   */
+  const seenLogins = new Set<string>();
+  const embeddable: { login: string; id: number; name: string; url: string }[] = [];
+  const elsewhere: WatchChannel[] = [];
+  for (const channel of channels) {
+    const login = channel.url ? twitchLogin(channel.url) : null;
+    if (login && channel.url && !seenLogins.has(login)) {
+      seenLogins.add(login);
+      embeddable.push({ login, id: channel.id, name: channel.name, url: channel.url });
+    } else if (!login) {
+      elsewhere.push(channel);
+    }
+  }
+
   return (
     <div className="border-line bg-surface border-2">
       {/* The ticker rule: league, status, source count. Fixed order, and a
@@ -142,9 +162,40 @@ export function EventPoster({
             half that cannot live inside a PNG. */}
         <div className="border-line mt-8 border-t-2 pt-6">
           <p className="eyebrow mb-3">Where to watch</p>
-          {channels.length > 0 ? (
+
+          {/*
+           * THE STREAM PLAYS HERE, IT IS NOT LINKED TO.
+           *
+           * This section used to be a row of pills — including UFB's Twitch
+           * channel, which sent a reader who came to watch the fight off to
+           * twitch.tv. Tobias: "i want people to watch on our page and not go
+           * to the pages of the league."
+           *
+           * So any twitch.tv channel on this league becomes the player, and
+           * the pills below carry only what CANNOT be embedded as a live
+           * stream: a YouTube channel, the organiser's site, an X account.
+           * Those are still worth listing — they are where the VOD and the
+           * announcements live — but they are a different question from
+           * "where do I watch this", and the answer to that one is now on
+           * this page.
+           */}
+          {embeddable.length > 0 ? (
+            <div className="mb-5 grid gap-4">
+              {embeddable.map((channel) => (
+                <TwitchEmbed
+                  key={channel.login}
+                  login={channel.login}
+                  channelName={channel.name}
+                  competitionName={competitionName}
+                  url={channel.url}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {elsewhere.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {channels.map((channel) => (
+              {elsewhere.map((channel) => (
                 <ChannelPill
                   key={channel.id}
                   name={channel.name}
@@ -152,11 +203,13 @@ export function EventPoster({
                 />
               ))}
             </div>
-          ) : (
+          ) : null}
+
+          {embeddable.length === 0 && elsewhere.length === 0 ? (
             <p className="text-ink-muted text-sm">
               No channel has been announced for this event.
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
