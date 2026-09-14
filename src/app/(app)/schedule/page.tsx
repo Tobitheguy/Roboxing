@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarClock, Tv } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 
-import { BoutList } from "@/components/bout-row";
-import { Card, CardBodyFlush, CardHeader } from "@/components/card";
+import { Card, CardBodyFlush } from "@/components/card";
 import { CompetitionFilter } from "@/components/competition-filter";
 import { ConfidenceBadge } from "@/components/confidence-badge";
-import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
-import { dateZone, EventDate } from "@/components/event-date";
-import { LivePill } from "@/components/live-pill";
+import { EventRow } from "@/components/event-row";
+import { dateZone } from "@/components/event-date";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import { safeTimeZone } from "@/lib/timezones";
 import {
@@ -78,6 +76,21 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
         basePath="/schedule"
       />
 
+      {/*
+       * THE BOUT LIST USED TO BE IN HERE, AND THAT IS WHAT MADE THIS PAGE
+       * HEAVY.
+       *
+       * Every schedule entry printed its full card inline, which on a
+       * schedule means printing "Card not announced" down the length of the
+       * page — most fixtures in this sport are announced as a number of bouts
+       * with no pairings. The row now carries the event's identity and links
+       * to the card; the card lives on the event page, where there is room
+       * for it and where a reader who wants it has asked for it.
+       *
+       * That is the actual lesson from UFC's events list, which Tobias sent
+       * me to look at: the row is lean because it is not trying to be the
+       * event page too.
+       */}
       {dated.length === 0 && announced.length === 0 ? (
         <Card>
           <EmptyState
@@ -99,7 +112,17 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
               Ticketmaster actually show for exactly this density of calendar —
               the grid only earns its place when most weeks have something in
               them. */}
-          {dated.map(({ event, competitionName, boutCount }, index) => {
+          {dated.map(
+            (
+              {
+                event,
+                competitionName,
+                competitionSlug,
+                competitionLogoUrl,
+                boutCount,
+              },
+              index,
+            ) => {
             // Grouped in the venue's calendar — except for date-only rows,
             // where there is no announced time to convert and the venue's zone
             // would file a 1 October season under September. See dateZone().
@@ -122,93 +145,14 @@ export default async function SchedulePage(props: PageProps<"/schedule">) {
                     {monthLabel}
                   </h2>
                 ) : null}
-              <Card>
-                <CardHeader
-                  title={competitionName}
-                  action={
-                    <span className="flex items-center gap-2">
-                      {event.status === "live" ? <LivePill status="live" /> : null}
-                      <ConfidenceBadge level={event.confidence} />
-                    </span>
-                  }
+              <EventRow
+                  event={event}
+                  competitionName={competitionName}
+                  competitionSlug={competitionSlug}
+                  competitionLogoUrl={competitionLogoUrl}
+                  boutCount={boutCount}
+                  bouts={eventBouts}
                 />
-                <div className="border-line/60 border-b px-4 py-5 sm:px-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h2 className="font-display text-title text-ink uppercase">
-                        <Link
-                          href={`/events/${event.slug}`}
-                          className="hover:text-volt transition-colors"
-                        >
-                          {event.name}
-                        </Link>
-                      </h2>
-                      <p className="text-ink-muted mt-2 text-sm">
-                        <EventDate
-                          startsAt={event.startsAt}
-                          endsAt={event.endsAt}
-                          timeZone={event.timezone}
-                          city={event.city}
-                          dateTbd={event.dateTbd}
-                          dateLabel={event.dateLabel}
-                          startTimeTbd={event.startTimeTbd}
-                        />
-                      </p>
-                      {/* The caveat beside the date, which on this schedule is
-                          frequently worth more than the date. */}
-                      {event.note ? (
-                        <p className="text-ink-dim mt-2 max-w-xl text-xs leading-relaxed">
-                          {event.note}
-                        </p>
-                      ) : null}
-                      {event.venue ? (
-                        <p className="text-ink-dim mt-1 text-xs">
-                          {[event.venue, event.city, event.country]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      ) : null}
-                      {/* Who is showing it, on the row itself. The calendar's
-                          job is to answer "what is on and where do I watch
-                          it", and for most of these the answer is somebody
-                          else's channel — making the reader open the event
-                          page to find that out is a step for nothing. */}
-                      {event.broadcastUrl ? (
-                        <p className="text-ink-dim mt-1 text-xs">
-                          <Tv className="mr-1 inline size-3 align-[-1px]" />
-                          {event.broadcastName?.trim() || "Streamed externally"}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="text-right">
-                      {/* No countdown to a time nobody announced. */}
-                      {event.startTimeTbd || event.endsAt ? (
-                        <p className="font-display text-ink-muted text-lg font-bold">
-                          {event.endsAt ? "Season" : "TBA"}
-                        </p>
-                      ) : (
-                        <Countdown
-                          startsAt={event.startsAt.toISOString()}
-                          className="font-display text-volt text-lg font-bold"
-                        />
-                      )}
-                      <p className="text-ink-dim tabular mt-1 text-xs">
-                        {boutCount} {boutCount === 1 ? "bout" : "bouts"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <CardBodyFlush>
-                  {eventBouts.length > 0 ? (
-                    <BoutList bouts={eventBouts} />
-                  ) : (
-                    <EmptyState
-                      title="Card not announced"
-                      description="Bouts appear here once the organizer confirms the card."
-                    />
-                  )}
-                </CardBodyFlush>
-              </Card>
               </div>
             );
           })}

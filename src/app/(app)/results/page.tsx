@@ -4,12 +4,14 @@ import { Trophy } from "lucide-react";
 import { BoutList } from "@/components/bout-row";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { CompetitionFilter } from "@/components/competition-filter";
+import { EventRow } from "@/components/event-row";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeading, PageShell } from "@/components/page-shell";
 import {
   getAllResults,
   getLeagues,
   getMachineRecords,
+  getPastEvents,
 } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Results" };
@@ -19,7 +21,7 @@ export default async function ResultsPage(props: PageProps<"/results">) {
   const raw = params.competition;
   const competition = Array.isArray(raw) ? raw[0] : raw;
 
-  const [competitions, results, machineRecords] = await Promise.all([
+  const [competitions, results, machineRecords, pastEvents] = await Promise.all([
     // getLeagues, not getCompetitions: the filter is a list of LEAGUES, and
     // `getCompetitions` also returns the exhibitions container — a row that
     // exists so a manufacturer's sparring video has somewhere to hang without
@@ -28,6 +30,7 @@ export default async function ResultsPage(props: PageProps<"/results">) {
     getLeagues(),
     getAllResults(competition),
     getMachineRecords(),
+    getPastEvents(),
   ]);
 
   /*
@@ -46,6 +49,10 @@ export default async function ResultsPage(props: PageProps<"/results">) {
   };
 
   // Group by event so a night of fights reads as a night rather than a stream.
+  /* Keyed by slug, not id: both queries select the same `events` rows, and
+     the slug is the stable public identifier either way. */
+  const pastBySlug = new Map(pastEvents.map((e) => [e.event.slug, e]));
+
   const byEvent = new Map<number, typeof results>();
   for (const bout of results) {
     const list = byEvent.get(bout.event.id) ?? [];
@@ -107,21 +114,45 @@ export default async function ResultsPage(props: PageProps<"/results">) {
           <div className="space-y-6">
             {[...byEvent.values()].map((eventBouts) => {
               const event = eventBouts[0].event;
+              /* The bout query carries a thin event — no confidence, note,
+                 date label or broadcaster — so the row reads from the events
+                 query instead. Null only if an event holds bouts while its own
+                 status is not `completed`, which would be a data problem
+                 worth seeing rather than papering over. */
+              const row = pastBySlug.get(event.slug) ?? null;
               return (
-                <Card key={event.id}>
-                  <CardHeader
-                    title={eventBouts[0].competitionName}
-                    action={
-                      <span className="text-ink-dim tabular text-xs">
-                        {eventBouts.length}{" "}
-                        {eventBouts.length === 1 ? "bout" : "bouts"}
-                      </span>
-                    }
-                  />
-                  <CardBodyFlush>
-                    <BoutList bouts={eventBouts} showEvent />
-                  </CardBodyFlush>
-                </Card>
+                <div key={event.id}>
+                  {/*
+                   * THE ROW, THEN THE RECORD.
+                   *
+                   * /schedule drops the bout list entirely — on a calendar it
+                   * is mostly "Card not announced" repeated down the page. Here
+                   * it stays, because the bouts ARE the archive: winner, method,
+                   * round and how well each is sourced. The UFC-style row on
+                   * top gives the two pages one grammar; what hangs off it
+                   * differs because the two pages answer different questions.
+                   */}
+                  {row ? (
+                    <EventRow
+                      event={row.event}
+                      competitionName={row.competitionName}
+                      competitionSlug={row.competitionSlug}
+                      competitionLogoUrl={row.competitionLogoUrl}
+                      boutCount={eventBouts.length}
+                      bouts={eventBouts}
+                      showCountdown={false}
+                      className="border-b-0"
+                    />
+                  ) : null}
+                  <Card className={row ? "border-t-0" : undefined}>
+                    {row ? null : (
+                      <CardHeader title={eventBouts[0].competitionName} />
+                    )}
+                    <CardBodyFlush>
+                      <BoutList bouts={eventBouts} />
+                    </CardBodyFlush>
+                  </Card>
+                </div>
               );
             })}
           </div>
