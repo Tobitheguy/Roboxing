@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import {
-  Anton,
   Archivo,
+  Archivo_Black,
   JetBrains_Mono,
   Noto_Sans_SC,
 } from "next/font/google";
@@ -12,25 +12,43 @@ import { roboxingLocalization } from "@/components/auth/localization";
 import "./globals.css";
 
 /**
- * Three faces, three jobs, no overlap (DIR_03).
+ * ONE FAMILY, TWO ROLES, PLUS A MONO.
  *
- * The site ran on Oswald alone — one face for everything, which was a
- * deliberate instruction and the right call while the design was monochrome
- * and typographic. The new identity separates the jobs instead:
+ *   Archivo Black  display. Results, machine names, headlines. Always
+ *                  uppercase, never a sentence.
+ *   Archivo        every sentence. Never a headline.
+ *   Mono           the telemetry ticker, IDs, timecodes, scores, chips.
  *
- *   Anton    display only. Results, machine names, headlines. Always
- *            uppercase, never a sentence. Single weight — it only has one.
- *   Archivo  every sentence. Never a headline.
- *   Mono     the telemetry ticker, IDs, timecodes, scores, confidence chips.
+ * WHY NOT ANTON, WHICH DIR_03 SPECIFIED.
  *
- * NOTO SANS SC IS NOT OPTIONAL. Anton has no CJK coverage at all, and this
+ * Two separate complaints from Tobias had one root. First, headlines were
+ * hard to read and the letters grew together. Anton is extremely condensed
+ * AND very heavy, which is exactly the combination that closes up at small
+ * sizes; the tracking bump and the disabled synthetic bold were treating a
+ * symptom.
+ *
+ * Second, the drawn R in the logo did not look like the R beside it. That is
+ * not a "logo font vs site font" problem, which is normal and near-universal
+ * (Netflix, Spotify and Airbnb all do it). It is a PROPORTION problem: the
+ * mark is a square, wide, heavy R and Anton's R is roughly 55% of that width.
+ * Two R's at opposite ends of the width axis, ten pixels apart.
+ *
+ * Archivo Black answers both. Its proportions sit with the mark, it stays
+ * open at small sizes, and it is the black cut of the family that already
+ * sets the body -- so the site drops from two type families to one.
+ *
+ * The cost was accepted knowingly: Archivo Black sets about 60% wider than
+ * Anton, so the display scale came down a step and some long league names now
+ * wrap. A headline that wraps beats a headline nobody can read.
+ *
+ * NOTO SANS SC IS NOT OPTIONAL. Neither Latin face covers CJK, and this
  * record is full of Chinese: machine names (斗牛士), pilot names (陆鑫), a
  * league entry keyword (报名). Without a CJK fallback on every stack those
  * render as boxes — which on a site whose whole claim is knowing which machine
  * is which would be worse than ugly.
  */
-const anton = Anton({
-  variable: "--font-anton",
+const archivoBlack = Archivo_Black({
+  variable: "--font-archivo-black",
   subsets: ["latin"],
   weight: "400",
   display: "swap",
@@ -150,7 +168,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         // palette; the palette is light now, and leaving it on would apply
         // dark-mode overrides on top of light tokens — which is how you get a
         // white page with dark-grey form controls on it.
-        className={`${anton.variable} ${archivo.variable} ${jetbrainsMono.variable} ${notoSC.variable} h-full antialiased`}
+        className={`${archivoBlack.variable} ${archivo.variable} ${jetbrainsMono.variable} ${notoSC.variable} h-full antialiased`}
       >
         <body className="flex min-h-full flex-col">{children}</body>
       </html>

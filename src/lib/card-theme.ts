@@ -48,8 +48,8 @@ export const CARD = {
  * render depend on a third party, and it fails on exactly the post that
  * travels.
  *
- * TWO FACES, BECAUSE DISPLAY IS NEVER A SENTENCE. Anton is for names,
- * results and headlines; Archivo is for anything with a verb in it. The
+ * TWO WEIGHTS, BECAUSE DISPLAY IS NEVER A SENTENCE. Archivo Black is for
+ * names, results and headlines; Archivo is for anything with a verb in. The
  * share cards used to set their summary paragraphs in the display face,
  * which is the rule this system states most plainly and the easiest one to
  * break by accident — a card only has one `fontFamily` at the root and
@@ -60,12 +60,17 @@ export const CARD = {
  * defect `font-synthesis-weight: none` fixes in the browser.
  */
 export async function displayFont() {
-  const [anton, archivo] = await Promise.all([
-    readFile(join(process.cwd(), "src/app/_fonts/anton-400.ttf")),
+  const [display, archivo] = await Promise.all([
+    readFile(join(process.cwd(), "src/app/_fonts/archivo-black.ttf")),
     readFile(join(process.cwd(), "src/app/_fonts/archivo-400.ttf")),
   ]);
   return [
-    { name: "Anton", data: anton, weight: 400 as const, style: "normal" as const },
+    {
+      name: "Archivo Black",
+      data: display,
+      weight: 400 as const,
+      style: "normal" as const,
+    },
     {
       name: "Archivo",
       data: archivo,
@@ -76,7 +81,7 @@ export async function displayFont() {
 }
 
 /** Names, results, headlines. Always uppercase, never a sentence. */
-export const CARD_FONT = "Anton";
+export const CARD_FONT = "Archivo Black";
 
 /** Anything with a verb in it. Never a headline. */
 export const CARD_BODY_FONT = "Archivo";

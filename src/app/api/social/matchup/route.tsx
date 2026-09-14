@@ -299,12 +299,24 @@ export async function GET(request: Request) {
             justifyContent: "space-between",
             borderBottom: `2px solid ${CARD.line}`,
             padding: "36px 40px",
+            /* A GAP, AND A LEAGUE NAME THAT YIELDS.
+               space-between alone put "ULTIMATE ROBOT KNOCK-OUT LEGEND" flush
+               against "THU, JUL 16, 2026" with no space at all once the
+               display face got wider. The date is short and fixed, so it
+               never shrinks; the league name takes what is left and ellipses
+               rather than pushing into it. */
+            gap: 28,
           }}
         >
           <div
             style={{
-              fontSize: 26,
-              letterSpacing: "0.14em",
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              fontSize: 22,
+              letterSpacing: "0.12em",
               color: CARD.ink,
               textTransform: "uppercase",
             }}
@@ -316,10 +328,11 @@ export async function GET(request: Request) {
               style={{
                 display: "flex",
                 alignItems: "center",
+                flexShrink: 0,
                 background: CARD.live,
                 color: CARD.ink,
-                fontSize: 24,
-                letterSpacing: "0.14em",
+                fontSize: 22,
+                letterSpacing: "0.12em",
                 padding: "8px 16px",
               }}
             >
@@ -328,8 +341,9 @@ export async function GET(request: Request) {
           ) : (
             <div
               style={{
-                fontSize: 26,
-                letterSpacing: "0.1em",
+                flexShrink: 0,
+                fontSize: 22,
+                letterSpacing: "0.08em",
                 color: CARD.dim,
                 textTransform: "uppercase",
               }}
@@ -401,11 +415,13 @@ export async function GET(request: Request) {
             justifyContent: "space-between",
             borderTop: `2px solid ${CARD.line}`,
             padding: "30px 40px",
+            gap: 28,
           }}
         >
           <div
             style={{
-              fontSize: 28,
+              flexShrink: 0,
+              fontSize: 24,
               letterSpacing: "0.16em",
               color: CARD.ink,
               textTransform: "uppercase",
@@ -415,11 +431,18 @@ export async function GET(request: Request) {
           </div>
           <div
             style={{
-              fontSize: 22,
-              letterSpacing: "0.1em",
+              /* justifyContent, not textAlign: satori lays this out as a
+                 flex item, where text-align has nothing to align inside. */
+              display: "flex",
+              justifyContent: "flex-end",
+              flex: 1,
+              minWidth: 0,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              fontSize: 20,
+              letterSpacing: "0.08em",
               color: CARD.dim,
-              maxWidth: 640,
-              textAlign: "right",
             }}
           >
             {footerRight}

@@ -27,7 +27,8 @@ an intention.
 | Light ground `#f6f6f3` | Void `#0b0f10` | DIR_03 |
 | Monochrome accent (`--color-volt` = ink) | Instrument cyan `#00e5d0` | DIR_03 — volt NAMES a colour again |
 | `#e5231f` live red | `#ff3225` | DIR_03 |
-| Oswald, one face for everything | Anton / Archivo / JetBrains Mono | DIR_03 |
+| Oswald, one face for everything | Archivo Black / Archivo / JetBrains Mono | DIR_03, then 13 Sep 2026 |
+| Anton for display | Archivo Black | 13 Sep 2026 — see the note below |
 | `--radius: 0.5rem` | `0` at every step | DIR_03 — do not reintroduce a radius scale |
 | 1px hairlines | 2px rules, never softened | DIR_03 |
 | `#FF2D2D` (live red) | superseded twice; see above | pre-DIR_03 |
@@ -131,29 +132,43 @@ measures 1.7:1 on paper and fails as text.
 
 | Role | Face | Used for |
 |---|---|---|
-| Display | **Anton** (400 only) | Results, machine names, headlines. Always uppercase, never a sentence. |
+| Display | **Archivo Black** (400 only — it is already the black cut) | Results, machine names, headlines. Always uppercase, never a sentence. |
 | Body | **Archivo** (400–700) | Every sentence. Never a headline. |
 | Mono | **JetBrains Mono** | Ticker, IDs, timecodes, scores, confidence chips, nav, filter chips. |
-| CJK | **Noto Sans SC** | Fallback on every stack. Anton has no CJK and machine names are routinely Chinese. |
+| CJK | **Noto Sans SC** | Fallback on every stack. Neither Latin cut has CJK and machine names are routinely Chinese. |
 
 ```css
---font-display: var(--font-anton), "Anton", "Noto Sans SC", sans-serif;
+--font-display: var(--font-archivo-black), "Archivo Black", "Noto Sans SC", sans-serif;
 --font-sans:    var(--font-archivo), "Archivo", "Noto Sans SC", sans-serif;
 --font-mono:    var(--font-jetbrains-mono), ui-monospace, monospace;
 ```
 
-**TRACKING IS 0.03em ON DISPLAY, NOT DIR_03's 0.005em.** Anton is extremely
-condensed and its caps very nearly touch at their default fit; at 0.005em a
-long name — ULTIMATE ROBOT KNOCK-OUT LEGEND — closes into an unreadable block.
-The prototype's headlines are one word, where the tight fit looks deliberate.
-Small headings (`h3`) take 0.055em and drop to 92% opacity: optical sizing runs
-the opposite way to intuition, and #F2F0EA on #0B0F10 at 16.8:1 blooms at small
-sizes.
+**WHY NOT ANTON, WHICH DIR_03 SPECIFIED.** Two complaints had one root.
+Headlines were hard to read and the letters grew together — Anton is
+extremely condensed AND very heavy, the exact combination that closes up at
+small sizes, and the tracking bump it needed (0.03em against DIR_03's
+0.005em) was treating a symptom. And its R is roughly 55% the width of the
+drawn R in the logo standing ten pixels away. That second one is NOT the
+ordinary "logo font differs from site font" — that is normal and near
+universal. It is a proportion clash between a square mark and a narrow face.
 
-**`font-synthesis-weight: none` is set globally.** Anton ships one weight and
-the codebase still carries `font-bold` from the Oswald era; without this the
-browser fakes the weight by smearing the glyphs, which welds adjacent letters
-together.
+Archivo Black answers both, and it is the black cut of the family that
+already sets the body, so the system dropped from two families to one.
+
+**IT SETS ABOUT 60% WIDER THAN ANTON.** The whole display scale came down a
+step for it and some long league names now wrap to two lines. That trade was
+made deliberately: a headline that wraps beats one nobody can read. When you
+add a template, check a long name in it — "ULTIMATE ROBOT KNOCK-OUT LEGEND"
+is the stress case, and it is what pushed the matchup card's league line into
+its date until both got a gap and an ellipsis.
+
+**Tracking is DIR_03's 0.005em on display**, 0.02em on small headings.
+Nothing here needs the old compensation.
+
+**`font-synthesis-weight: none` is set globally.** Archivo Black ships one
+weight and names it 400; eighty places in this codebase still carry
+`font-bold` from the Oswald era, and without that line the browser fakes a
+bold on top of a bold and welds the glyphs together.
 
 **Image routes must read the font off disk**, never fetch it.
 
