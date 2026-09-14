@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { bouts, competitions, events, watchChannels } from "@/db/schema";
 import { getViewer } from "@/lib/auth";
+import { checkClerk } from "@/lib/clerk-health";
 import { checkTwitch } from "@/lib/twitch-health";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,8 @@ export default async function AdminEventsPage() {
      `twitch-health`. It is one token request and one Helix call, on an
      admin-only page that nobody loads in a loop. */
   const twitch = await checkTwitch(twitchChannelUrls.map((r) => r.url));
+  /* Synchronous — it reads one env var and compares a prefix. */
+  const clerk = checkClerk();
 
   return (
     <PageShell>
@@ -65,6 +68,43 @@ export default async function AdminEventsPage() {
        * three booleans, a message, and the first eight characters of the
        * client id, which Twitch publishes in browser requests anyway.
        */}
+      {/*
+       * SIGN-IN, which is the one credential on this site that a VISITOR can
+       * see the state of. Clerk prints "Development mode" under its own form,
+       * so a wrong key here is not a quiet failure — it is a label on the
+       * product. It sat there for days because nothing looked.
+       */}
+      <Card className="mb-6">
+        <CardHeader
+          title="Sign-in"
+          action={
+            <span
+              className={cn(
+                "font-mono px-2 py-1 text-[11px] font-bold tracking-[0.1em] uppercase",
+                clerk.production
+                  ? "chip-confirmed"
+                  : clerk.configured
+                    ? "chip-unconfirmed"
+                    : "chip-reported",
+              )}
+            >
+              {clerk.production
+                ? "Production"
+                : clerk.configured
+                  ? "Development"
+                  : "Not configured"}
+            </span>
+          }
+        />
+        {clerk.problem ? (
+          <CardBody>
+            <p className="text-ink-muted max-w-2xl text-sm leading-relaxed">
+              {clerk.problem}
+            </p>
+          </CardBody>
+        ) : null}
+      </Card>
+
       <Card className="mb-6">
         <CardHeader
           title="Twitch"
