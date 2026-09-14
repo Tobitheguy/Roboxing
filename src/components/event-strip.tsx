@@ -2,7 +2,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Tv } from "lucide-react";
 
-import { getFeaturedEvent, getRecordCounts } from "@/lib/queries";
+import { dateZone } from "@/components/event-date";
+import { formatDate, formatTimeWithZone } from "@/lib/format";
+import { getFeaturedEvent } from "@/lib/queries";
 import { rethrowControlFlow } from "@/lib/next-errors";
 import { cn } from "@/lib/utils";
 import { getLiveChannels } from "@/lib/twitch";
@@ -56,8 +58,6 @@ export async function EventStrip() {
     rethrowControlFlow(error);
     console.error("[EventStrip] live check failed:", error);
   }
-
-  const counts = await getRecordCounts();
 
   if (live.length > 0) {
     const channel = live[0];
@@ -149,6 +149,25 @@ export async function EventStrip() {
       ? `Next · ${competitionName} · ${event.dateLabel?.trim() || "date to be announced"}`
       : `Next · ${competitionName} · ${event.name}`;
 
+  /*
+   * The date read in the VENUE's calendar, except for date-only rows, where
+   * there is no announced instant to convert and the venue's zone would file
+   * a 1 October season under September. Same rule as `dateZone` on the
+   * schedule; stated again here because this bar renders on every page and
+   * getting it wrong would be wrong everywhere at once.
+   */
+  const whenWhere = [
+    event.dateTbd
+      ? event.dateLabel?.trim() || "Date TBA"
+      : formatDate(event.startsAt, dateZone(event.timezone, event.startTimeTbd)),
+    event.dateTbd || event.startTimeTbd
+      ? "Time TBA"
+      : formatTimeWithZone(event.startsAt, event.timezone),
+    [event.city, event.country].filter(Boolean).join(", ") || null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     /* A filled bar, not a dim rule. It was steel-on-charcoal and disappeared
        into the header above it; as a solid band it reads as the one piece of
@@ -184,14 +203,21 @@ export async function EventStrip() {
           {lead}
         </Link>
 
-        {/* What the record holds. Open questions used to sit here and do not
-            any more: a bar that announces "8 open questions" on every page
-            advertises the site's gaps above its content. That list is worth
-            keeping and worth linking — from the footer, where an index
-            belongs. */}
-        <span className="hidden shrink-0 sm:inline">
-          {`${counts.leagues} leagues · ${counts.results} results · ${counts.machines} machines`}
-        </span>
+        {/*
+         * WHEN AND WHERE, NOT HOW BIG WE ARE.
+         *
+         * This read "8 leagues · 2 results · 10 machines" — three counts about
+         * the site, on a bar above every page, and one of them was the number
+         * 2. Inventory is not news. Nobody arrives wanting to know how many
+         * machines we have on file, and advertising a two-row results table is
+         * the opposite of a reason to stay.
+         *
+         * The left half already names what is next. This half finishes the
+         * sentence: the date, the time, and where it is happening. A field
+         * with no value prints its absence — "Time TBA" rather than nothing,
+         * because a missing time reads as a time nobody bothered to show.
+         */}
+        <span className="hidden shrink-0 sm:inline">{whenWhere}</span>
       </div>
     </div>
   );

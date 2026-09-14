@@ -32,6 +32,12 @@ import { cn } from "@/lib/utils";
  * touchscreen, so a parent that only opens a menu is a dead item on a phone —
  * tapping "Events" there goes to the schedule, which is what a visitor asking
  * for events most likely wants.
+ *
+ * NO CARET. It had one, and Tobias asked for it gone. He is right on the
+ * merits too: a caret is a promise that something is hidden, and this item
+ * already goes somewhere by itself. The affordance is that the menu opens
+ * when the pointer arrives — which it does, immediately — and on a
+ * touchscreen the caret was promising a menu that cannot open at all.
  */
 export function MainNav({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -98,18 +104,9 @@ export function MainNav({ className }: { className?: string }) {
             <Link
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
-              className={cn(boxClass(active), "flex items-center gap-1.5")}
+              className={boxClass(active)}
             >
               {item.label}
-              {/* A caret, drawn rather than typed: a "▾" glyph sets at the
-                  mono face's own size and sits off the optical centre. */}
-              <svg
-                viewBox="0 0 10 6"
-                aria-hidden
-                className="size-2 shrink-0 transition-transform group-hover:rotate-180 group-focus-within:rotate-180"
-              >
-                <path d="M0 0h10L5 6z" fill="currentColor" />
-              </svg>
             </Link>
 
             {/*

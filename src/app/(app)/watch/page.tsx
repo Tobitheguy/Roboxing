@@ -5,6 +5,7 @@ import { ChevronRight, MonitorPlay, Tv } from "lucide-react";
 import { Card, CardBody, CardBodyFlush, CardHeader } from "@/components/card";
 import { ChannelPill } from "@/components/channel-pill";
 import { LiveStreamPlayer } from "@/components/live-stream-player";
+import { TwitchEmbed } from "@/components/twitch-embed";
 import { EventDate } from "@/components/event-date";
 import { Countdown } from "@/components/countdown";
 import { EmptyState } from "@/components/empty-state";
@@ -19,7 +20,7 @@ import {
   getPublishedPosts,
   getUpcomingEvents,
 } from "@/lib/queries";
-import { getLiveChannels } from "@/lib/twitch";
+import { getLiveChannels, twitchLogin } from "@/lib/twitch";
 
 export const metadata: Metadata = {
   title: "Where to watch",
@@ -53,6 +54,40 @@ export default async function WatchIndexPage() {
   ]);
 
   const videoPosts = posts.filter((p) => youtubeThumbnailUrl(p.post.embedUrl));
+
+  /*
+   * EVERY TWITCH CHANNEL IN THE DIRECTORY, EMBEDDED, ALWAYS.
+   *
+   * `liveChannels` below is the API-confirmed list and needs credentials.
+   * This one needs nothing: the Twitch iframe asks only for `parent=<host>`,
+   * so the player can sit here permanently and become the stream the moment
+   * the channel goes live. Offline it draws Twitch's own offline card, which
+   * is an honest state rather than an empty frame.
+   *
+   * Deduplicated by login — a league listing the same channel twice must not
+   * render the same player twice.
+   */
+  const embeds = (() => {
+    const seen = new Set<string>();
+    const out: {
+      login: string;
+      channelName: string;
+      competitionName: string;
+      url: string;
+    }[] = [];
+    for (const row of channels) {
+      const login = twitchLogin(row.channel.url);
+      if (!login || seen.has(login) || !row.channel.url) continue;
+      seen.add(login);
+      out.push({
+        login,
+        channelName: row.channel.name,
+        competitionName: row.competitionName,
+        url: row.channel.url,
+      });
+    }
+    return out;
+  })();
 
   /*
    * Dated events only.
@@ -96,7 +131,6 @@ export default async function WatchIndexPage() {
       <PageHeading
         eyebrow="Broadcast"
         title="Where to watch"
-        description="This sport is broadcast by other people. Here is every channel that carries it, which event is next and who is showing it, and the footage from the nights already fought."
       />
 
       {live ? (
@@ -137,18 +171,30 @@ export default async function WatchIndexPage() {
         </div>
       ) : null}
 
+      {/*
+        THE STREAMS, ON THIS PAGE.
+        Tobias: "when we embed the stream into our page i want people to watch
+        on our page and not go to the pages of the league." This is that. UFB
+        broadcasts on Twitch and Twitch's player runs in our frame with no
+        credentials and no permission beyond naming our hostname — so the
+        channel is here, not a link to it.
+      */}
+      {embeds.length > 0 ? (
+        <div className="mb-12">
+          <h2 className="font-display text-title text-ink mb-4 uppercase">
+            Streams
+          </h2>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {embeds.map((embed) => (
+              <TwitchEmbed key={embed.login} {...embed} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {/* ---- The standing answer, per league ----------------------------- */}
       {leagueGroups.length > 0 ? (
         <div className="mb-12">
-          <h2 className="font-display text-title text-ink mb-2 uppercase">
-            Channels by league
-          </h2>
-          <p className="text-ink-muted mb-5 max-w-2xl text-sm leading-relaxed">
-            Every link here goes to a stream or to the organiser&rsquo;s own
-            video channel — where the footage actually is. Not to a
-            broadcaster&rsquo;s homepage, which answers a different question.
-          </p>
-
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {leagueGroups.map((group) => (
               <Card key={group[0].competitionSlug}>

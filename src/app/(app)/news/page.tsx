@@ -42,8 +42,12 @@ export default async function NewsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {posts.map(({ post, eventSlug, eventName }) => (
+          {/* Only the newest story carries its standfirst — see the note on
+              PostCard's `showSummary`. Everything else is headline, image and
+              date, which is what a reader scanning an index actually uses. */}
+          {posts.map(({ post, eventSlug, eventName }, index) => (
             <PostCard
+              showSummary={index === 0}
               key={post.id}
               post={post}
               eventSlug={eventSlug}

@@ -51,7 +51,12 @@ export function FootageRail({
   return (
     <div
       className={cn(
-        "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+        /* Four across at desktop, not three. The rail moved to the top of
+           the front page and carries four clips there; a three-column grid
+           left the fourth alone on its own row, which reads as a mistake
+           rather than a row of four. Two across on a tablet keeps the pairs
+           even. */
+        "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
         className,
       )}
     >
@@ -67,7 +72,7 @@ export function FootageRail({
         return (
           <figure
             key={item.slug}
-            className="border-line bg-surface overflow-hidden rounded-lg border"
+            className="border-line bg-surface overflow-hidden border-2"
           >
             <div className="bg-surface-2 relative aspect-video">
               {isPlaying && embed ? (
