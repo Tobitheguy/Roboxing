@@ -425,6 +425,7 @@ export const getMostRecentCompletedEvent = cache(async () => {
       event: events,
       competitionSlug: competitions.slug,
       competitionName: competitions.name,
+      competitionLogoUrl: competitions.logoUrl,
     })
     .from(events)
     .innerJoin(competitions, eq(events.competitionId, competitions.id))
@@ -586,6 +587,9 @@ export const getUpcomingEvents = cache(async (competitionSlug?: string) => {
       event: events,
       competitionSlug: competitions.slug,
       competitionName: competitions.name,
+      /* The mark, so an event row can carry its league's logo without a
+         second query per row. */
+      competitionLogoUrl: competitions.logoUrl,
       competitionClass: competitions.class,
       boutCount: sql<number>`(select count(*) from ${bouts} where ${bouts.eventId} = ${events.id})::int`,
     })
@@ -609,6 +613,7 @@ export const getPastEvents = cache(async () => {
       event: events,
       competitionSlug: competitions.slug,
       competitionName: competitions.name,
+      competitionLogoUrl: competitions.logoUrl,
     })
     .from(events)
     .innerJoin(competitions, eq(events.competitionId, competitions.id))

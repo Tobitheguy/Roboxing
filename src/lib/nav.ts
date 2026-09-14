@@ -1,4 +1,13 @@
-export type NavItem = { href: string; label: string };
+export type NavItem = {
+  href: string;
+  label: string;
+  /**
+   * A hover/focus submenu, UFC-style. When present, `href` is still a real
+   * destination — the parent is clickable and the children are shortcuts into
+   * it, never a dead label that only opens a menu.
+   */
+  children?: NavItem[];
+};
 
 /**
  * Primary navigation.
@@ -10,11 +19,29 @@ export type NavItem = { href: string; label: string };
  * "Broadcast TBA".
  *
  * Teams stays out. It is still a list of names with little behind it.
+ *
+ * EVENTS IS ONE ITEM WITH TWO CHILDREN, NOT TWO ITEMS.
+ *
+ * Schedule and Results sat side by side in the header, which is how this site
+ * thinks about them — one table of fixtures, one table of outcomes — and not
+ * how a visitor does. They arrive wanting "events" and then decide whether
+ * they mean the next one or the last one. UFC nests both under Events and
+ * Tobias pointed at exactly that; it also takes the header from six items to
+ * five, which is the reason the four-item rule existed in the first place.
+ *
+ * `/schedule` stays the parent's own destination. A parent that only opens a
+ * menu is a trap on a touchscreen, where there is no hover.
  */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/news", label: "News" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/results", label: "Results" },
+  {
+    href: "/schedule",
+    label: "Events",
+    children: [
+      { href: "/schedule", label: "Upcoming" },
+      { href: "/results", label: "Past" },
+    ],
+  },
   /*
    * Back in the header, and on different terms than last time.
    *
@@ -43,9 +70,17 @@ export const NAV_ITEMS: NavItem[] = [
 /**
  * The footer directory: everything, including what the header dropped.
  * A footer is an index, not a pitch — completeness is the point there.
+ *
+ * Flattened: the header's submenu is a header affordance, and a footer with
+ * nested lists is a sitemap pretending to be navigation.
  */
 export const FOOTER_ITEMS: NavItem[] = [
-  ...NAV_ITEMS,
+  { href: "/news", label: "News" },
+  { href: "/schedule", label: "Schedule" },
+  { href: "/results", label: "Results" },
+  { href: "/watch", label: "Watch" },
+  { href: "/competitions", label: "Leagues" },
+  { href: "/get-in-the-ring", label: "Get in the ring" },
   { href: "/teams", label: "Teams" },
   { href: "/robots", label: "Machines" },
   { href: "/open-questions", label: "Open questions" },

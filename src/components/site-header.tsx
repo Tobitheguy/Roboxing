@@ -52,7 +52,21 @@ async function LiveNowPill({ variant }: { variant: "mobile" | "desktop" }) {
 
 export function SiteHeader() {
   return (
-    <header className="border-line bg-canvas/85 sticky top-0 z-50 border-b backdrop-blur-md">
+    /*
+     * SOLID, NOT BLURRED, AND THAT IS A BUG FIX BEFORE IT IS A STYLE CHOICE.
+     *
+     * This was `bg-canvas/85 backdrop-blur-md`. An element with
+     * `backdrop-filter` becomes a backdrop root in Chromium and CLIPS its
+     * descendants to its own border box — so the Events dropdown rendered
+     * (display:block, correct position, 176x80) and then had everything below
+     * the header's bottom edge cut away. `elementFromPoint` at the panel's
+     * centre returned the ticker strip behind it, which is how it was found.
+     *
+     * Removing the blur is also the on-brand answer: DIR_03 is flat, with no
+     * gradients, no glow and no softness. A translucent blurred bar was the
+     * one piece of glass chrome left on the site.
+     */
+    <header className="border-line bg-canvas sticky top-0 z-50 border-b-2">
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:gap-6 md:px-6">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="rounded-md" aria-label="Roboxing home">

@@ -6,7 +6,6 @@ import {
   rejectBrief,
   slugify,
   uniqueSlug,
-  withAttribution,
   type Brief,
 } from "@/lib/autopublish";
 
@@ -121,18 +120,6 @@ describe("isFetchableArticle", () => {
     expect(isFetchableArticle("https://news.google.com.evil.test/x")).toBe(true);
     expect(isFetchableArticle("not a url")).toBe(false);
     expect(isFetchableArticle("ftp://example.com/x")).toBe(false);
-  });
-});
-
-describe("withAttribution", () => {
-  it("appends the source as a markdown link on its own paragraph", () => {
-    const body = withAttribution(
-      "Something happened.",
-      "https://www.saudigazette.com.sa/article/123",
-    );
-    expect(body).toBe(
-      "Something happened.\n\nSource: [saudigazette.com.sa](https://www.saudigazette.com.sa/article/123)",
-    );
   });
 });
 

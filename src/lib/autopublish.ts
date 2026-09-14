@@ -262,22 +262,19 @@ export function isFetchableArticle(url: string): boolean {
 }
 
 /**
- * Compose the stored body: the brief, then the attribution.
+ * `withAttribution` USED TO LIVE HERE AND IS GONE ON PURPOSE.
  *
- * The source line is appended here rather than asked of the model, because a
- * model that forgets it once publishes an unsourced claim. Plain text with a
- * markdown link — the same renderer the hand-written posts use.
+ * It appended "Source: [host](url)" to the end of every generated body,
+ * because a model that forgets the attribution once publishes an unsourced
+ * claim. That reasoning was right and the mechanism was the wrong one: the
+ * same insert already stores `posts.source_url`, and the article page now
+ * renders it as a real link in a fixed place at the foot of the piece.
+ *
+ * Two sources on one page is worse than one — it read as a duplicate, and the
+ * prose copy could drift from the column while looking equally official.
+ * The column is the guarantee now, and it cannot be forgotten by a model
+ * because no model writes it.
  */
-export function withAttribution(body: string, url: string): string {
-  const host = (() => {
-    try {
-      return new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-      return url;
-    }
-  })();
-  return `${body.trim()}\n\nSource: [${host}](${url})`;
-}
 
 /* -------------------------------------------------------------------------- */
 /* The run                                                                     */
@@ -639,7 +636,7 @@ export async function autoPublish(
         status: "published",
         title: brief.title.trim(),
         summary: brief.summary.trim(),
-        body: withAttribution(brief.body, candidate.url),
+        body: brief.body.trim(),
         publishedAt: new Date(),
         autoPublished: true,
         sourceUrl: candidate.url,
@@ -756,7 +753,7 @@ export async function dryRunAutoPublish(
       url: candidate.url,
       score: candidate.score,
       brief: verdict.brief,
-      body: withAttribution(verdict.brief.body, candidate.url),
+      body: verdict.brief.body.trim(),
       slug,
       reason: "ok",
     });

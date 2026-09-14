@@ -25,6 +25,21 @@ export function PostCard({
   post,
   eventSlug,
   eventName,
+  /**
+   * Print the standfirst under the headline.
+   *
+   * OFF BY DEFAULT, WHICH IS THE OPPOSITE OF HOW THIS STARTED.
+   *
+   * Every card carried a three-line summary, and on a grid of five that is a
+   * wall of prose where a reader wanted a list of stories. ESPN, UFC and The
+   * Athletic all show headline + image + date in a grid and save the standfirst
+   * for the one lead item. The reason is simple: a good headline already sells
+   * the click, and a summary sells it a second time to someone who has already
+   * decided.
+   *
+   * So the lead opts in and nothing else does.
+   */
+  showSummary = false,
   className,
 }: {
   post: Pick<
@@ -39,6 +54,7 @@ export function PostCard({
   >;
   eventSlug?: string | null;
   eventName?: string | null;
+  showSummary?: boolean;
   className?: string;
 }) {
   const Icon = post.kind === "clip" ? Clapperboard : FileText;
@@ -111,7 +127,7 @@ export function PostCard({
           </Link>
         </h3>
 
-        {post.summary ? (
+        {showSummary && post.summary ? (
           <p className="text-ink-muted mt-2 line-clamp-3 text-sm">
             {post.summary}
           </p>

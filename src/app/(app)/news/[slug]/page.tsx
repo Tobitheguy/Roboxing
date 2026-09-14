@@ -114,19 +114,6 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
           ) : null}
         </div>
 
-        {/* Above the headline's fold, not in a footer.
-            This post was written by the morning cron from the one source linked
-            at the end, and no person read it before it went live. A reader who
-            learns that after finishing the piece has already decided how much to
-            trust it. The whole value of this site is that its results are right,
-            which means being loud about the copy nobody checked. */}
-        {post.autoPublished ? (
-          <p className="border-line text-ink-dim mt-4 border-l-2 pl-4 text-sm leading-relaxed">
-            Written automatically from the source linked below, and not reviewed
-            by an editor before publication. Corrections are welcome.
-          </p>
-        ) : null}
-
         <h1 className="font-display text-hero text-ink uppercase">
           {post.title}
         </h1>
@@ -144,8 +131,60 @@ export default async function PostPage(props: PageProps<"/news/[slug]">) {
         ) : null}
 
         {/* Text and `[label](url)` links only — still no HTML path into a
-            body. See the parser note in `lib/embeds`. */}
-        <RichText body={post.body} className="mt-8 space-y-4" />
+            body. See the parser note in `lib/embeds`.
+
+            The trailing "Source: [host](url)" line is stripped because every
+            brief published before 13 Sep 2026 has one baked into its prose,
+            from back when the attribution lived in the body. The structured
+            link at the foot of the page replaces it; leaving both would print
+            the same source twice, a paragraph apart. Anchored to the end of
+            the string so a source cited mid-article is untouched. */}
+        <RichText
+          body={post.body?.replace(/\n+Source:\s*\[[^\]]*\]\([^)]*\)\s*$/, "") ?? null}
+          className="mt-8 space-y-4"
+        />
+
+        {/*
+         * THE SOURCE, AT THE END, WHERE TOBIAS SAID IT BELONGS.
+         *
+         * The automated-brief disclosure used to sit between the kicker and
+         * the headline, which is the worst position on the page: it is the
+         * first thing read, it is a caveat about a story the reader has not
+         * met yet, and it interrupts the one typographic move the article has.
+         * His instruction was that the source at the end is enough.
+         *
+         * It also made a promise the page did not keep. The text said "from
+         * the source linked below" while `posts.source_url` was never
+         * rendered anywhere — the link was only ever inside the body, if the
+         * writer happened to include it. So the disclosure moved down here
+         * AND the link it refers to now actually exists.
+         *
+         * The "Automated brief" chip stays in the meta row. One word above
+         * the headline is a label; three sentences is an apology.
+         */}
+        {post.sourceUrl || post.autoPublished ? (
+          <div className="border-line mt-10 border-t-2 pt-6">
+            {post.sourceUrl ? (
+              <p className="text-sm">
+                <span className="eyebrow">Source</span>{" "}
+                <a
+                  href={post.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="break-all"
+                >
+                  {post.sourceUrl.replace(/^https?:\/\/(www\.)?/, "")}
+                </a>
+              </p>
+            ) : null}
+            {post.autoPublished ? (
+              <p className="text-ink-dim mt-2 text-xs leading-relaxed">
+                Written automatically from that source and not reviewed by an
+                editor before publication. Corrections are welcome.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {eventSlug && eventName ? (
           <div className="border-line mt-10 border-t pt-6">

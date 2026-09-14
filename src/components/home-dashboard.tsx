@@ -66,7 +66,7 @@ export async function HomeDashboard() {
    */
   const footage = posts
     .filter(({ post }) => post.embedUrl)
-    .slice(0, 3)
+    .slice(0, 4)
     .map(({ post }) => ({
       slug: post.slug,
       title: post.title,
@@ -77,6 +77,38 @@ export async function HomeDashboard() {
   return (
     <PageShell>
       <JustHappenedUpNext />
+
+      {/*
+       * THE CLIPS COME FIRST NOW.
+       *
+       * They used to sit halfway down the main column, under five text cards.
+       * That is the wrong order for who actually arrives here. Almost
+       * everyone who lands on this site saw a clip somewhere else first — the
+       * flying kick that took Matador's head off is the most-seen thing this
+       * sport has produced — and what they want is more of that, not a
+       * standfirst. The record is why they should come back; the footage is
+       * why they stay the first time.
+       *
+       * Full width, above the column/rail split, directly under the two event
+       * panels. Poster frames only until a click — see the note in
+       * FootageRail on why four iframes do not belong on a front page.
+       */}
+      {footage.length > 0 ? (
+        <div className="mt-10">
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <h2 className="font-display text-title text-ink uppercase">
+              Watch
+            </h2>
+            <Link
+              href="/watch"
+              className="text-volt shrink-0 text-xs font-medium underline underline-offset-4"
+            >
+              Where to watch
+            </Link>
+          </div>
+          <FootageRail items={footage} />
+        </div>
+      ) : null}
 
       {/* Main column + rail, the UFC/ESPN shape. On a phone the rail content
           follows the column rather than cramming beside it. */}
@@ -113,6 +145,7 @@ export async function HomeDashboard() {
                   post={lead.post}
                   eventSlug={lead.eventSlug}
                   eventName={lead.eventName}
+                  showSummary
                 />
               ) : null}
               {gridPosts.length > 0 ? (
@@ -129,28 +162,6 @@ export async function HomeDashboard() {
               ) : null}
             </div>
           )}
-
-          {/* Footage as an entrance, not a footnote.
-              The kick that took Matador's head off is the most-seen thing this
-              sport has produced, and until now it was a thumbnail in a list.
-              Poster frames only until a click — see the note in FootageRail on
-              why four iframes do not belong on a front page. */}
-          {footage.length > 0 ? (
-            <div className="mt-10">
-              <div className="mb-4 flex items-baseline justify-between gap-4">
-                <h2 className="font-display text-title text-ink uppercase">
-                  Watch
-                </h2>
-                <Link
-                  href="/watch"
-                  className="text-volt shrink-0 text-xs font-medium underline underline-offset-4"
-                >
-                  Where to watch
-                </Link>
-              </div>
-              <FootageRail items={footage} />
-            </div>
-          ) : null}
 
           <div className="mt-8">
             <Card>
@@ -185,7 +196,12 @@ export async function HomeDashboard() {
           </div>
         </div>
 
-        <SideRail posts={posts} />
+        {/* `rest`, not `posts`: the rail was fed the same nine stories as the
+            column, so the lead story appeared twice on one screen — once with
+            a standfirst in Latest coverage and again as number one in Top
+            stories. A front page that prints the same headline twice reads as
+            thin, not as busy. */}
+        <SideRail posts={rest} />
       </div>
 
       <div className="mt-12">
