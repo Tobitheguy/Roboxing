@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getAppUrl } from "@/lib/app-url";
-import { NAV_ITEMS } from "@/lib/nav";
+import { LEGAL_ITEMS, NAV_ITEMS } from "@/lib/nav";
 import { getSitemapContent } from "@/lib/queries";
 import { rethrowControlFlow } from "@/lib/next-errors";
 
@@ -37,6 +37,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${base}${item.href}`,
       changeFrequency: "daily" as const,
       priority: 0.8,
+    })),
+    /*
+     * The legal pages, at the bottom of the priority range.
+     *
+     * Nobody arrives here from a search and they are not content. They are
+     * listed because they are URLs somebody else checks: Google's OAuth
+     * consent screen requires a reachable privacy policy and terms before an
+     * app can be published, and a page a crawler cannot find is a page that
+     * verification treats as missing.
+     */
+    ...LEGAL_ITEMS.map((item) => ({
+      url: `${base}${item.href}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.1,
     })),
   ];
 

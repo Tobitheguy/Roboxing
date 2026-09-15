@@ -86,3 +86,21 @@ export const FOOTER_ITEMS: NavItem[] = [
   { href: "/open-questions", label: "Open questions" },
   { href: "/context", label: "Context" },
 ];
+
+/**
+ * The legal row, kept OUT of `FOOTER_ITEMS` on purpose.
+ *
+ * The footer directory is an index of the sport — news, fixtures, machines.
+ * Dropping "Privacy" between "Machines" and "Open questions" makes both
+ * kinds of link harder to find: a reader scanning for content skips past
+ * boilerplate, and a reader hunting for the privacy policy expects it in the
+ * fine print at the very bottom, which is where every other site puts it.
+ *
+ * `/impressum` is here rather than `/legal-notice` because the readers who go
+ * looking for it type the German word.
+ */
+export const LEGAL_ITEMS: NavItem[] = [
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+  { href: "/impressum", label: "Legal notice" },
+];

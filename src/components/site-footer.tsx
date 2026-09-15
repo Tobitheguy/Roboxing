@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { RoboxingMark } from "@/components/roboxing-mark";
-import { FOOTER_ITEMS } from "@/lib/nav";
+import { FOOTER_ITEMS, LEGAL_ITEMS } from "@/lib/nav";
 
 export function SiteFooter() {
   return (
@@ -40,9 +40,25 @@ export function SiteFooter() {
       </div>
 
       <div className="border-line border-t">
-        <div className="text-ink-dim mx-auto max-w-7xl px-4 py-4 text-xs md:px-6">
-          Roboxing is an independent platform. Robot names, team names, and league
-          marks belong to their respective owners.
+        <div className="text-ink-dim mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs sm:flex-row sm:items-center sm:justify-between md:px-6">
+          <p>
+            Roboxing is an independent platform. Robot names, team names, and
+            league marks belong to their respective owners.
+          </p>
+          <nav
+            aria-label="Legal"
+            className="flex shrink-0 flex-wrap gap-x-4 gap-y-1"
+          >
+            {LEGAL_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="hover:text-ink transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>
