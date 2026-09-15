@@ -1,5 +1,88 @@
 # Where Roboxing stands
 
+> **2026-09-14: GOOGLE SIGN-IN IS LIVE ON THE PRODUCTION INSTANCE, and the
+> route there is not the documented one.** `roboxing.tv/sign-in` serves
+> `pk_live_Y2xlcmsucm9ib3hpbmcudHYk` — verified by reading the deployed page,
+> which remains the only trustworthy check. The orange "Development mode" line
+> is gone and `clerk.roboxing.tv/v1/environment` reports `oauth_google`.
+>
+> **The Vercel marketplace integration cannot do this and will waste an hour
+> if you let it.** Setting the production domain in Integrations → Clerk →
+> Settings → Change Configuration runs ~25s and then fails with
+> `Configuration update failed. Clerk failed to complete this request.` Twice,
+> identically. (The older note that it "sits on Processing and comes back
+> empty" is out of date — it now returns a definite error.) Best guess, not
+> proven: the production instance already existed, created by hand, so the
+> marketplace has nothing to provision and conflicts.
+>
+> Worse, **the two variables it manages have no Edit option at all** — their
+> menu is Manage Connection / Rotate Integration Secrets / Copy / History /
+> Delete. So "just override them" is not available either.
+>
+> What actually worked: **delete the marketplace-managed
+> `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` rows**, then add
+> plain ones. After deletion they behave like any other env var. Note the
+> publishable key is only base64 of `clerk.roboxing.tv$` and is public by
+> design — it ships to every browser, which is why reading it off the page
+> works. Deleting the marketplace row also strips Preview and Development,
+> because it was scoped to All Environments; the dev key was put back there by
+> hand. **Preview still has no `CLERK_SECRET_KEY`**, so auth does not work on
+> preview deployments until a `sk_test_` is added there.
+>
+> **Google Cloud is complete, in the project nobody could find.** It lives
+> under **tobias@roboxing.tv**, not the gmail account the browser defaults to —
+> which is why an earlier search through four projects found nothing. OAuth
+> client "Roboxing" (Web application), JS origin `https://roboxing.tv`,
+> redirect `https://clerk.roboxing.tv/v1/oauth_callback`. The client secret
+> **can no longer be displayed** by Google; if it was not saved, "Add secret"
+> makes a second one and the old stays valid.
+>
+> The consent screen is **published and brand-verified**: app name Roboxing,
+> the split R, `roboxing.tv` as authorized domain. Brand verification turned
+> out to be automatic and took about a minute, not a multi-week review — but
+> the result **expires in 7 days if you do not then click "Branding
+> veröffentlichen"**, which is a separate second click. Scope verification does
+> not apply at all: only name, email and picture are requested.
+>
+> **The legal pages exist and Google's publish flow is what forced them**
+> (`e280a0f`): `/privacy`, `/terms`, `/impressum`, shared shell in
+> `components/legal-page.tsx`, operator facts in `lib/legal.ts`.
+> `OPERATOR.address` is deliberately `null` — this repo is public and an
+> address committed here survives deletion, in history. Every page renders it
+> only when set.
+>
+> **The privacy policy makes a claim the code has to keep true: there is no
+> analytics product on this site.** No Vercel Analytics, no Speed Insights, no
+> GA, no Plausible. If one is ever added, `/privacy` is wrong the same day —
+> edit it in the same commit.
+>
+> **Clerk's dashboard now opens straight onto the Roboxing app.** The old note
+> that a normal login lands on an unrelated app called "Infinita" no longer
+> holds; `dashboard.clerk.com` shows Roboxing / Production directly.
+>
+> **2026-09-14: the signals pipeline is healthy and has published by itself.**
+> All three stages run. The classification outage below is over — every row
+> swept in the last five days is scored, 0 unscored. `AUTOPUBLISH=on` has been
+> set in Vercel since 12 Sep, and stage 3 published its first unattended brief
+> at **05:31 on 13 Sep**: `/news/cyberhero-riyadh-finale-crowns-yellow-squad-4-3…`,
+> from a signal scoring 88.
+>
+> **A quiet morning is the system working, not a broken watcher.** 14 Sep swept
+> 22 items, scored all 22, top score 90, and published nothing — correctly: the
+> 90s were four copies of the CyberHero Riyadh finale already covered on the
+> 13th, and their links are `news.google.com` interstitials the publisher
+> refuses to write from. Worth watching: 18 of those 22 rows were Google News
+> links, which stage 3 can never use. If a week passes with real news and
+> nothing publishes, that ratio is the thing to look at, not the flags.
+>
+> **Twitch is done** (13 Sep). Credentials are in Vercel production, a
+> twitch.tv channel on an event page renders as the player instead of a pill
+> that sends readers away. Neither credential is needed for the embed — the
+> iframe only wants `parent=<hostname>` from `live-stream-player.tsx`; the two
+> variables buy the "is it live" label via Helix. **They are not in
+> `.env.local`**, so in `npm run dev` the stream plays and the live label never
+> appears. That is not a bug.
+>
 > **LAUNCHED 2026-09-08, the evening before CyberHero x Riyadh.**
 > Production is https://roboxing.vercel.app — verified live: home 200, all
 > seven posts serving, robots.txt open to crawlers, the Matador result on
@@ -52,6 +135,9 @@
 > edits to those rows). Where a source URL was never actually verified it is
 > left NULL on purpose — a citation that does not resolve is worse than none.
 >
+> **2026-09-11 — SUPERSEDED, see the 2026-09-14 block at the top: the variable
+> was set on 12 Sep and stage 3 has published.** Kept for the design notes.
+>
 > **2026-09-11: the cron can publish, and ONE VARIABLE IS MISSING.** Stage 3
 > (`src/lib/autopublish.ts`) fetches the source article behind a high-scoring
 > signal and writes a 2–4 paragraph brief. It is off until **`AUTOPUBLISH=on`**
@@ -61,6 +147,10 @@
 >
 > Tunable without a deploy: `AUTOPUBLISH_MAX` (default 2 per run),
 > `AUTOPUBLISH_MIN_SCORE` (default 85), `AUTOPUBLISH_MODEL`.
+>
+> **RESOLVED — the backlog is gone and every row is scored (checked against the
+> live database on 14 Sep). The account below is kept because the failure mode
+> is worth recognising if it returns.**
 >
 > **Still unexplained, and it blocks stage 3 too:** classification stopped
 > working in production on **9 September** and the cron reported 200 for two
@@ -91,6 +181,11 @@
 > note on how it was first learned. The league page also gained a Coverage
 > section — before this, two posts about Riyadh sat three clicks from the league
 > they were about.
+>
+> **2026-09-11 — SUPERSEDED by the 2026-09-14 block at the top. The live site
+> is on the PRODUCTION instance now and Google sign-in works. Everything below
+> describes how it got half-configured and is kept for the DNS and shared-
+> credentials reasoning, not as current state.**
 >
 > **2026-09-11: the Clerk production instance is half-configured. Read this
 > before touching auth.** The live site is STILL on the development instance —
@@ -136,7 +231,13 @@
 > re-signing in on the new instance inserts cleanly. Admin is by `ADMIN_EMAILS`,
 > so lockout is impossible.
 >
-> Still open, in order:
+> Still open, in order (revised 2026-09-14 — the Clerk cutover that used to
+> head this list is done; the rest has not moved, plus two leftovers from the
+> key swap):
+>
+> 0. **Preview deployments have no `CLERK_SECRET_KEY`**, and the Development
+>    scope holds a `sk_live_` that does not belong there. Neither affects
+>    production; both are wrong.
 >
 > 1. **Prove the signup works end to end** — subscribe on the live site with a
 >    real address and watch for the confirmation mail. Never verified: the
@@ -780,19 +881,23 @@ Billing → Notifications.
 | Thing | State | What it costs |
 |---|---|---|
 | Two-factor authentication | Built, deployed, switched **off** via `REQUIRE_TWO_FACTOR` | Clerk Pro, $25/mo. Turning it on without that locks out every account, including the one that would fix it. |
-| "Development mode" badge on the sign-in form | Visible to every visitor | Free — needs a Clerk **production** instance. |
+| ~~"Development mode" badge on the sign-in form~~ | **Done 2026-09-14** — production instance is live | — |
 | Clerk application name (`clerk-cyan-drum`) | Patched in the visible strings only | Free — rename in the Clerk dashboard, then delete `src/components/auth/localization.ts`. |
 | Password minimum length | 15, with no strength meter | Free — 10 is the recommendation. |
-| Google sign-in on our own domain | Currently via `*.clerk.accounts.dev` | Free — production instance + DNS + our own Google OAuth credentials. |
-| `roboxing.tv` | Not bought | ~$35–40/yr |
+| ~~Google sign-in on our own domain~~ | **Done 2026-09-14** — own Google OAuth client, consent screen brand-verified | — |
+| ~~`roboxing.tv`~~ | **Bought 2026-09-08**, live, DNS at Vercel | — |
 | Stripe | Test mode | Live mode needs the business registered. |
 | Broadcast rights | None | **The actual gate on launch.** Everything on the site is invented placeholder data and says so. |
 
-The right Clerk instance is the one reachable via
-**vercel.com → roboxing → Integrations → Clerk → Manage** (instance id
-deliberately not recorded here — this repo is public). The instance visible
+**Out of date as of 2026-09-14:** `dashboard.clerk.com` now opens directly on
+the Roboxing app, Production instance. The "Infinita" detour below no longer
+applies. Going through vercel.com → Integrations → Clerk → Manage still works
+and lands in the same place.
+
+~~The right Clerk instance is the one reachable via
+**vercel.com → roboxing → Integrations → Clerk → Manage**. The instance visible
 in a normal Clerk dashboard login is a different, unused app called "Infinita" —
-changes made there do nothing.
+changes made there do nothing.~~
 
 ---
 
