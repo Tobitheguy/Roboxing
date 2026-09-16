@@ -51,10 +51,44 @@
 > address committed here survives deletion, in history. Every page renders it
 > only when set.
 >
-> **The privacy policy makes a claim the code has to keep true: there is no
-> analytics product on this site.** No Vercel Analytics, no Speed Insights, no
-> GA, no Plausible. If one is ever added, `/privacy` is wrong the same day —
-> edit it in the same commit.
+> **SUPERSEDED 2026-09-15 — analytics now exists. See the block below.** This
+> used to read "the privacy policy makes a claim the code has to keep true:
+> there is no analytics product on this site." That is no longer the claim, and
+> the rule it stated was honoured: the product and the policy shipped in one
+> commit.
+>
+> **2026-09-15: the site measures itself, and `/privacy` was rewritten in the
+> same commit.** `@vercel/analytics` only — no Speed Insights, no GA, no
+> Plausible, no advertising network. Mounted once in the root layout via
+> `components/analytics.tsx`, which is a client wrapper for one reason:
+> `beforeSend` is a function and cannot cross a server→client boundary.
+>
+> **Cookieless was the whole selection criterion.** Vercel Web Analytics writes
+> nothing to the browser and counts visitors by a request hash discarded after
+> 24 hours, so the "no consent banner" position survives. Google Analytics would
+> have cost that on day one and forced a banner onto every page. Confirmed
+> against Vercel's own privacy documentation rather than recalled — what is
+> stored per view is timestamp, URL, dynamic path, referrer, filtered query
+> params, geolocation, OS, browser, device type, script version. **IP is used in
+> passing and not stored.**
+>
+> **Two redactions in `beforeSend`, and `/privacy` now promises both — so they
+> are load-bearing code.** `/admin` and `/account` are never reported (admin
+> traffic is Tobias, and at this audience size one editing session outweighs a
+> day of real readers; `/account` paths describe an identifiable person). Query
+> strings are dropped except an attribution allowlist — today nothing sensitive
+> rides in a page URL, because the newsletter's confirm/unsubscribe tokens live
+> on `/api/newsletter/*` which is a route handler and never a page view, but an
+> allowlist does not have to be remembered later.
+>
+> **IT IS NOT COLLECTING YET.** `vercel project web-analytics enable` is a PAID
+> feature and the CLI refuses to confirm it non-interactively — it must be run
+> by a human in a terminal. Until then the script is deployed and the dashboard
+> stays empty. That is the one remaining step.
+>
+> Speed Insights was deliberately NOT added: a second paid enablement and a
+> second disclosure, collecting real-user performance data nobody is acting on,
+> when Lighthouse answers the same question for free at this traffic level.
 >
 > **Clerk's dashboard now opens straight onto the Roboxing app.** The old note
 > that a normal login lands on an unrelated app called "Infinita" no longer
@@ -235,16 +269,50 @@
 > head this list is done; the rest has not moved, plus two leftovers from the
 > key swap):
 >
-> 0. **Preview deployments have no `CLERK_SECRET_KEY`**, and the Development
->    scope holds a `sk_live_` that does not belong there. Neither affects
->    production; both are wrong.
+> 0. **Preview deployments have no `CLERK_SECRET_KEY`.** Confirmed 2026-09-15
+>    with `vercel env ls`: that variable exists in **Production only**. Preview
+>    already carries the matching `pk_test_` (dev instance), so it needs the dev
+>    `sk_test_` beside it — Preview must run the DEV Clerk instance, because a
+>    production instance will not accept a random `*.vercel.app` preview origin.
+>
+>    ~~and the Development scope holds a `sk_live_` that does not belong
+>    there~~ — **that was wrong.** There is no `CLERK_SECRET_KEY` in the
+>    Development scope at all, and `.env.local` holds a correct `sk_test_`, so
+>    local dev was never broken. Nothing to clean up.
+>
+>    The fix is one command, and an agent cannot run it: piping a secret out of
+>    `.env.local` into `vercel env add` trips the permission classifier, twice.
+>    Run it by hand from the repo root:
+>
+>    ```sh
+>    grep '^CLERK_SECRET_KEY=' .env.local | cut -d= -f2- | tr -d '"' \
+>      | vercel env add CLERK_SECRET_KEY preview
+>    ```
+>
+>    Then redeploy — Vercel bakes env vars in at build time, so setting it
+>    changes nothing until the next build.
 >
 > 1. **Prove the signup works end to end** — subscribe on the live site with a
 >    real address and watch for the confirmation mail. Never verified: the
 >    crash fix and RESEND_API_KEY both landed, but no successful production
 >    signup has been observed. `vercel logs <deployment>` shows what happened.
-> 2. Create the social accounts — still the only thing that puts a human on the
->    site, and the reason there are zero subscribers.
+> 2. **The social accounts exist as of 2026-09-15 and are linked from every
+>    page.** `@roboxingtv` on X, `@roboxing.tv` on Instagram and TikTok — held
+>    in `lib/social.ts`, drawn by `components/social-icons.tsx`, rendered in the
+>    footer's identity block under the mark. `rel="me"` is on each link so the
+>    platforms can verify the site back.
+>
+>    **NOT VERIFIED: that those three profiles actually resolve.** X, Instagram
+>    and TikTok all serve a JS login shell to a server-side fetch, so the handles
+>    are live on the site on Tobias's word. A footer linking to a 404 is worse
+>    than no footer link — open all three in a signed-in browser once.
+>
+>    Posting to them is still the open work, and still the reason there are zero
+>    subscribers. The plan Tobias accepted: he runs the accounts, the signals
+>    pipeline supplies the material, a model may DRAFT but never publish — same
+>    call as stage 3. Explicitly rejected: handing the accounts to an autonomous
+>    bot. The site's entire claim is being right about who won, and one
+>    unsourced result posted under this name costs more than a week of silence.
 > 3. Triage the 240 scored signals; none has been kept or dismissed yet.
 > 4. Delete the orphaned Cloudflare live input by hand (see "Do this first").
 >
@@ -252,9 +320,15 @@
 >
 > (Vercel Pro: verified Active on 2026-09-08.)
 >
-> The Vercel CLI is **not installed**, which is why those two variables are a
-> manual dashboard job rather than one command. `npm i -g vercel` then
-> `vercel link` makes env changes scriptable and is worth the two minutes.
+> ~~The Vercel CLI is **not installed**, which is why those two variables are a
+> manual dashboard job rather than one command.~~ **Wrong as of 2026-09-15:
+> `vercel --version` reports 59.13.1, the project is linked
+> (`.vercel/project.json`, org `team_QGWgNRcBbCYrtdjFD1X0KpOh`), and
+> `vercel env ls` / `vercel env pull` both work against the real project with no
+> further setup. Note `vercel whoami` fails with `Worker timed out after 10
+> seconds` / `Failed to spawn get latest worker` — that is the CLI's
+> update-check worker dying on this machine, NOT an auth problem. Every other
+> command works. Do not conclude from `whoami` that you are logged out.
 
 > **2026-09-07: the product changed shape.** Roboxing is no longer being built
 > as a rights holder's subscription streaming product. It is being built as the

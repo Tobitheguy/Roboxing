@@ -49,7 +49,7 @@ export const OPERATOR = {
  * nothing, and quietly claims the terms changed when they did not. Change this
  * line when the WORDS change, and only then.
  */
-export const LEGAL_LAST_UPDATED = "14 September 2026";
+export const LEGAL_LAST_UPDATED = "15 September 2026";
 
 /**
  * The law these terms are read under.

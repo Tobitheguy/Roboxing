@@ -2,7 +2,9 @@ import Link from "next/link";
 
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { RoboxingMark } from "@/components/roboxing-mark";
+import { SocialIcon } from "@/components/social-icons";
 import { FOOTER_ITEMS, LEGAL_ITEMS } from "@/lib/nav";
+import { SOCIAL_ACCOUNTS } from "@/lib/social";
 
 export function SiteFooter() {
   return (
@@ -24,6 +26,38 @@ export function SiteFooter() {
           <p className="text-ink-dim mt-2 max-w-xs text-xs">
             Live humanoid robot combat — streams, standings, and fight history.
           </p>
+
+          {/* Directly under the mark, not out in the link row. These are the
+              same organisation as the logo above them, and grouping them with
+              the identity block says so — dropped among Teams/Watch/Machines
+              they read as four more pages of this site.
+
+              `rel="me"` is not decoration: it is the microformat that asserts
+              "this profile is the same entity as this site", which is what
+              lets a platform verify the link back. `noopener` because
+              `target="_blank"` without it hands the opened tab a reference to
+              this window. */}
+          <nav aria-label="Roboxing on social media" className="mt-4">
+            <ul className="flex items-center gap-4">
+              {SOCIAL_ACCOUNTS.map((account) => (
+                <li key={account.platform}>
+                  <a
+                    href={account.href}
+                    target="_blank"
+                    rel="me noopener noreferrer"
+                    aria-label={account.name}
+                    title={`${account.name} (${account.handle})`}
+                    className="text-ink-muted hover:text-ink focus-visible:ring-ink/40 inline-flex rounded-xs p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <SocialIcon
+                      platform={account.platform}
+                      className="h-5 w-5"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
 
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">

@@ -7,7 +7,7 @@ import { OPERATOR } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "What Roboxing collects, who processes it, and how to get it deleted. No analytics, no advertising cookies, no tracking pixels.",
+    "What Roboxing collects, who processes it, and how to get it deleted. Cookieless analytics, no advertising network, no tracking pixels.",
 };
 
 /**
@@ -21,11 +21,28 @@ export const metadata: Metadata = {
  *
  * The three that were verified and are worth not breaking:
  *
- * 1. THERE IS NO ANALYTICS PACKAGE. Not Vercel Analytics, not Speed Insights,
- *    not Google Analytics, not Plausible — `package.json` has none of them and
- *    no layout renders a script tag. The "we do not track you" paragraph is
- *    load-bearing: add an analytics product and this page is wrong the same
- *    day. Add the product, edit this file in the same commit.
+ * 1. THERE IS EXACTLY ONE ANALYTICS PACKAGE, AND IT IS COOKIELESS.
+ *    `@vercel/analytics`, mounted once in the root layout through
+ *    `components/analytics.tsx`. No Google Analytics, no Plausible, no Speed
+ *    Insights, no advertising network, no tracking pixel — `package.json` has
+ *    none of them.
+ *
+ *    This page previously said there was no analytics product at all, and that
+ *    was true until 15 September 2026. The claims that replaced it are narrower
+ *    and each one is checkable:
+ *
+ *    - It sets NO COOKIE and writes nothing to the browser. Visitors are
+ *      counted by a hash Vercel derives from the incoming request, discarded
+ *      after 24 hours. That is what keeps the "no consent banner" position
+ *      defensible, and it is why this product was chosen over the alternatives.
+ *    - `/admin` and `/account` page views are NEVER SENT. See the `beforeSend`
+ *      redaction in `components/analytics.tsx`. Delete a prefix from that list
+ *      and the "Cookies" and "What we collect" sections below become false.
+ *    - Query strings are dropped except for an attribution allowlist, so a
+ *      token or an address in a page URL is not forwarded even by accident.
+ *
+ *    If any of that changes, this page is wrong the same day. Change the code,
+ *    edit this file in the same commit.
  * 2. YOUTUBE IS EMBEDDED THROUGH `youtube-nocookie.com`. See `lib/embeds.ts` —
  *    that host sets nothing until the visitor presses play, which is what makes
  *    the cookie section honest without a consent banner. Twitch, Bilibili and
@@ -44,11 +61,16 @@ export default function PrivacyPage() {
     >
       <LegalSection heading="The short version">
         <p>
-          You can read every page of Roboxing without an account, and we do not
-          measure you while you do it. There is no analytics product on this
-          site, no advertising network, and no tracking pixel. If you never sign
-          in and never subscribe, the only record of your visit is the ordinary
-          server log our host keeps.
+          You can read every page of Roboxing without an account. We do count
+          page views, because otherwise we have no idea whether any of this is
+          reaching anyone — but the counter sets no cookie, stores nothing on
+          your device, and cannot tell who you are or follow you to another
+          site. There is no advertising network here and no tracking pixel.
+        </p>
+        <p>
+          If you never sign in and never subscribe, what exists afterwards is a
+          number: one more view of one page, from a country, on a kind of
+          device. Nothing that points back to you.
         </p>
         <p>
           An account exists for one reason — to make predictions and keep your
@@ -75,6 +97,30 @@ export default function PrivacyPage() {
             records the usual request data — IP address, time, page, browser
             string — as part of serving and protecting the site. We do not build
             profiles from it and we do not join it to anything else.
+          </li>
+          <li>
+            <strong className="text-ink">Page views.</strong> Separately from
+            that log, each page view is counted. What is stored with it: the
+            time, the page address, the site that linked you here, a rough
+            location (country, region, city), your browser and operating system,
+            and whether you are on a phone, a tablet or a desktop. Your IP
+            address is <em>not</em> stored — it is used once, in passing, to
+            work out the country and to produce a scrambled value that
+            distinguishes you from the next visitor for 24 hours, after which it
+            is discarded. There is no identifier that survives that, so we
+            cannot recognise a returning reader and cannot follow you anywhere
+            else.
+          </li>
+          <li>
+            <strong className="text-ink">
+              What the counter is never told.
+            </strong>{" "}
+            Pages under <code>/account</code> and <code>/admin</code> are
+            excluded outright — the half of the site where a page address would
+            say something about a particular person is simply not reported. Web
+            addresses are also stripped of everything except the tags that say
+            which link brought you (<code>?ref=</code>, <code>?utm_source=</code>{" "}
+            and similar), so nothing else in a link is passed on.
           </li>
           <li>
             <strong className="text-ink">If you create an account.</strong> Your
@@ -111,8 +157,11 @@ export default function PrivacyPage() {
           why there is no banner asking permission for them.
         </p>
         <p>
-          We set nothing else. No analytics cookie, no advertising cookie, no
-          cross-site identifier.
+          We set nothing else. The page-view counter described above is the
+          usual reason a site asks for cookie consent, and it is the reason this
+          one does not have to: it stores nothing on your device at all — no
+          cookie, no local storage — so there is nothing to ask you about. No
+          advertising cookie, no cross-site identifier.
         </p>
         <p>
           Embedded video is the exception, and it is not ours. YouTube clips are
@@ -138,8 +187,8 @@ export default function PrivacyPage() {
             accounts, predictions and subscribers.
           </li>
           <li>
-            <strong className="text-ink">Vercel</strong> — hosting, and the
-            server logs described above.
+            <strong className="text-ink">Vercel</strong> — hosting, the server
+            logs described above, and the page-view counter.
           </li>
           <li>
             <strong className="text-ink">Resend</strong> — sending the

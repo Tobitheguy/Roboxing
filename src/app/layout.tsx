@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 
+import { SiteAnalytics } from "@/components/analytics";
 import { roboxingLocalization } from "@/components/auth/localization";
 
 import "./globals.css";
@@ -104,7 +105,7 @@ export const viewport: Viewport = {
 
 /**
  * The root layout holds only what EVERY response needs: fonts, the theme
- * class, and the Clerk provider.
+ * class, the Clerk provider, and the analytics beacon.
  *
  * Chrome lives one level down, because the two halves of the site want
  * opposite things. `(app)` gets the header, footer and demo banner — and the
@@ -170,7 +171,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         // white page with dark-grey form controls on it.
         className={`${archivoBlack.variable} ${archivo.variable} ${jetbrainsMono.variable} ${notoSC.variable} h-full antialiased`}
       >
-        <body className="flex min-h-full flex-col">{children}</body>
+        <body className="flex min-h-full flex-col">
+          {children}
+          {/* Here rather than in `(app)` so the sign-in screens are counted
+              too — "people reach /sign-in and do not finish" is exactly the
+              kind of thing worth knowing. `components/analytics.tsx` is what
+              keeps /admin and /account out of it. */}
+          <SiteAnalytics />
+        </body>
       </html>
     </ClerkProvider>
   );
