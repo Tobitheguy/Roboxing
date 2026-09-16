@@ -86,6 +86,14 @@
 > by a human in a terminal. Until then the script is deployed and the dashboard
 > stays empty. That is the one remaining step.
 >
+> **Do not try to verify this with `curl`.** `@vercel/analytics` attaches its
+> script client-side, in a `useEffect` via `document.createElement` — read out
+> of `node_modules/@vercel/analytics/dist/react/index.mjs`, not assumed. So it
+> is correctly ABSENT from the server-rendered HTML and grepping the page for
+> `_vercel/insights` proves nothing. The check that does work is the client
+> bundle: both the insights path and the `utm_campaign` allowlist land in
+> `.next/static/chunks/` (verified 2026-09-15). In a browser, the network tab.
+>
 > Speed Insights was deliberately NOT added: a second paid enablement and a
 > second disclosure, collecting real-user performance data nobody is acting on,
 > when Lighthouse answers the same question for free at this traffic level.
