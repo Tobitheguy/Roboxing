@@ -328,6 +328,22 @@
 >    value is already in `.env.local`), but `--type config` is the flag if a
 >    future variable needs to be readable back.
 >
+>    **Verified on a real preview deployment, not assumed.** Branch
+>    `verify/preview-auth` existed only to produce one. `/sign-in` renders as
+>    "Sign in · Roboxing" rather than an error page, and the browser fetches
+>    Clerk from **`vocal-grackle-2359.clerk.accounts.dev`** — the dev instance,
+>    correctly paired with the `sk_test_`. The Google button is there too
+>    (`img.clerk.com/static/google.svg` loads). Production still serves
+>    `clerk.roboxing.tv` and was not touched.
+>
+>    **Two things that will waste your time when you next check a preview.**
+>    Preview deployments sit behind Vercel SSO deployment protection, so `curl`
+>    gets a **302 to `vercel.com/sso-api`** and reads nothing — that is the
+>    protection, not a broken app. Use a browser logged into Vercel. And
+>    `clerk-telemetry.com/v1/event` returns **503** on every page load; it is
+>    Clerk's own telemetry endpoint failing, carries none of our data, and is
+>    not worth investigating.
+>
 >    ~~and the Development scope holds a `sk_live_` that does not belong
 >    there~~ — **that was wrong.** There is no `CLERK_SECRET_KEY` in the
 >    Development scope at all, and `.env.local` holds a correct `sk_test_`, so
