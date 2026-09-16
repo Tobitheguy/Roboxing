@@ -98,6 +98,24 @@
 > second disclosure, collecting real-user performance data nobody is acting on,
 > when Lighthouse answers the same question for free at this traffic level.
 >
+> **What it costs, checked 2026-09-15 against Vercel's pricing page.** Pro
+> includes **zero** events — it is $0.03 per 1,000, drawn against the $20
+> monthly Pro credit ($0.59 of which was used on 8 Sep). That is ~660,000 page
+> views a month before this costs anything beyond the existing subscription, so
+> at current traffic it is free. Spend Management can cap it outright.
+>
+> **UTM REPORTING IS NOT ON PLAIN PRO — it needs the Web Analytics Plus add-on
+> at $10/month.** This matters for `components/analytics.tsx`: the `beforeSend`
+> allowlist keeps `utm_*`, and those params are still stored as part of the URL,
+> but there is no UTM breakdown in the dashboard without the add-on. So on plain
+> Pro, attribution comes from the **Referrer** dimension, which IS included.
+>
+> Referrer is unreliable for exactly our traffic: Instagram and TikTok in-app
+> browsers frequently send no referrer or report only the app. The cheap answer
+> is to put `?ref=ig` / `?ref=tt` / `?ref=x` on links posted to each platform —
+> `ref` is already in the allowlist for this reason, it survives redaction, and
+> it shows up in the URL breakdown with no add-on. Do that before paying $10.
+>
 > **Clerk's dashboard now opens straight onto the Roboxing app.** The old note
 > that a normal login lands on an unrelated app called "Infinita" no longer
 > holds; `dashboard.clerk.com` shows Roboxing / Production directly.
