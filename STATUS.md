@@ -142,6 +142,48 @@
 > that a normal login lands on an unrelated app called "Infinita" no longer
 > holds; `dashboard.clerk.com` shows Roboxing / Production directly.
 >
+> **2026-09-16: THE CLASSIFIER IS DOWN AGAIN, AND THE CAUSE IS FINALLY KNOWN —
+> THE ANTHROPIC ACCOUNT IS OUT OF CREDIT.** This is the single most useful line
+> in this file right now. `npm run signals:classify` returns, on every chunk:
+>
+> ```
+> 400 invalid_request_error: "Your credit balance is too low to access the
+> Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+> ```
+>
+> **Fix: top up at console.anthropic.com → Plans & Billing.** Nothing in this
+> repository is broken and no redeploy is needed. A 400 bills nothing, so the
+> diagnosis cost $0 and re-running after a top-up is free to retry.
+>
+> **This closes the 9 September mystery below**, which guessed "most likely
+> `ANTHROPIC_API_KEY` no longer resolving there, or its credit". It was the
+> credit, both times. If scoring stops again, check the balance FIRST — before
+> the key, before the env, before the logs.
+>
+> The damage, from `npm run signals:report`: **15 Sep swept 25 rows and scored
+> 0; 16 Sep swept 29 and scored 0.** Everything up to 14 Sep is scored. The
+> design holds up exactly as intended — `classified_at IS NULL` is the work
+> queue, so every one of those rows is simply waiting and the next run after a
+> top-up collects them all. Nothing was lost.
+>
+> **Stage 3 is down for the same reason.** The publisher calls the same API, so
+> nothing will auto-publish until the balance is restored. A quiet morning right
+> now is NOT the healthy-system case described further down.
+>
+> **2026-09-16: the triage inbox is far bigger than this file claimed, and
+> 91% of the top of it is unusable.** `npm run signals:report` (read-only,
+> spends nothing, added for this) says: **518 new**, not the 240 recorded below
+> — 1 kept, 2 dismissed, ever. Of the 219 new rows scoring ≥70, **199 are
+> `news.google.com` interstitials** that stage 3 can never publish from, against
+> 20 from real publishers.
+>
+> So the inbox is not a queue of 219 opportunities; it is roughly 20, buried
+> under the same handful of stories repeated across syndicators. Before hand-
+> triaging any of it, the thing worth building is a dedupe — the high scorers
+> are visibly four and five copies of one CyberHero Riyadh story. **Dismissing
+> is permanent** (the unique URL is the dedupe key), so bulk-dismissing by hand
+> is the one move that cannot be undone if the rule turns out wrong.
+>
 > **2026-09-14: the signals pipeline is healthy and has published by itself.**
 > All three stages run. The classification outage below is over — every row
 > swept in the last five days is scored, 0 unscored. `AUTOPUBLISH=on` has been
