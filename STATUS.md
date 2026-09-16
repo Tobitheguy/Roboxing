@@ -317,11 +317,32 @@
 > head this list is done; the rest has not moved, plus two leftovers from the
 > key swap):
 >
-> 0. **Preview deployments have no `CLERK_SECRET_KEY`.** Confirmed 2026-09-15
->    with `vercel env ls`: that variable exists in **Production only**. Preview
->    already carries the matching `pk_test_` (dev instance), so it needs the dev
->    `sk_test_` beside it — Preview must run the DEV Clerk instance, because a
->    production instance will not accept a random `*.vercel.app` preview origin.
+> 0. ~~**Preview deployments have no `CLERK_SECRET_KEY`.**~~ **DONE
+>    2026-09-15.** `vercel env ls` now shows it in Preview (Secret) alongside
+>    Production. Preview already carried the matching `pk_test_`, so both halves
+>    are the dev instance — which is the correct pairing, because a production
+>    Clerk instance will not accept a random `*.vercel.app` preview origin.
+>
+>    Note the CLI stored it as **Secret**, which means it is hidden in the
+>    dashboard and `vercel env pull` will NOT return it. That is fine here (the
+>    value is already in `.env.local`), but `--type config` is the flag if a
+>    future variable needs to be readable back.
+>
+>    **Verified on a real preview deployment, not assumed.** Branch
+>    `verify/preview-auth` existed only to produce one. `/sign-in` renders as
+>    "Sign in · Roboxing" rather than an error page, and the browser fetches
+>    Clerk from **`vocal-grackle-2359.clerk.accounts.dev`** — the dev instance,
+>    correctly paired with the `sk_test_`. The Google button is there too
+>    (`img.clerk.com/static/google.svg` loads). Production still serves
+>    `clerk.roboxing.tv` and was not touched.
+>
+>    **Two things that will waste your time when you next check a preview.**
+>    Preview deployments sit behind Vercel SSO deployment protection, so `curl`
+>    gets a **302 to `vercel.com/sso-api`** and reads nothing — that is the
+>    protection, not a broken app. Use a browser logged into Vercel. And
+>    `clerk-telemetry.com/v1/event` returns **503** on every page load; it is
+>    Clerk's own telemetry endpoint failing, carries none of our data, and is
+>    not worth investigating.
 >
 >    ~~and the Development scope holds a `sk_live_` that does not belong
 >    there~~ — **that was wrong.** There is no `CLERK_SECRET_KEY` in the
