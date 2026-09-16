@@ -81,18 +81,40 @@
 > on `/api/newsletter/*` which is a route handler and never a page view, but an
 > allowlist does not have to be remembered later.
 >
-> **IT IS NOT COLLECTING YET.** `vercel project web-analytics enable` is a PAID
-> feature and the CLI refuses to confirm it non-interactively — it must be run
-> by a human in a terminal. Until then the script is deployed and the dashboard
-> stays empty. That is the one remaining step.
+> **ENABLED AND PROVEN COLLECTING, 2026-09-15.** Tobias turned it on (it is a
+> paid feature and the CLI refuses to confirm non-interactively — the `!` prefix
+> does not count as a TTY either; dashboard or a real terminal). Verified in a
+> browser, not assumed: loading `/schedule` produced
+> `GET https://roboxing.tv/07f179bcbbdd9d70/script.js 200` followed by
+> `POST https://roboxing.tv/07f179bcbbdd9d70/view 200`.
 >
-> **Do not try to verify this with `curl`.** `@vercel/analytics` attaches its
-> script client-side, in a `useEffect` via `document.createElement` — read out
-> of `node_modules/@vercel/analytics/dist/react/index.mjs`, not assumed. So it
-> is correctly ABSENT from the server-rendered HTML and grepping the page for
-> `_vercel/insights` proves nothing. The check that does work is the client
-> bundle: both the insights path and the `utm_campaign` allowlist land in
-> `.next/static/chunks/` (verified 2026-09-15). In a browser, the network tab.
+> **Do not try to verify this with `curl`, and do not grep for
+> `_vercel/insights`.** Two separate reasons it will not be there, both checked
+> rather than guessed. First, `@vercel/analytics` attaches its script
+> client-side in a `useEffect` via `document.createElement` (read out of
+> `node_modules/@vercel/analytics/dist/react/index.mjs`), so it is correctly
+> absent from server-rendered HTML. Second, v2's Resilient Intake RANDOMISES the
+> path per build from a build-time seed — hence `07f179bcbbdd9d70` above, which
+> will be a different string after the next deploy. The checks that work are the
+> browser network tab, or grepping `.next/static/chunks/` in a local build.
+>
+> **A zero in the dashboard is not evidence of a broken beacon.** On
+> 2026-09-15 `vercel metrics vercel.analytics.page_view.count --since 2d`
+> returned an empty series, and the correct reading was the boring one: nobody
+> had visited. The query itself is the useful tool —
+> `vercel metrics schema | grep analytics` lists the two metric names, and note
+> the CLI wants `vercel.analytics.page_view.count`, NOT the
+> `vercel.analytics_pageview` spelling the docs show. The Vercel MCP's
+> `get_web_analytics` returns **403** for the agent on this team, the same scope
+> failure already recorded for the runtime-logs API; the CLI is authenticated
+> and works.
+>
+> **The redaction is a tested pure function, not inline code.**
+> `lib/analytics-redaction.ts` with 9 tests. It was inline in the component at
+> first, which made a privacy promise that no test could reach — the same
+> standing `resolveEmbed()` has, and for the same reason. If one of those tests
+> goes red the question is not how to fix the assertion, it is whether
+> `/privacy` still describes the code.
 >
 > Speed Insights was deliberately NOT added: a second paid enablement and a
 > second disclosure, collecting real-user performance data nobody is acting on,
@@ -328,10 +350,14 @@
 >    footer's identity block under the mark. `rel="me"` is on each link so the
 >    platforms can verify the site back.
 >
->    **NOT VERIFIED: that those three profiles actually resolve.** X, Instagram
->    and TikTok all serve a JS login shell to a server-side fetch, so the handles
->    are live on the site on Tobias's word. A footer linking to a 404 is worse
->    than no footer link — open all three in a signed-in browser once.
+>    **Two of three confirmed to resolve, in a real browser on 2026-09-15.** X
+>    is "Roboxing (@roboxingtv)", joined September 2026, 0 posts and 0
+>    followers. Instagram `roboxing.tv` exists, 0 followers. **TikTok is still
+>    unproven** — it serves the generic "TikTok - Make Your Day" shell to
+>    automation and never renders the profile, so the footer link to
+>    `@roboxing.tv` there rests on Tobias's word. One click in a normal browser
+>    settles it. A server-side fetch settles none of the three: all of them
+>    return a JS login shell to `curl`.
 >
 >    Posting to them is still the open work, and still the reason there are zero
 >    subscribers. The plan Tobias accepted: he runs the accounts, the signals

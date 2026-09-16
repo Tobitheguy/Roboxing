@@ -2,6 +2,8 @@
 
 import { Analytics } from "@vercel/analytics/next";
 
+import { redactAnalyticsEvent } from "@/lib/analytics-redaction";
+
 /**
  * Vercel Web Analytics, with two deliberate subtractions.
  *
@@ -17,68 +19,18 @@ import { Analytics } from "@vercel/analytics/next";
  * under ePrivacy and the "no banner" promise stays true. Google Analytics would
  * have cost us that promise on day one.
  *
- * WHAT IS SUBTRACTED, and both are on purpose:
+ * WHAT IS SUBTRACTED lives in `lib/analytics-redaction.ts`, with its tests,
+ * because `/privacy` makes promises that hold only while that function does.
+ * In short: `/admin` and `/account` are never reported, and query strings are
+ * dropped except for an attribution allowlist.
  *
- * 1. `/admin` and `/account` are never reported. Two different reasons that
- *    happen to point the same way. Admin traffic is Tobias looking at his own
- *    site, and counting it makes every number a lie about strangers — with an
- *    audience this small, one editing session outweighs a day of real readers.
- *    `/account` is the signed-in half, where a path is a statement about a
- *    identifiable person rather than about a page. The policy promises this
- *    explicitly, so it is load-bearing: deleting a prefix here makes
- *    /privacy wrong.
- *
- * 2. Query strings are dropped except for the attribution parameters below.
- *    Today nothing sensitive rides in a page URL — the newsletter's confirm and
- *    unsubscribe tokens live on `/api/newsletter/*`, which is a route handler,
- *    never a page view, so the script never sees them. This is defence against
- *    the future: the day somebody adds `?token=` or `?email=` to a real page,
- *    the allowlist means it is already not being sent. A denylist would have to
- *    be remembered at exactly the wrong moment.
- *
- * The allowlist keeps what tells us whether a post worked — which is the entire
- * reason for switching measurement on.
+ * VERIFIED IN A BROWSER on 2026-09-15, which is the only check that works —
+ * the script is injected client-side in a `useEffect`, so it is correctly
+ * absent from server-rendered HTML and `curl` can never see it. Loading
+ * /schedule produced `GET /<seed>/script.js 200` followed by
+ * `POST /<seed>/view 200`. The path is randomised per build (Resilient Intake
+ * in v2), so do not grep for `_vercel/insights` and conclude anything.
  */
-const PRIVATE_PREFIXES = ["/admin", "/account"] as const;
-
-const ATTRIBUTION_PARAMS = new Set([
-  "ref",
-  "source",
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_content",
-  "utm_term",
-]);
-
-function isPrivate(pathname: string): boolean {
-  return PRIVATE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-}
-
 export function SiteAnalytics() {
-  return (
-    <Analytics
-      beforeSend={(event) => {
-        let url: URL;
-        try {
-          url = new URL(event.url);
-        } catch {
-          // An unparseable URL is not worth guessing at. Dropping the event
-          // loses one data point; forwarding a string we could not inspect
-          // forwards whatever is in it.
-          return null;
-        }
-
-        if (isPrivate(url.pathname)) return null;
-
-        for (const key of [...url.searchParams.keys()]) {
-          if (!ATTRIBUTION_PARAMS.has(key)) url.searchParams.delete(key);
-        }
-
-        return { ...event, url: url.toString() };
-      }}
-    />
-  );
+  return <Analytics beforeSend={redactAnalyticsEvent} />;
 }
