@@ -1,5 +1,54 @@
 # Where Roboxing stands
 
+> **2026-09-19: THE NET WAS TOO NARROW AND A WHOLE LEAGUE PROVED IT.** Tobias
+> found the Shadow Combat League in Malaysia by hand. Checked before touching
+> anything: it is not on the site, not in the repo, and — the part that matters
+> — **not in the signals inbox either**. Searching 569 swept rows for `%shadow%`
+> and `%malay%` returned four hits, all irrelevant (two Malaysian outlets
+> syndicating the CyberHero Riyadh story, a China-military piece, a BAE drone
+> story). The watcher never saw it.
+>
+> **Why.** The English query required the literal phrase `"humanoid robot"`.
+> Coverage that says "robot fighting league" and never "humanoid robot" scored
+> zero hits, and there was no Malay source, no regional edition, and no query
+> that looked for leagues by name. Two languages is not a net, it is a guess
+> about where the sport happens.
+>
+> **What the sweep is now: 26 sources, 6 languages, all verified returning
+> items on 19 Sep** (`npm run signals:sources` — read-only, spends nothing,
+> hits no database; run it after editing any query). Four groups: the broad net
+> (strict + phrase-first EN, zh-CN + zh-TW, Bing EN/ZH), **discovery** (queries
+> whose only job is finding leagues nobody here has heard of), **the watchlist**
+> (every league by name, in `WATCHED_LEAGUES` — add a name the DAY you hear it,
+> before it has a page), and the other languages (ms, ja, ko, ar).
+>
+> **Two things were measured rather than assumed, and both changed the design.**
+> (1) Google News regional editions re-rank a global index, they do not open a
+> local one: on the same query, AE added **zero** publisher domains the US
+> edition did not already have and SG was byte-identical to MY. Only MY survived
+> (6 Asian outlets). Do not re-add SG or AE without re-running that comparison.
+> (2) **Bing's news RSS returns an empty feed for a query that is only an OR
+> group** — it needs a required term in front. Both new Bing feeds returned 0
+> until they were rewritten as `robot (… OR …)`. An empty feed is
+> indistinguishable from a quiet news day, so there is now a test for it.
+>
+> **The cost, honestly.** More rows land → stage 2 pays to score more rows. The
+> old four search feeds ran 10–29 items a day; expect several times that, and a
+> one-off burst on the first sweep because each new feed arrives carrying its
+> full 100-item window. The real number will be in the first morning's
+> `results` array. If it needs dialling back, the lever is the regional and
+> phrase feeds — **never the discovery queries**, which are the entire point.
+>
+> **The next thing to build is dedupe, and this makes it urgent.** The inbox was
+> already 91% duplicates at the top (see the 16 Sep note); a wider net multiplies
+> that. Recall is now good enough that the failure mode has moved: we will not
+> miss a story because the net was too small, we will miss it because it was
+> buried under four copies of the same syndicated piece.
+>
+> **Shadow Combat League itself is still unpublished** — it is watched by name
+> from today, but writing it up needs a source link. The auto-publisher refuses
+> to work from a headline alone and so should we.
+
 > **2026-09-14: GOOGLE SIGN-IN IS LIVE ON THE PRODUCTION INSTANCE, and the
 > route there is not the documented one.** `roboxing.tv/sign-in` serves
 > `pk_live_Y2xlcmsucm9ib3hpbmcudHYk` — verified by reading the deployed page,

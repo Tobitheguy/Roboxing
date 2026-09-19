@@ -43,13 +43,13 @@ function byRelevance(a: Signal, b: Signal): number {
  * The morning inbox.
  *
  * Everything the watcher swept in overnight. Stage 2 scores it, so the page
- * leads with what the classifier thinks matters — across both languages,
- * because a Chinese-language fight result is the single most valuable thing
- * this feed can produce and burying it under a language heading would be
- * exactly backwards.
+ * leads with what the classifier thinks matters — across every language,
+ * because a non-English fight result is the single most valuable thing this
+ * feed can produce and burying it under a language heading would be exactly
+ * backwards.
  *
  * Below that the language split survives, and still earns its place: the
- * English feed is what the audience is already reading, the Chinese feed is
+ * English feed is what the audience is already reading, the other five are
  * what they CANNOT read — which is where this site's edge lives. A kept signal
  * is a lead for a post; a dismissed one is remembered so its URL never
  * resurfaces.
@@ -66,7 +66,20 @@ export default async function SignalsPage() {
   const priority = sorted.filter((s) => (s.score ?? -1) >= PRIORITY_SCORE);
   const rest = sorted.filter((s) => (s.score ?? -1) < PRIORITY_SCORE);
   const chinese = rest.filter((s) => s.language === "zh");
-  const english = rest.filter((s) => s.language !== "zh");
+  const english = rest.filter(
+    (s) => s.language === "en" || s.language === null,
+  );
+  /*
+   * Malay, Japanese, Korean, Arabic. This bucket exists because the split used
+   * to be `zh` versus everything-else-is-English, and the moment the sweep
+   * started running in six languages that heading became a lie — a Malay
+   * result would have been filed under "English-language" and read as
+   * something a reader could already get elsewhere, which is the exact
+   * opposite of what it is.
+   */
+  const other = rest.filter(
+    (s) => s.language !== null && s.language !== "zh" && s.language !== "en",
+  );
 
   // Distinguishable states: nothing swept at all, versus swept but unscored.
   // The second one means the classifier is not running, and saying so here is
@@ -106,7 +119,7 @@ export default async function SignalsPage() {
                 title="Priority"
                 action={
                   <span className="text-ink-dim text-xs">
-                    {priority.length} — scored {PRIORITY_SCORE}+, both languages
+                    {priority.length} — scored {PRIORITY_SCORE}+, every language
                   </span>
                 }
               />
@@ -134,6 +147,26 @@ export default async function SignalsPage() {
                 <ul>
                   {chinese.map((signal) => (
                     <SignalRow key={signal.id} signal={signal} />
+                  ))}
+                </ul>
+              </CardBodyFlush>
+            </Card>
+          ) : null}
+
+          {other.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Other languages"
+                action={
+                  <span className="text-ink-dim text-xs">
+                    {other.length} — Malay, Japanese, Korean, Arabic
+                  </span>
+                }
+              />
+              <CardBodyFlush>
+                <ul>
+                  {other.map((signal) => (
+                    <SignalRow key={signal.id} signal={signal} showLanguage />
                   ))}
                 </ul>
               </CardBodyFlush>

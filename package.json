@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "signals:classify": "tsx scripts/classify-signals.ts",
     "signals:report": "tsx scripts/signals-report.ts",
+    "signals:sources": "tsx scripts/signals-sources.ts",
     "set-test-stream": "tsx scripts/set-test-stream.ts",
     "stripe:setup": "tsx scripts/stripe-setup.ts",
     "signals:publish": "tsx scripts/autopublish.ts",

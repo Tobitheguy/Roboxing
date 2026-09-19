@@ -29,12 +29,25 @@ import { signals } from "@/db/schema";
  * `https://rsshub.app/bilibili/user/video/{uid}`.
  */
 
+/**
+ * Which sweep found a row. Stored as text, so adding one is a code change and
+ * not a migration.
+ *
+ * It was `"en" | "zh"` until the Shadow Combat League went unnoticed: a league
+ * that exists only in Malaysian coverage is invisible to a net cast in two
+ * languages. The set below is not "every language" — it is every language this
+ * sport is currently organised in. Adding one is cheap; the reason to keep the
+ * list explicit is that the inbox groups by it and an unexpected value there
+ * would quietly land in the wrong bucket.
+ */
+export type SignalLanguage = "en" | "zh" | "ms" | "ja" | "ko" | "ar";
+
 export type SignalSource = {
   /** Stable identifier stored on each row, e.g. "google-news-en". */
   id: string;
   url: string;
   kind: "news" | "video";
-  language: "en" | "zh";
+  language: SignalLanguage;
   /**
    * True when the feed IS a query, so its items are pre-scoped.
    *
@@ -71,19 +84,127 @@ export type SignalSource = {
  * names no robot word. Either group alone is enough to be worth scoring.
  */
 export const RELEVANT_TITLE =
-  /\b(robot|robots|robotic|humanoid|humanoids|android|unitree|engineai|agibot|booster|cyberhero|urkl|\bREK\b|battlebots|mech|mecha)\b|\b(fight|fights|fighting|boxing|kickbox|kickboxing|combat|bout|bouts|brawl|spar|sparring|knockout|octagon|ring|martial arts|mma|ufc|wrestl)/i;
+  /\b(robot|robots|robotic|humanoid|humanoids|android|unitree|engineai|agibot|booster|cyberhero|urkl|whrg|\bufb\b|\bREK\b|battlebots|mech|mecha|iron fist|mecha king|shadow combat)\b|\b(fight|fights|fighting|boxing|kickbox|kickboxing|combat|bout|bouts|brawl|spar|sparring|knockout|octagon|ring|martial arts|mma|ufc|wrestl|duel|melee)/i;
 
-const GOOGLE_NEWS_EN =
-  "https://news.google.com/rss/search?q=" +
-  encodeURIComponent(
-    '"humanoid robot" (fight OR boxing OR kickboxing OR combat OR URKL OR CyberHero)',
-  ) +
-  "&hl=en-US&gl=US&ceid=US:en";
+/**
+ * Google News editions. `ceid` is the one that actually selects the index —
+ * `hl`/`gl` alone return the US edition with translated chrome.
+ *
+ * Regional English editions are here because of the Shadow Combat League miss.
+ * Malaysian and Gulf outlets publish in English, but the US edition does not
+ * carry them: the US sweep saw The Edge Malaysia and The Malaysian Reserve only
+ * when they syndicated a Riyadh story big enough to travel. A regional league's
+ * first announcement never is.
+ */
+const EDITIONS = {
+  us: { hl: "en-US", gl: "US", ceid: "US:en" },
+  my: { hl: "en-MY", gl: "MY", ceid: "MY:en" },
+  sg: { hl: "en-SG", gl: "SG", ceid: "SG:en" },
+  ae: { hl: "en-AE", gl: "AE", ceid: "AE:en" },
+  cn: { hl: "zh-CN", gl: "CN", ceid: "CN:zh-Hans" },
+  tw: { hl: "zh-TW", gl: "TW", ceid: "TW:zh-Hant" },
+  msMY: { hl: "ms-MY", gl: "MY", ceid: "MY:ms" },
+  jp: { hl: "ja", gl: "JP", ceid: "JP:ja" },
+  kr: { hl: "ko", gl: "KR", ceid: "KR:ko" },
+  arAE: { hl: "ar", gl: "AE", ceid: "AE:ar" },
+} as const;
 
-const GOOGLE_NEWS_ZH =
-  "https://news.google.com/rss/search?q=" +
-  encodeURIComponent("人形机器人 格斗 OR 机器人格斗 OR 机甲格斗") +
-  "&hl=zh-CN&gl=CN&ceid=CN:zh-Hans";
+type Edition = (typeof EDITIONS)[keyof typeof EDITIONS];
+
+function googleNews(query: string, edition: Edition): string {
+  return (
+    "https://news.google.com/rss/search?q=" +
+    encodeURIComponent(query) +
+    `&hl=${edition.hl}&gl=${edition.gl}&ceid=${edition.ceid}`
+  );
+}
+
+function bingNews(query: string, setlang?: string): string {
+  return (
+    "https://www.bing.com/news/search?q=" +
+    encodeURIComponent(query) +
+    "&format=RSS" +
+    (setlang ? `&setlang=${setlang}` : "")
+  );
+}
+
+/**
+ * THE QUERIES, and what each one is for.
+ *
+ * Four jobs, not one, and they fail differently — which is why they are four
+ * feeds instead of one long OR. A query that is broad enough to discover an
+ * unknown league is too broad to run on every regional edition; a query that
+ * names our leagues can never find the next one.
+ */
+
+/**
+ * 1. The original net. Requires the exact phrase "humanoid robot", which is
+ *    precise and is exactly how we missed Malaysia: coverage that says "robot
+ *    fighting league" and never "humanoid robot" scored zero hits here.
+ */
+const Q_STRICT_EN =
+  '"humanoid robot" (fight OR boxing OR kickboxing OR combat OR URKL OR CyberHero)';
+
+/**
+ * 2. Phrase-first, no "humanoid robot" requirement. Every phrase below is a
+ *    thing only this sport says, so dropping the robot-noun requirement costs
+ *    little precision — "robot boxing" is never about a vacuum cleaner.
+ */
+const Q_PHRASE_EN =
+  '"robot boxing" OR "robot fighting" OR "robot combat" OR "robot fight night" OR "humanoid fight" OR "fighting robots" OR "robot martial arts" OR "robot kickboxing"';
+
+/**
+ * 3. DISCOVERY — the query whose entire job is to find leagues we do not know
+ *    exist. This is the one that would have caught Shadow Combat League.
+ */
+const Q_NEW_LEAGUE_EN =
+  '"robot fighting league" OR "robot combat league" OR "robot boxing league" OR "humanoid robot league" OR "robot fight league" OR "robot fighting championship" OR "humanoid fighting championship"';
+
+/**
+ * 4. THE WATCHLIST — every league we already track, by name, plus every league
+ *    we have merely heard of. A named query catches an event announcement that
+ *    mentions no generic keyword at all ("Shadow Combat League returns to Kuala
+ *    Lumpur in March"), which the other three would all miss.
+ *
+ *    ADD A LEAGUE HERE THE DAY YOU FIRST HEAR ITS NAME, before it has a page on
+ *    the site. That is the cheapest possible insurance and the whole point of a
+ *    watchlist: the cost of watching a league that turns out not to exist is one
+ *    empty feed a morning.
+ */
+export const WATCHED_LEAGUES = [
+  "Shadow Combat League",
+  "CyberHero",
+  "URKL",
+  "Unitree Robot Kombat",
+  "Iron Fist King",
+  "Mecha King",
+  "World Humanoid Robot Games",
+  "Ultimate Fighting Bots",
+  "Robot Boxing League",
+  "Mecha Fighting League",
+] as const;
+
+const Q_WATCHLIST = WATCHED_LEAGUES.map((name) => `"${name}"`).join(" OR ");
+
+/** The Chinese sweep — unchanged terms, now run on both mainland and Taiwan. */
+const Q_ZH = "人形机器人 格斗 OR 机器人格斗 OR 机甲格斗";
+
+/** Chinese discovery: league/competition nouns rather than fight nouns. */
+const Q_NEW_LEAGUE_ZH = "机器人格斗联赛 OR 人形机器人格斗赛 OR 机甲格斗联盟";
+
+/**
+ * The non-CJK regional queries.
+ *
+ * Written from the terms the local press actually uses, and each one is
+ * VERIFIED TO RETURN ITEMS rather than assumed — an unverified translation is
+ * a feed that silently returns zero every morning and looks identical to a
+ * quiet news day. `npm run signals:sources` re-checks them all without touching
+ * the database.
+ */
+const Q_MS = '"robot humanoid" OR "pertarungan robot" OR "tinju robot"';
+const Q_JA = "ヒューマノイド 格闘 OR ロボット格闘技 OR ロボット ボクシング";
+const Q_KO = "휴머노이드 격투 OR 로봇 격투 OR 로봇 복싱";
+const Q_AR = "روبوت قتال OR ملاكمة الروبوتات OR روبوتات بشرية قتال";
 
 /**
  * Why the publisher feeds below exist, when Google News already finds more.
@@ -162,17 +283,46 @@ const PUBLISHER_FEEDS: SignalSource[] = [
  * Both engines are kept because they fail differently. If Bing's redirect
  * format changes, discovery continues and only publishing stops.
  */
-const BING_NEWS_EN =
-  "https://www.bing.com/news/search?q=" +
-  encodeURIComponent(
-    '"humanoid robot" (fight OR boxing OR kickboxing OR combat OR CyberHero OR URKL)',
-  ) +
-  "&format=RSS";
+const BING_NEWS_EN = bingNews(Q_STRICT_EN);
+const BING_NEWS_ZH = bingNews("人形机器人 格斗", "zh-hans");
 
-const BING_NEWS_ZH =
-  "https://www.bing.com/news/search?q=" +
-  encodeURIComponent("人形机器人 格斗") +
-  "&format=RSS&setlang=zh-hans";
+/**
+ * Bing gets the discovery and watchlist queries too, and this is the pair that
+ * matters most in this file: Bing links unwrap to the publisher, so a league
+ * discovered HERE can be auto-published. The same discovery on Google News
+ * lands as an interstitial stage 3 can never write from — it would sit in the
+ * inbox waiting for a human to notice it.
+ *
+ * WHY THESE TWO ARE PHRASED DIFFERENTLY FROM THE GOOGLE ONES, and do not
+ * "simplify" them back:
+ *
+ * Bing's news RSS silently returns an EMPTY FEED for a query that is nothing
+ * but an OR group — parenthesised or not. It needs a REQUIRED TERM in front of
+ * the alternatives. Measured, not read in a doc; every line is a real count:
+ *
+ *   ("robot fighting league" OR "robot combat…")  → 0 items
+ *   robot fighting league OR robot combat league  → 0 items
+ *   "Iron Fist King" OR CyberHero OR URKL         → 0 items
+ *   robot ("fighting league" OR "combat league")  → 7 items
+ *   robot (CyberHero OR URKL OR "Iron Fist King") → 3 items
+ *   "humanoid robot" (fight OR boxing)            → 9 items
+ *
+ * The last line is why the rule is "a required term first" and not "never
+ * start with a quote": `bing-news-en` has led with a quoted phrase since the
+ * beginning and works fine, because the OR group sits behind it.
+ *
+ * So both queries lead with the bare word `robot`. The cost is real and worth
+ * stating: a Bing watchlist hit must contain the word "robot" somewhere, so a
+ * piece headlined "Shadow Combat League returns to Kuala Lumpur" and never
+ * saying "robot" is invisible here. Google's watchlist feed has no such
+ * requirement and is the one that catches that — which is why both exist.
+ */
+const BING_NEW_LEAGUE_EN = bingNews(
+  'robot ("fighting league" OR "combat league" OR "boxing league" OR "fight league" OR "fighting championship")',
+);
+const BING_WATCHLIST_EN = bingNews(
+  `robot (${WATCHED_LEAGUES.map((name) => (name.includes(" ") ? `"${name}"` : name)).join(" OR ")})`,
+);
 
 /**
  * The organisers' own YouTube channels.
@@ -232,35 +382,88 @@ const YOUTUBE_CHANNELS: SignalSource[] = [
   },
 ];
 
+/** Shorthand — every search feed is `search: true` and carries no filter. */
+function searchFeed(
+  id: string,
+  url: string,
+  language: SignalLanguage,
+): SignalSource {
+  return { id, url, kind: "news", language, search: true };
+}
+
+/**
+ * The search feeds, in four groups.
+ *
+ * WHAT THIS COSTS, because widening a net is not free: every row that lands
+ * here is a row stage 2 pays to score. The sweep ran 10–29 items a day on the
+ * old four feeds; these eighteen should be budgeted at a few times that, and
+ * the honest number will be in the first morning's `results` array rather than
+ * in this comment. If it ever becomes a real bill, the lever is the regional
+ * editions — they overlap most with `us` — and not the discovery queries, which
+ * are the entire reason this exists.
+ */
+const SEARCH_FEEDS: SignalSource[] = [
+  // --- The broad net, run wide -------------------------------------------
+  searchFeed("google-news-en", googleNews(Q_STRICT_EN, EDITIONS.us), "en"),
+  searchFeed(
+    "google-news-en-phrase",
+    googleNews(Q_PHRASE_EN, EDITIONS.us),
+    "en",
+  ),
+  searchFeed("google-news-zh", googleNews(Q_ZH, EDITIONS.cn), "zh"),
+  searchFeed("google-news-zh-tw", googleNews(Q_ZH, EDITIONS.tw), "zh"),
+  searchFeed("bing-news-en", BING_NEWS_EN, "en"),
+  searchFeed("bing-news-zh", BING_NEWS_ZH, "zh"),
+
+  // --- Discovery: leagues we do not know exist ----------------------------
+  searchFeed(
+    "google-news-new-league-en",
+    googleNews(Q_NEW_LEAGUE_EN, EDITIONS.us),
+    "en",
+  ),
+  searchFeed(
+    "google-news-new-league-zh",
+    googleNews(Q_NEW_LEAGUE_ZH, EDITIONS.cn),
+    "zh",
+  ),
+  searchFeed("bing-news-new-league-en", BING_NEW_LEAGUE_EN, "en"),
+
+  // --- The watchlist: every league by name --------------------------------
+  searchFeed(
+    "google-news-watchlist",
+    googleNews(Q_WATCHLIST, EDITIONS.us),
+    "en",
+  ),
+  searchFeed("bing-news-watchlist", BING_WATCHLIST_EN, "en"),
+
+  /*
+   * --- Regional English: ONE edition, and the other two were measured out ---
+   *
+   * A Google News edition re-ranks a mostly global index; it does not open a
+   * local one. Comparing publisher domains on the same query, same morning:
+   *
+   *   US  80 domains
+   *   MY  79 — 6 of them absent from US (Asia Times, TechNode Global, TVB,
+   *            The Online Citizen, …)
+   *   SG  79 — byte-identical to MY
+   *   AE  79 — ZERO domains absent from US
+   *
+   * So SG and AE were ~200 extra rows a morning for nothing, and they are
+   * deliberately not here. MY earns its place on six Asian outlets. If someone
+   * re-adds SG or AE, this is the measurement to re-run first, not an opinion
+   * to argue with.
+   */
+  searchFeed("google-news-my", googleNews(Q_PHRASE_EN, EDITIONS.my), "en"),
+
+  // --- The other languages this sport is organised in ---------------------
+  searchFeed("google-news-ms", googleNews(Q_MS, EDITIONS.msMY), "ms"),
+  searchFeed("google-news-ja", googleNews(Q_JA, EDITIONS.jp), "ja"),
+  searchFeed("google-news-ko", googleNews(Q_KO, EDITIONS.kr), "ko"),
+  searchFeed("google-news-ar", googleNews(Q_AR, EDITIONS.arAE), "ar"),
+];
+
 export const SOURCES: SignalSource[] = [
-  {
-    id: "google-news-en",
-    url: GOOGLE_NEWS_EN,
-    kind: "news",
-    language: "en",
-    search: true,
-  },
-  {
-    id: "google-news-zh",
-    url: GOOGLE_NEWS_ZH,
-    kind: "news",
-    language: "zh",
-    search: true,
-  },
-  {
-    id: "bing-news-en",
-    url: BING_NEWS_EN,
-    kind: "news",
-    language: "en",
-    search: true,
-  },
-  {
-    id: "bing-news-zh",
-    url: BING_NEWS_ZH,
-    kind: "news",
-    language: "zh",
-    search: true,
-  },
+  ...SEARCH_FEEDS,
   ...PUBLISHER_FEEDS,
   ...YOUTUBE_CHANNELS,
   // Bilibili slots go here as their uids are collected — same shape, zero

@@ -82,7 +82,9 @@ SCORING (0-100). Score what the item IS, not how excited the headline sounds:
 - 10-39: General humanoid robotics with no combat link.
 - 0-9: Unrelated. Stock-market coverage, industrial arms, toys, vacuum robots, generic AI news, listicles, press-release spam.
 
-Chinese-language items reporting actual fight outcomes are the highest-value thing in this feed and are routinely the ONLY source for a result. Do not discount an item for being in Chinese.
+A LEAGUE, PROMOTION OR EVENT YOU HAVE NEVER HEARD OF IS A DISCOVERY, NOT A REASON TO SCORE LOW. If an item names a humanoid-robot fighting competition run by an organiser not listed above — in any country — score it 90+ and category "league". The named leagues above are the ones already covered; the ones missing from that list are the ones this feed exists to find. An unfamiliar name is the signal, not the noise.
+
+Items in Chinese, Malay, Japanese, Korean or Arabic reporting actual fight outcomes are the highest-value thing in this feed and are routinely the ONLY source for a result. Never discount an item for the language it is written in — the sweep runs in six languages precisely because the English press is last to these stories.
 
 CATEGORY:
 - result: a bout or tournament outcome that already happened

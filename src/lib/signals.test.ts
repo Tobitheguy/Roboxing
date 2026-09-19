@@ -6,6 +6,7 @@ import {
   RELEVANT_TITLE,
   SOURCES,
   unwrapTrackingUrl,
+  WATCHED_LEAGUES,
 } from "./signals";
 
 /**
@@ -73,7 +74,11 @@ describe("parseFeed", () => {
  * multiplies the daily bill. Both failures are invisible without these.
  */
 describe("filterItems", () => {
-  const item = (title: string) => ({ title, url: "https://x.test/a", publishedAt: null });
+  const item = (title: string) => ({
+    title,
+    url: "https://x.test/a",
+    publishedAt: null,
+  });
 
   it("keeps anything naming a robot or a fight", () => {
     const kept = filterItems(
@@ -105,7 +110,10 @@ describe("filterItems", () => {
     // Google News sources ARE their query; filtering them again would drop
     // legitimate results the search already scoped, including Chinese titles
     // that match no English keyword.
-    const items = [item("人形机器人格斗赛在利雅得揭幕"), item("anything at all")];
+    const items = [
+      item("人形机器人格斗赛在利雅得揭幕"),
+      item("anything at all"),
+    ];
     expect(filterItems(items, undefined)).toEqual(items);
   });
 
@@ -122,6 +130,95 @@ describe("filterItems", () => {
       if (source.search) continue;
       expect(source.match, `${source.id} has no match filter`).toBeDefined();
     }
+  });
+});
+
+/**
+ * The shape of the net.
+ *
+ * These assert the lessons of the Shadow Combat League miss — a league that ran
+ * in Malaysia while a sweep in two languages saw nothing. Each one below is a
+ * specific way the net silently narrows again, and every one of them is
+ * invisible in production: a feed that stops matching does not error, it just
+ * returns a quiet morning.
+ */
+describe("SOURCES", () => {
+  it("gives every source a unique id", () => {
+    // Ids are stored on the row and are how a dead feed is identified in the
+    // sweep report. A duplicate makes two feeds indistinguishable there.
+    const ids = SOURCES.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("sweeps every language this sport is organised in", () => {
+    const languages = new Set(SOURCES.map((s) => s.language));
+    // en and zh were the whole net when a Malaysian league went unnoticed.
+    for (const lang of ["en", "zh", "ms", "ja", "ko", "ar"]) {
+      expect(languages.has(lang as never), `no ${lang} source`).toBe(true);
+    }
+  });
+
+  it("keeps a discovery feed whose job is leagues we do not know exist", () => {
+    // The watchlist can only find leagues already named. This is the only
+    // group that can find the next one, so it must never be the thing that
+    // gets trimmed when the daily row count looks high.
+    const discovery = SOURCES.filter((s) => s.id.includes("new-league"));
+    expect(discovery.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("watches every league by name, including ones with no page yet", () => {
+    // A league belongs here the day its name is first heard — before it is on
+    // the site. Shadow Combat League is the case that proved the rule.
+    expect(WATCHED_LEAGUES).toContain("Shadow Combat League");
+
+    const watchlist = SOURCES.filter((s) => s.id.includes("watchlist"));
+    expect(watchlist.length).toBeGreaterThanOrEqual(2);
+    for (const source of watchlist) {
+      const query = decodeURIComponent(source.url);
+      for (const league of WATCHED_LEAGUES) {
+        expect(query, `${source.id} does not watch ${league}`).toContain(
+          league,
+        );
+      }
+    }
+  });
+
+  it("puts a required term in front of every Bing OR group", () => {
+    /*
+     * Measured, and the failure is silent: Bing's news RSS returns an EMPTY
+     * feed for a query that is nothing but an OR group, and a working one when
+     * a required term leads. An empty feed looks exactly like a slow news
+     * week, so nothing would ever report this as broken — which is the only
+     * reason it is worth a test rather than a comment.
+     *
+     * The rule is about the OR, not the quote: `"humanoid robot" (fight OR
+     * boxing)` leads with a quoted phrase and returns results.
+     */
+    for (const source of SOURCES.filter((s) => s.url.includes("bing.com"))) {
+      const query = decodeURIComponent(
+        new URL(source.url).searchParams.get("q") ?? "",
+      );
+      expect(query, `${source.id} has no query`).not.toBe("");
+
+      const lead = query.split("(")[0];
+      expect(lead.trim(), `${source.id} opens with its OR group`).not.toBe("");
+      expect(lead, `${source.id} ORs outside a paren group`).not.toMatch(
+        /\bOR\b/,
+      );
+    }
+  });
+
+  it("keeps the strict and the phrase-first English nets as separate feeds", () => {
+    // The strict one requires the exact phrase "humanoid robot"; the phrase
+    // one does not. Merging them back into a single query re-creates the miss:
+    // Malaysian coverage said "robot fighting league" and never "humanoid
+    // robot", and scored zero hits on the strict net.
+    const strict = SOURCES.find((s) => s.id === "google-news-en");
+    const phrase = SOURCES.find((s) => s.id === "google-news-en-phrase");
+    expect(decodeURIComponent(strict?.url ?? "")).toContain('"humanoid robot"');
+    expect(decodeURIComponent(phrase?.url ?? "")).not.toContain(
+      '"humanoid robot"',
+    );
   });
 });
 
