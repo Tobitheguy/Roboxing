@@ -1,5 +1,35 @@
 # Where Roboxing stands
 
+> **2026-09-19, later: URKL SHANGHAI RAN TONIGHT AND WE HAD NOTHING ON IT —
+> and this time the watcher was not at fault.** Signal 3765 was swept from
+> `bing-news-zh` on 15 September: "众擎机器人落地宝山！URKL全球机器人格斗联赛上
+> 海站即将启幕". Scored **85**, categorised `event`, with a fetchable
+> `news.qq.com` link rather than a Google interstitial. The pipeline did
+> everything it was built to do.
+>
+> **The row was then dismissed, and that is permanent by design** — the URL is
+> the dedupe key, so it can never resurface, and stage 3 only ever looks at
+> rows still marked `new`. **`admin_audit` holds nine rows and not one of them
+> is a signal**, although `triageSignal` declares an audit entry, so there is no
+> record of who dismissed it or when. Two separate problems: a permanent action
+> with no confirmation, and an audit trail that is not being written.
+>
+> **The fix for tonight**: the event is now on the site
+> (`/events/urkl-shanghai-baoshan-2026`, `npm run db:seed-urkl-shanghai`) —
+> Baoshan Gymnasium, 5,000 tickets sold out, 32 teams on identical T800s, KO if
+> a machine cannot stand within 10 seconds. No result published yet. Signal 3765
+> moved from `dismissed` to `kept`.
+>
+> **THE OPEN PROBLEM, and it is bigger than either bug.** A `completed` event
+> with no result is invisible on this site: `/schedule` shows what is upcoming
+> and `/results` shows bouts that have outcomes. Tonight's event has its own
+> page and appears on `/competitions/urkl`, and appears nowhere a reader
+> browses. That is the next thing worth building — a "happened, result not in
+> yet" state, which on this sport's evidence is most events most of the time.
+>
+> Worth fixing alongside it: dismissing a signal should ask, and the audit write
+> should be verified rather than logged-and-swallowed (`admin-action.ts:133`).
+
 > **2026-09-19: THE NET WAS TOO NARROW AND A WHOLE LEAGUE PROVED IT.** Tobias
 > found the Shadow Combat League in Malaysia by hand. Checked before touching
 > anything: it is not on the site, not in the repo, and — the part that matters
