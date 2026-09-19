@@ -1151,6 +1151,88 @@ export const signals = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Record drafts — stage 4                                                     */
+/* -------------------------------------------------------------------------- */
+
+export const draftKind = pgEnum("draft_kind", ["competition", "event"]);
+
+export const draftStatus = pgEnum("draft_status", [
+  "pending",
+  "applied",
+  "dismissed",
+]);
+
+/**
+ * A league or an event the watcher believes exists, waiting for a human.
+ *
+ * WHY THIS TABLE EXISTS AT ALL.
+ * -----------------------------
+ * Stage 3 writes news. It has never written the record — one `posts` insert is
+ * the whole of it. So a league discovered on a Tuesday got, at best, a brief
+ * saying it existed, and somebody then had to notice that brief and type the
+ * league in by hand. Shadow Combat League ran two events in Malaysia before
+ * anyone here knew its name. Discovery was the missing half; this is the other
+ * one.
+ *
+ * WHY IT IS A SEPARATE TABLE AND NOT A `published` FLAG ON `competitions`.
+ * -----------------------------------------------------------------------
+ * A draft is a MODEL'S CLAIM, not a row. Putting it in `competitions` behind a
+ * boolean means every public query on the site grows a filter, and the day one
+ * of them is forgotten an unreviewed machine-written league appears on
+ * /competitions as though a person had checked it. The failure mode of that
+ * mistake is exactly the thing this site cannot survive — so the drafts live
+ * somewhere no public query can reach them, and become real rows only when
+ * somebody presses Apply.
+ *
+ * The payload is JSON rather than columns on purpose: it is whatever the model
+ * extracted, stored verbatim, including the fields it could not find. A field
+ * the source did not state comes back null and must STAY null through review —
+ * the point of the whole pipeline is that nothing is invented on the way in.
+ */
+export const recordDrafts = pgTable(
+  "record_drafts",
+  {
+    id: serial("id").primaryKey(),
+    /**
+     * The signal this was extracted from. UNIQUE, and that is the idempotency
+     * guard: a second cron run over the same inbox drafts nothing new, the
+     * same way `signals.post_id` stops stage 3 republishing.
+     *
+     * `cascade` because a draft with no signal behind it has no source, and a
+     * proposed league with no source is the one thing this table must never
+     * hold.
+     */
+    signalId: integer("signal_id")
+      .notNull()
+      .unique()
+      .references(() => signals.id, { onDelete: "cascade" }),
+    kind: draftKind("kind").notNull(),
+    status: draftStatus("status").notNull().default("pending"),
+    /** The proposed row, exactly as extracted. Nulls are meaningful. */
+    payload: jsonb("payload").notNull(),
+    /** Why the model thinks this is a real league or event, in one sentence. */
+    rationale: text("rationale"),
+    /** The article it was read from — never the feed headline. */
+    sourceUrl: text("source_url").notNull(),
+    model: text("model"),
+    /**
+     * The slug of the row created when this was applied.
+     *
+     * Kept so an applied draft links to what it became, and so a second Apply
+     * on a stale page is visibly a no-op rather than a duplicate league.
+     */
+    appliedSlug: text("applied_slug"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("record_drafts_status_idx").on(t.status, t.createdAt)],
+);
+
+export type RecordDraft = typeof recordDrafts.$inferSelect;
+
+/* -------------------------------------------------------------------------- */
 /* Audience                                                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -1414,14 +1496,17 @@ export const adminAudit = pgTable(
 /* Relations                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export const competitionsRelations = relations(competitions, ({ one, many }) => ({
-  pointsRule: one(pointsRules, {
-    fields: [competitions.id],
-    references: [pointsRules.competitionId],
+export const competitionsRelations = relations(
+  competitions,
+  ({ one, many }) => ({
+    pointsRule: one(pointsRules, {
+      fields: [competitions.id],
+      references: [pointsRules.competitionId],
+    }),
+    events: many(events),
+    bouts: many(bouts),
   }),
-  events: many(events),
-  bouts: many(bouts),
-}));
+);
 
 export const pointsRulesRelations = relations(pointsRules, ({ one }) => ({
   competition: one(competitions, {
@@ -1577,6 +1662,7 @@ export type BoutMethodValue = (typeof boutMethod.enumValues)[number];
 export type EventAccessValue = (typeof eventAccess.enumValues)[number];
 export type EntitlementKindValue = (typeof entitlementKind.enumValues)[number];
 export type ConfidenceValue = (typeof confidence.enumValues)[number];
-export type CompetitionClassValue = (typeof competitionClass.enumValues)[number];
+export type CompetitionClassValue =
+  (typeof competitionClass.enumValues)[number];
 export type EventKindValue = (typeof eventKind.enumValues)[number];
 export type PilotRoleValue = (typeof pilotRole.enumValues)[number];

@@ -327,7 +327,13 @@ function offResult(reason: string): AutoPublishResult {
  * not read, which is a skip rather than an error — publishers block bots,
  * paywalls exist, and neither is a fault in this pipeline.
  */
-async function readArticle(url: string): Promise<string | null> {
+/**
+ * Exported for stage 4 (lib/draft-record.ts), which has the same problem and
+ * must solve it identically: a record drafted from a headline is a record
+ * drafted from nothing, and the publisher's hard-won fetch rules — real UA,
+ * HTML only, length floor, hard cap — are the ones that make that safe.
+ */
+export async function readArticle(url: string): Promise<string | null> {
   let response: Response;
   try {
     response = await fetch(url, {

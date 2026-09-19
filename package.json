@@ -23,7 +23,9 @@
     "stripe:setup": "tsx scripts/stripe-setup.ts",
     "signals:publish": "tsx scripts/autopublish.ts",
     "db:seed-record": "tsx scripts/seed-record.ts",
-    "db:seed-watch": "tsx scripts/seed-watch-channels.ts"
+    "db:seed-watch": "tsx scripts/seed-watch-channels.ts",
+    "db:seed-scl": "tsx scripts/seed-shadow-combat-league.ts",
+    "db:seed-urkl-shanghai": "tsx scripts/seed-urkl-shanghai.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

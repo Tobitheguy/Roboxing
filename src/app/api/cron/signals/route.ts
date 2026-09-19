@@ -1,5 +1,6 @@
 import { autoPublish } from "@/lib/autopublish";
 import { classifySignals } from "@/lib/classify";
+import { draftRecords } from "@/lib/draft-record";
 import { sweepSignals } from "@/lib/signals";
 
 /**
@@ -12,14 +13,22 @@ import { sweepSignals } from "@/lib/signals";
  * spends money on stage 2, that guard is the difference between a free button
  * and a billable one.
  *
- * Three stages, in order and in one invocation:
+ * Four stages, in order and in one invocation:
  *   1. sweepSignals()    — keyless RSS, costs nothing
  *   2. classifySignals() — scores what stage 1 landed, costs a few cents a day
  *   3. autoPublish()     — reads the top-scoring sources and writes briefs
+ *   4. draftRecords()    — proposes LEAGUES AND EVENTS for /admin/drafts
  *
  * Stage 3 is off unless AUTOPUBLISH=on, and publishes at most a couple of
  * briefs a run. See lib/autopublish.ts for why it refuses to work from a
  * headline alone.
+ *
+ * Stage 4 is the one that writes the RECORD rather than the news, and it runs
+ * by default — its output is a row in an admin queue that no public query
+ * reads, so the reasoning that keeps stage 3 switched off does not apply. Kill
+ * it with AUTODRAFT=off. It exists because for a year discovery and coverage
+ * were two jobs and only one of them was automated: Shadow Combat League held
+ * two events in Malaysia before anybody here knew its name.
  *
  * What "failed" means here, and why it changed
  * -------------------------------------------
@@ -56,6 +65,7 @@ export async function GET(request: Request) {
 
   const classification = await classifySignals();
   const publishing = await autoPublish();
+  const drafting = await draftRecords();
 
   /*
    * "Skipped" is not failure. classifySignals() and autoPublish() both report a
@@ -67,14 +77,24 @@ export async function GET(request: Request) {
   const skipped = (message: string) => /\bskipped$/.test(message);
   const classifyBroke = classification.errors.some((e) => !skipped(e));
   const publishBroke = publishing.errors.some((e) => !skipped(e));
+  /*
+   * Stage 4 reports a failed fetch per candidate in `errors`, and a publisher
+   * 403 is an ordinary morning rather than a broken pipeline. Only a stage that
+   * could not run AT ALL turns the cron red — the same distinction stages 2 and
+   * 3 draw, applied to a stage whose per-item failures are expected.
+   */
+  const draftBroke = drafting.errors.some(
+    (e) => !skipped(e) && !/fetch failed|no readable article/.test(e),
+  );
 
-  const ok = sweepOk && !classifyBroke && !publishBroke;
+  const ok = sweepOk && !classifyBroke && !publishBroke && !draftBroke;
 
   return Response.json(
     {
       results,
       classification,
       publishing,
+      drafting,
       // Named so the dashboard's one-line preview says which stage went wrong
       // without anyone expanding the body.
       failed: ok
@@ -83,6 +103,7 @@ export async function GET(request: Request) {
             sweep: !sweepOk,
             classify: classifyBroke,
             publish: publishBroke,
+            draft: draftBroke,
           },
     },
     // 500 so the cron run is MARKED failed and shows red in Vercel — a sweep

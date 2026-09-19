@@ -6,8 +6,10 @@ import { SignalRow } from "@/components/admin/signal-row";
 import { Card, CardBodyFlush, CardHeader } from "@/components/card";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeading, PageShell } from "@/components/page-shell";
+import Link from "next/link";
+
 import { db } from "@/db";
-import { signals, type Signal } from "@/db/schema";
+import { recordDrafts, signals, type Signal } from "@/db/schema";
 
 export const metadata: Metadata = {
   title: "Signals",
@@ -81,6 +83,18 @@ export default async function SignalsPage() {
     (s) => s.language !== null && s.language !== "zh" && s.language !== "en",
   );
 
+  /*
+   * Stage 4's queue, surfaced HERE rather than left at its own URL.
+   *
+   * The drafts page is where a discovered league becomes a league on the site,
+   * and a review queue nobody opens is a queue that does not exist. This is the
+   * page that gets opened every morning, so the pending count lives on it.
+   */
+  const pendingDrafts = await db
+    .select({ id: recordDrafts.id })
+    .from(recordDrafts)
+    .where(eq(recordDrafts.status, "pending"));
+
   // Distinguishable states: nothing swept at all, versus swept but unscored.
   // The second one means the classifier is not running, and saying so here is
   // cheaper than noticing a month later that every row lost its chip.
@@ -104,6 +118,22 @@ export default async function SignalsPage() {
         </Card>
       ) : (
         <div className="space-y-6">
+          {pendingDrafts.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Leagues and events awaiting review"
+                action={
+                  <Link
+                    href="/admin/drafts"
+                    className="text-volt text-xs hover:underline"
+                  >
+                    {pendingDrafts.length} pending →
+                  </Link>
+                }
+              />
+            </Card>
+          ) : null}
+
           {unscored > 0 ? (
             <p className="text-ink-dim text-xs">
               {unscored} of {rows.length} not yet scored — they sort last and
